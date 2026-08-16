@@ -1,0 +1,179 @@
+name: AutoRepoRAG
+description: >-
+  Build a self-verifying LatticeDB vector corpus (lattice-jsonl) from your
+  repository: chunk source files, embed them (live OpenRouter-compatible
+  endpoint or deterministic mock), load and verify against a real
+  lattice-server, and export corpus + gzip + metadata for publishing.
+author: Avarok Cybersecurity
+
+branding:
+  icon: database
+  color: purple
+
+inputs:
+  paths:
+    description: Newline-separated include globs (** / * / ? and {a,b}), relative to the repository root.
+    required: true
+  exclude:
+    description: Newline-separated exclude globs applied after `paths`.
+    required: false
+    default: ''
+  collection:
+    description: LatticeDB collection name recorded in the corpus header.
+    required: false
+    default: coderag
+  output-dir:
+    description: Directory (relative to the workspace) where corpus, gzip and metadata are written.
+    required: false
+    default: autoreporag-out
+  output-name:
+    description: Basename for outputs (<name>.jsonl, <name>.jsonl.gz, <name>.meta.json).
+    required: false
+    default: coderag
+  gzip:
+    description: Also write a gzip -9 twin of the corpus.
+    required: false
+    default: 'true'
+  embedding-endpoint:
+    description: OpenAI-compatible embeddings API base URL (POST <endpoint>/embeddings).
+    required: false
+    default: https://openrouter.ai/api/v1
+  embedding-model:
+    description: Embedding model id. Required unless mock-embeddings is true.
+    required: false
+    default: ''
+  embedding-api-key:
+    description: API key for the embedding endpoint. Masked immediately; required unless mock-embeddings is true.
+    required: false
+    default: ''
+  mock-embeddings:
+    description: Use deterministic sha256-seeded L2-normalized mock vectors (CI needs no secrets).
+    required: false
+    default: 'false'
+  mock-dim:
+    description: Vector dimensionality in mock mode.
+    required: false
+    default: '256'
+  chunk-lines:
+    description: Lines per chunk window.
+    required: false
+    default: '90'
+  chunk-overlap:
+    description: Lines of overlap between consecutive chunks (stride = chunk-lines - chunk-overlap).
+    required: false
+    default: '15'
+  max-chunk-bytes:
+    description: Hard byte cap per chunk text (UTF-8).
+    required: false
+    default: '16384'
+  batch-size:
+    description: Texts per embeddings request.
+    required: false
+    default: '32'
+  request-interval-ms:
+    description: Minimum milliseconds between embeddings request starts (free-tier pacing).
+    required: false
+    default: '2500'
+  max-retries:
+    description: Attempts per embeddings request (700ms * 2^n backoff on transient failures).
+    required: false
+    default: '3'
+  max-chunks:
+    description: Upper bound on chunks (0 = unlimited); truncates with a warning.
+    required: false
+    default: '0'
+  vector-precision:
+    description: Significant digits vectors are rounded to (then f32-cast) before upsert and export.
+    required: false
+    default: '6'
+  previous-corpus-url:
+    description: >-
+      file:// or http(s):// URL of a previously published corpus (.jsonl or
+      .jsonl.gz) for incremental reuse by chunk_hash; its sibling .meta.json
+      must declare the same model, and dims must match, else the cache is
+      discarded with a warning.
+    required: false
+    default: ''
+  lattice-version:
+    description: Pinned lattice-db release tag whose lattice-server binary is downloaded and sha256-verified.
+    required: false
+    default: v0.3.3
+  lattice-port:
+    description: Loopback port for the throwaway lattice-server.
+    required: false
+    default: '6334'
+
+outputs:
+  corpus-file:
+    description: Absolute path of the written lattice-jsonl corpus.
+    value: ${{ steps.build.outputs.corpus-file }}
+  corpus-gz-file:
+    description: Absolute path of the gzip twin (empty when gzip is false).
+    value: ${{ steps.build.outputs.corpus-gz-file }}
+  metadata-file:
+    description: Absolute path of the metadata JSON.
+    value: ${{ steps.build.outputs.metadata-file }}
+  dim:
+    description: Vector dimensionality of the corpus.
+    value: ${{ steps.build.outputs.dim }}
+  points:
+    description: Number of points in the corpus.
+    value: ${{ steps.build.outputs.points }}
+  embedded:
+    description: Chunks embedded fresh this run.
+    value: ${{ steps.build.outputs.embedded }}
+  reused:
+    description: Chunks whose vectors were reused from previous-corpus-url.
+    value: ${{ steps.build.outputs.reused }}
+  sha256:
+    description: sha256 of the raw corpus file.
+    value: ${{ steps.build.outputs.sha256 }}
+
+runs:
+  using: composite
+  steps:
+    - name: Build corpus
+      id: build
+      shell: bash
+      env:
+        INPUT_PATHS: ${{ inputs.paths }}
+        INPUT_EXCLUDE: ${{ inputs.exclude }}
+        INPUT_COLLECTION: ${{ inputs.collection }}
+        INPUT_OUTPUT_DIR: ${{ inputs.output-dir }}
+        INPUT_OUTPUT_NAME: ${{ inputs.output-name }}
+        INPUT_GZIP: ${{ inputs.gzip }}
+        INPUT_EMBEDDING_ENDPOINT: ${{ inputs.embedding-endpoint }}
+        INPUT_EMBEDDING_MODEL: ${{ inputs.embedding-model }}
+        INPUT_EMBEDDING_API_KEY: ${{ inputs.embedding-api-key }}
+        INPUT_MOCK_EMBEDDINGS: ${{ inputs.mock-embeddings }}
+        INPUT_MOCK_DIM: ${{ inputs.mock-dim }}
+        INPUT_CHUNK_LINES: ${{ inputs.chunk-lines }}
+        INPUT_CHUNK_OVERLAP: ${{ inputs.chunk-overlap }}
+        INPUT_MAX_CHUNK_BYTES: ${{ inputs.max-chunk-bytes }}
+        INPUT_BATCH_SIZE: ${{ inputs.batch-size }}
+        INPUT_REQUEST_INTERVAL_MS: ${{ inputs.request-interval-ms }}
+        INPUT_MAX_RETRIES: ${{ inputs.max-retries }}
+        INPUT_MAX_CHUNKS: ${{ inputs.max-chunks }}
+        INPUT_VECTOR_PRECISION: ${{ inputs.vector-precision }}
+        INPUT_PREVIOUS_CORPUS_URL: ${{ inputs.previous-corpus-url }}
+        INPUT_LATTICE_VERSION: ${{ inputs.lattice-version }}
+        INPUT_LATTICE_PORT: ${{ inputs.lattice-port }}
+      run: node "$GITHUB_ACTION_PATH/src/main.mjs"
+
+    - name: Stop lattice-server
+      if: always()
+      shell: bash
+      run: |
+        pidfile="${RUNNER_TEMP:-${GITHUB_WORKSPACE:-$PWD}/.work}/autoreporag-lattice.pid"
+        if [ -f "$pidfile" ]; then
+          pid="$(cat "$pidfile")"
+          if kill -0 "$pid" 2>/dev/null; then
+            kill -TERM "$pid" 2>/dev/null || true
+            for _ in $(seq 1 30); do
+              kill -0 "$pid" 2>/dev/null || break
+              sleep 0.1
+            done
+            kill -KILL "$pid" 2>/dev/null || true
+          fi
+          rm -f "$pidfile"
+        fi

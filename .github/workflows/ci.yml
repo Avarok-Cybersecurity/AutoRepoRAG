@@ -1,0 +1,196 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+  schedule:
+    # Weekly drift canary against the newest lattice-db release.
+    - cron: '17 5 * * 1'
+
+concurrency:
+  # event_name keeps the weekly canary from cancelling a real push run on main.
+  group: ci-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  # Pinned lint toolchain (verified before execution).
+  ACTIONLINT_VERSION: 1.7.12
+  ACTIONLINT_SHA256: 8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8
+
+jobs:
+  lint:
+    name: Lint
+    if: github.event_name != 'schedule'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Syntax-check every ESM source
+        run: |
+          set -euo pipefail
+          mapfile -t files < <(git ls-files '*.mjs')
+          [ "${#files[@]}" -gt 0 ] || { echo '::error::no .mjs files found'; exit 1; }
+          for f in "${files[@]}"; do
+            node --check "$f"
+            echo "ok: $f"
+          done
+
+      - name: Syntax-check shell scripts
+        run: |
+          set -euo pipefail
+          mapfile -t files < <(git ls-files '*.sh')
+          for f in "${files[@]}"; do
+            bash -n "$f"
+            echo "ok: $f"
+          done
+
+      - name: Float formatter parity (Rust serde_json byte fixtures)
+        run: node test/float-parity.mjs
+
+      - name: actionlint (pinned + checksum-verified)
+        run: |
+          set -euo pipefail
+          curl -fsSL -o actionlint.tar.gz \
+            "https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}/actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz"
+          echo "${ACTIONLINT_SHA256}  actionlint.tar.gz" | sha256sum -c -
+          tar -xzf actionlint.tar.gz actionlint
+          ./actionlint -color
+
+  e2e-mock:
+    name: E2E mock (${{ matrix.os }})
+    if: github.event_name != 'schedule'
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, ubuntu-24.04-arm]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Run action (mock, run A)
+        id: run-a
+        uses: ./
+        with:
+          paths: |
+            test/fixtures/**
+          mock-embeddings: 'true'
+          output-dir: out-a
+
+      - name: Run action (mock, run B — determinism twin)
+        id: run-b
+        uses: ./
+        with:
+          paths: |
+            test/fixtures/**
+          mock-embeddings: 'true'
+          output-dir: out-b
+
+      - name: Schema check (lattice-jsonl v1 invariants)
+        env:
+          CORPUS_FILE: ${{ steps.run-a.outputs.corpus-file }}
+          CORPUS_GZ_FILE: ${{ steps.run-a.outputs.corpus-gz-file }}
+          METADATA_FILE: ${{ steps.run-a.outputs.metadata-file }}
+        run: node test/schema-check.mjs "$CORPUS_FILE" "$CORPUS_GZ_FILE" "$METADATA_FILE"
+
+      - name: Determinism check (byte-identical corpora)
+        env:
+          CORPUS_A: ${{ steps.run-a.outputs.corpus-file }}
+          CORPUS_B: ${{ steps.run-b.outputs.corpus-file }}
+          SHA_A: ${{ steps.run-a.outputs.sha256 }}
+          SHA_B: ${{ steps.run-b.outputs.sha256 }}
+        run: |
+          set -euo pipefail
+          node test/determinism-check.mjs "$CORPUS_A" "$CORPUS_B"
+          cmp "$CORPUS_A" "$CORPUS_B"
+          [ "$SHA_A" = "$SHA_B" ]
+          echo "deterministic: sha256 $SHA_A"
+
+  e2e-incremental:
+    name: E2E incremental reuse
+    if: github.event_name != 'schedule'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Seed run (full mock embed)
+        id: seed
+        uses: ./
+        with:
+          paths: |
+            test/fixtures/**
+          mock-embeddings: 'true'
+          output-dir: seed-out
+
+      - name: Keep seed corpus as artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: seed-corpus
+          path: seed-out/
+          retention-days: 7
+
+      - name: Incremental rerun (file:// previous corpus)
+        id: incr
+        uses: ./
+        with:
+          paths: |
+            test/fixtures/**
+          mock-embeddings: 'true'
+          output-dir: incr-out
+          previous-corpus-url: file://${{ github.workspace }}/seed-out/coderag.jsonl.gz
+
+      - name: Assert full reuse
+        env:
+          EMBEDDED: ${{ steps.incr.outputs.embedded }}
+          REUSED: ${{ steps.incr.outputs.reused }}
+          POINTS: ${{ steps.incr.outputs.points }}
+          SEED_SHA: ${{ steps.seed.outputs.sha256 }}
+          INCR_SHA: ${{ steps.incr.outputs.sha256 }}
+        run: |
+          set -euo pipefail
+          echo "embedded=$EMBEDDED reused=$REUSED points=$POINTS"
+          [ "$EMBEDDED" -eq 0 ]
+          [ "$REUSED" -eq "$POINTS" ]
+          [ "$SEED_SHA" = "$INCR_SHA" ]
+
+  drift-canary:
+    name: Drift canary (newest lattice-db)
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    # Advisory only: a lattice-db release that breaks us must not block PRs.
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # lattice-version wants a concrete release tag (assets are fetched from
+      # releases/download/<tag>/), so resolve "latest" to today's real tag.
+      - name: Resolve newest lattice-db release tag
+        id: latest
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          tag="$(gh api repos/Avarok-Cybersecurity/lattice-db/releases/latest --jq .tag_name)"
+          echo "resolved lattice-db latest: $tag"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+
+      - name: Run action against newest lattice-server
+        id: canary
+        uses: ./
+        with:
+          paths: |
+            test/fixtures/**
+          mock-embeddings: 'true'
+          output-dir: canary-out
+          lattice-version: ${{ steps.latest.outputs.tag }}
+
+      - name: Schema check
+        env:
+          CORPUS_FILE: ${{ steps.canary.outputs.corpus-file }}
+          CORPUS_GZ_FILE: ${{ steps.canary.outputs.corpus-gz-file }}
+          METADATA_FILE: ${{ steps.canary.outputs.metadata-file }}
+        run: node test/schema-check.mjs "$CORPUS_FILE" "$CORPUS_GZ_FILE" "$METADATA_FILE"

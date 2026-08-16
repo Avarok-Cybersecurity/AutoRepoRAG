@@ -1,0 +1,38 @@
+# examples/mock-ci.yml
+#
+# Pull-request dry run: proves the chunking + corpus pipeline still works on
+# every PR without spending a single embedding request. Mock vectors are
+# deterministic (sha256-seeded), so no secrets ever reach fork PRs.
+
+name: Corpus dry run
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  dry-run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Build mock corpus
+        id: rag
+        uses: Avarok-Cybersecurity/AutoRepoRAG@v1
+        with:
+          paths: |
+            src/**/*.rs
+          mock-embeddings: 'true'
+          mock-dim: '256'
+
+      - name: Report
+        env:
+          POINTS: ${{ steps.rag.outputs.points }}
+          DIM: ${{ steps.rag.outputs.dim }}
+          SHA256: ${{ steps.rag.outputs.sha256 }}
+        run: |
+          set -euo pipefail
+          [ "$POINTS" -gt 0 ]
+          echo "corpus OK: $POINTS points, dim $DIM, sha256 $SHA256"

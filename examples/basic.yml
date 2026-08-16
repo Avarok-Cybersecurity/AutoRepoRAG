@@ -1,0 +1,40 @@
+# examples/basic.yml
+#
+# Simplest real deployment: on every merge to main, embed the source tree with
+# a live embedding endpoint and keep the corpus as a build artifact.
+# Requires one secret: OPENROUTER_API_KEY.
+
+name: Build code corpus
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  corpus:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Build corpus
+        id: rag
+        uses: Avarok-Cybersecurity/AutoRepoRAG@v1
+        with:
+          paths: |
+            src/**/*.rs
+            src/**/*.ts
+          exclude: |
+            **/*_test.*
+          embedding-model: nvidia/llama-nemotron-embed-vl-1b-v2:free
+          embedding-api-key: ${{ secrets.OPENROUTER_API_KEY }}
+
+      - name: Upload corpus artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: code-corpus
+          path: |
+            ${{ steps.rag.outputs.corpus-gz-file }}
+            ${{ steps.rag.outputs.metadata-file }}

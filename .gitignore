@@ -1,0 +1,5 @@
+/autoreporag-out
+/.work
+node_modules/
+npm-debug.log*
+*.log
