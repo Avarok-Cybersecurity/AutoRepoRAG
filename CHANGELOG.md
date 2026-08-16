@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-08-16
+
+Promoted from 0.1.1 after the full Atlas production integration proved out
+end to end: merge-to-main corpus build (5,693 chunks, dim 2048), gh-pages
+publish with CORS, and in-browser retrieval on atlasinference.io.
+
+### Changed
+- No code changes since 0.1.1. This tag marks the public v1 contract:
+  action inputs/outputs and the lattice-jsonl v1 output format are stable.
+
 ## [0.1.0] - 2026-08-16
 
 ### Added
