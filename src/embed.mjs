@@ -1,6 +1,6 @@
 // embed.mjs — embedding providers: deterministic mock + live OpenRouter-compatible client.
 //
-// Contract: mock vectors are seeded from sha256(chunk_hash) and iterate sha256
+// Contract: mock vectors are seeded from sha256 of the chunk TEXT and iterate sha256
 // to fill dim floats in [-1, 1], L2-normalized — deterministic forever. The
 // live client mirrors lattice-db/examples/rag-example/src/openrouter.ts:
 // batch POST /embeddings, results sorted by index, dim derived from the first
@@ -19,8 +19,8 @@ import { sha256Bytes, sleep, log } from './util.mjs';
  * mapped to [-1, 1]; then L2-normalized. Quantization (significant digits +
  * fround) is the caller's job so mock and live vectors share one pipeline.
  */
-export function mockEmbedding(chunkHash, dim) {
-  let digest = sha256Bytes(chunkHash);
+export function mockEmbedding(seedText, dim) {
+  let digest = sha256Bytes(seedText);
   const pool = [digest];
   let bytes = digest.length;
   const needed = dim * 4;
@@ -38,7 +38,7 @@ export function mockEmbedding(chunkHash, dim) {
     sumSq += x * x;
   }
   const norm = Math.sqrt(sumSq);
-  if (norm === 0) throw new Error(`mock embedding for ${chunkHash} has zero norm`);
+  if (norm === 0) throw new Error('mock embedding has zero norm');
   for (let i = 0; i < dim; i++) v[i] /= norm;
   return v;
 }

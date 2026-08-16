@@ -158,7 +158,10 @@ async function resolveVectors(chunks, inputs, prev) {
 
   if (inputs.mock) {
     dim = inputs.mockDim;
-    for (const c of missing) rawByHash.set(c.chunkHash, mockEmbedding(c.chunkHash, dim));
+    // Seed by TEXT (not chunk_hash, which mixes in the path) so byte-identical
+    // chunks in different files embed identically — matching live-embedder
+    // behavior, which is what makes the tie-tolerant verify testable in CI.
+    for (const c of missing) rawByHash.set(c.chunkHash, mockEmbedding(c.payload.text, dim));
   } else if (missing.length === 0) {
     dim = prev.dim; // everything reused; prev model already matched
   } else {
@@ -202,7 +205,10 @@ async function loadAndVerify(client, collection, dim, points) {
   }
 
   // Self-retrieval: searching a point's own vector must return that point at
-  // rank 1 with (near-)zero cosine distance.
+  // (near-)zero cosine distance. Byte-identical chunk text in different files
+  // (duplicated headers, copied kernels) produces identical embeddings, so the
+  // sampled point may legitimately tie at distance 0 behind a twin — accept
+  // any hit that is the point itself, or a tie whose payload text matches.
   const n = points.length;
   const sampleIdx = new Set();
   for (let k = 0; k < Math.min(SELF_RETRIEVAL_SAMPLES, n); k++) {
@@ -210,16 +216,22 @@ async function loadAndVerify(client, collection, dim, points) {
   }
   for (const idx of sampleIdx) {
     const p = points[idx];
-    const hits = await client.search(collection, p.vector, 1);
+    const hits = await client.search(collection, p.vector, 5);
     if (!Array.isArray(hits) || hits.length === 0) {
       throw new Error(`verification failed: self-retrieval for id ${p.id} returned no hits`);
     }
-    const top = hits[0];
-    if (top.id !== p.id || !(top.score <= SELF_RETRIEVAL_MAX_DISTANCE)) {
+    const near = hits.filter((h) => h.score <= SELF_RETRIEVAL_MAX_DISTANCE);
+    const self = near.find((h) => h.id === p.id);
+    const twin = near.find((h) => h.payload && h.payload.text === p.payload.text);
+    if (!self && !twin) {
+      const top = hits[0];
       throw new Error(
         `verification failed: self-retrieval for id ${p.id} got id ${top.id} at distance ${top.score} ` +
-          `(need own id at distance <= ${SELF_RETRIEVAL_MAX_DISTANCE})`,
+          `(need the point itself or an identical-text twin at distance <= ${SELF_RETRIEVAL_MAX_DISTANCE})`,
       );
+    }
+    if (!self && twin) {
+      log(`[verify] id ${p.id} tied with identical-text twin id ${twin.id} at distance ${twin.score} — accepted`);
     }
   }
 
