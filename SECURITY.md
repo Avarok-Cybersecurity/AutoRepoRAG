@@ -46,3 +46,4 @@ Please do **not** open a public issue for security reports.
   (`lattice-version`, a required input) and verified against its published
   SHA-256 checksum before it is executed; it listens on loopback only.
 - Our own CI pins every third-party action by full commit SHA.
+
