@@ -35,7 +35,7 @@ export function readInputs(env) {
     outputDir: getRequiredInput(env, 'output-dir'),
     outputName: getRequiredInput(env, 'output-name'),
     gzip: getBoolInput(env, 'gzip'),
-    endpoint: getRequiredInput(env, 'embedding-endpoint'),
+    endpoint: getInput(env, 'embedding-endpoint'),
     model: getInput(env, 'embedding-model'),
     apiKey: getInput(env, 'embedding-api-key'),
     mock,
