@@ -275,10 +275,12 @@ jobs:
           INPUT_COLLECTION: ${{ env.CORPUS_COLLECTION }}
           INPUT_REQUEST_INTERVAL_MS: ${{ env.CORPUS_REQUEST_INTERVAL_MS }}
           INPUT_GENERATE_WEBSITE_CHAT: 'false'
+        # The runner's default bash is -e; this step wants the exit status.
         run: |
-          set -uo pipefail
+          set +e -uo pipefail
           out="$(node src/main.mjs 2>&1)"
           status=$?
+          set -e
           printf '%s\n' "$out"
           [ "$status" -ne 0 ] || { echo '::error::main.mjs succeeded without embedding-endpoint'; exit 1; }
           grep -F 'input "embedding-endpoint" is required' <<<"$out" \
