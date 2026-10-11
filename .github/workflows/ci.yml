@@ -305,7 +305,7 @@ jobs:
         id: ext
         uses: ./
         with:
-          source-dir: test/fixtures
+          source-dir: .sources/lattice-db
           paths: |
             README.md
             crates/lattice-core/src/**/*.rs
