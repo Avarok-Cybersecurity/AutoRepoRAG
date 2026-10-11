@@ -46,6 +46,12 @@ export const COPY_EN = deepFreeze({
     connectedTag: 'connected',
     connectedNote: 'key stored in this browser only',
     change: 'swap key',
+    swapTag: 'replace key',
+    swapLead: 'Paste the new key and connect it. The current key keeps working until you do.',
+    keep: 'keep current key',
+    forget: 'forget key',
+    forgotten: 'key removed from this browser',
+    undo: 'undo',
   },
   status: {
     idle: 'standby',
@@ -100,6 +106,13 @@ export const COPY_EN = deepFreeze({
     hintNoKey: 'connect your OpenRouter key above to ask',
     fine: 'answers are generated and can be wrong, the source links are real so read them before you trust them',
   },
+  conversation: {
+    label: 'conversation',
+    clear: 'new conversation',
+    cleared: 'conversation cleared',
+    undo: 'undo',
+  },
+  codeLabel: 'code block',
   answerTag: 'answer',
   sourcesHeading: 'source receipts',
   sourcesOne: 'source',
@@ -113,6 +126,11 @@ export const COPY_EN = deepFreeze({
       tag: 'engine fault',
       body: 'The wasm engine failed to start. Usually a one off, a retry brings it right up.',
       retry: 'restart engine',
+    },
+    unavailable: {
+      tag: 'corpus unavailable',
+      body: 'Not a connection problem: the server answered, but the corpus is not published where this site expects it. The site needs a fix.',
+      retry: 'retry',
     },
     manifest: {
       tag: 'manifest unreachable',
@@ -143,7 +161,13 @@ export const COPY_EN = deepFreeze({
       tag: 'daily limit reached',
       body: 'Your OpenRouter key has spent its free model allowance for today. Retrieval still runs locally so the corpus stays loaded and ready.',
       reset: 'The free pool refills at',
+      resetIn: '{h} h {m} min from now',
       paid: 'switch to the paid model and spend my own credits',
+      retry: 'ask again',
+    },
+    network: {
+      tag: 'no connection',
+      body: 'Could not reach OpenRouter. Check your connection, then ask again.',
       retry: 'ask again',
     },
     key: {

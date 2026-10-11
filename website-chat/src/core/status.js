@@ -40,6 +40,17 @@ export function statusText(chat, copy, asking) {
   return copy.status[chat.status] ?? chat.status;
 }
 
+/**
+ * What the screen-reader announcer says: the pill's words without its running
+ * numbers. The pill ticks every 0.1 MB and every indexed batch, and a live
+ * region reading each tick buries everything else; this changes once per
+ * stage (and the ready line, which has no running count, reads in full).
+ */
+export function announceText(chat, copy, asking) {
+  if (asking || chat.status === 'ready') return statusText(chat, copy, asking);
+  return copy.status[chat.status] ?? chat.status;
+}
+
 export function statusTone(chat, asking) {
   if (chat.status === 'error') return 'error';
   if (chat.status === 'ready') return asking ? 'working' : 'ready';

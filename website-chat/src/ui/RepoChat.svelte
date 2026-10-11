@@ -3,70 +3,75 @@
   // "Ask the codebase" — a lab instrument that prints its telemetry onto
   // receipt stock. A modal dialog (backdrop, aria, scroll lock, Escape) with
   // a real focus trap and focus return, since it holds form controls. All
-  // engine state comes from the session (state/session.svelte.js); this
+  // engine state and the conversation come from the session
+  // (state/session.svelte.js, state/conversation.svelte.js), which outlives
+  // this component: closing the dialog unmounts it and loses nothing. This
   // component never fetches.
+  import { tick } from 'svelte';
   import ChatMessage from './ChatMessage.svelte';
   import ErrorCard from './ErrorCard.svelte';
   import KeyRow from './KeyRow.svelte';
   import LatticeIcon from './LatticeIcon.svelte';
   import LoaderPanel from './LoaderPanel.svelte';
-  import { LOADING_STATUSES, shortCommit, statusText, statusTone } from '../core/status.js';
+  import { resetText } from '../core/reset-time.js';
+  import { LOADING_STATUSES, announceText, shortCommit, statusText, statusTone } from '../core/status.js';
   import { fill } from '../core/template.js';
 
   let { session, copy, brand, sourcesOpen, reducedMotion, onclose, onready } = $props();
 
   const chat = $derived(session.chat);
+  const conversation = $derived(session.conversation);
+  const convo = $derived(conversation.convo);
 
   let dialogEl = $state(null);
   let inputEl = $state(null);
   let logEl = $state(null);
-
-  let question = $state('');
-  let messages = $state([]);
-  // Every entry carries a stable id so the streaming card and the settled
-  // card are the SAME keyed node. Without that the list swapped one
-  // component for another at completion, remounting the DOM: the card
-  // blinked, its print animation replayed, and the sources snapped in.
-  let seq = $state(0);
-  let asking = $state(false);
-  let askError = $state(null);
-  let lastQuestion = '';
+  // The key form is open over a stored key ("swap key"); KeyRow owns the form.
+  let swapping = $state(false);
 
   const loading = $derived(LOADING_STATUSES.includes(chat.status) || chat.status === 'idle');
   const ready = $derived(chat.status === 'ready');
   const loadError = $derived(chat.status === 'error' ? chat.error : null);
-  const canAsk = $derived(ready && chat.keyState === 'set' && !asking);
-  const pill = $derived(statusText(chat, copy, asking));
-  const tone = $derived(statusTone(chat, asking));
+  const canAsk = $derived(conversation.canAsk());
+  const pill = $derived(statusText(chat, copy, convo.asking));
+  const announce = $derived(announceText(chat, copy, convo.asking));
+  const tone = $derived(statusTone(chat, convo.asking));
+  const askError = $derived(convo.askError);
 
-  // A spent daily allowance names a real reset time, and the same model
-  // without the ":free" suffix is usually available on credits. Both are
-  // shown only when they actually apply.
-  const resetLabel = $derived(
-    askError?.resetAt ? new Date(askError.resetAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : ''
+  // A spent daily allowance names its reset with the zone and the time left,
+  // and the same model without the ":free" suffix is usually available on
+  // credits. Both are shown only when they actually apply.
+  const quotaReset = $derived(
+    askError?.kind === 'quota' && askError.resetAt ? resetText(askError.resetAt, session.epochMs(), copy, { locale: [], timeZone: undefined }) : ''
   );
   const FREE = ':free';
   const paidModel = $derived(chat.chatModel.endsWith(FREE) ? chat.chatModel.slice(0, -FREE.length) : '');
 
   // The in-flight streamed card takes over from the pending line as soon as
   // the first thinking or answer token lands.
-  const streamLive = $derived(asking && chat.stream && (chat.stream.reasoningText || chat.stream.answerText) ? chat.stream : null);
+  const streamLive = $derived(convo.asking && chat.stream && (chat.stream.reasoningText || chat.stream.answerText) ? chat.stream : null);
 
   // The in-flight card takes the id the finished message will be pushed
   // with, so the keyed each block updates props in place instead of
   // remounting.
-  const rendered = $derived(streamLive ? [...messages, { id: seq, role: 'assistant', live: streamLive }] : messages);
+  const rendered = $derived(streamLive ? [...convo.messages, { id: convo.nextId, role: 'assistant', live: streamLive }] : convo.messages);
 
   const loadEntry = $derived(loadError ? (copy.errors[loadError.kind] ?? copy.errors.generic) : null);
 
   // Scroll lock + initial focus + focus return, and kick the corpus load.
   // ensureReady is idempotent and reports failures through chat.status/error.
+  // While open, focus that lands outside the dialog is brought back in.
   $effect(() => {
     const prev = document.activeElement;
     document.body.style.overflow = 'hidden';
     dialogEl?.focus();
     session.ensureReady();
+    const contain = (e) => {
+      if (dialogEl && e.target instanceof Node && !dialogEl.contains(e.target)) dialogEl.focus();
+    };
+    document.addEventListener('focusin', contain);
     return () => {
+      document.removeEventListener('focusin', contain);
       document.body.style.overflow = '';
       if (prev instanceof HTMLElement) prev.focus();
     };
@@ -81,13 +86,13 @@
   // sources print, we glide instead, which reads as the receipt finishing
   // rather than the pane snapping.
   $effect(() => {
-    void messages.length;
-    void asking;
+    void convo.messages.length;
+    void convo.asking;
     void chat.msgPhase;
     void chat.stream?.reasoningText;
     void chat.stream?.answerText;
     if (!logEl) return;
-    const settling = !streamLive && !asking;
+    const settling = !streamLive && !convo.asking;
     if (settling && !reducedMotion()) {
       logEl.scrollTo({ top: logEl.scrollHeight, behavior: 'smooth' });
     } else {
@@ -101,106 +106,107 @@
     onclose();
   }
 
-  function onDialogKeydown(e) {
-    if (e.key !== 'Tab' || !dialogEl) return;
-    const els = [
+  function focusables() {
+    return [
       ...dialogEl.querySelectorAll('a[href], button:not([disabled]), input:not([disabled]), summary, [tabindex]:not([tabindex="-1"])'),
     ].filter((el) => el.offsetParent !== null);
+  }
+
+  // The trap listens on the window: once focus has fallen to <body> (a
+  // control it sat on was disabled or removed), keys no longer pass through
+  // the dialog, and Tab would walk the page behind it.
+  function onWindowKeydown(e) {
+    if (e.key === 'Escape') {
+      close();
+      return;
+    }
+    if (e.key !== 'Tab' || !dialogEl) return;
+    const els = focusables();
     if (els.length === 0) return;
     const first = els[0];
     const last = els[els.length - 1];
-    if (e.shiftKey && (document.activeElement === first || document.activeElement === dialogEl)) {
+    const active = document.activeElement;
+    if (!dialogEl.contains(active)) {
+      e.preventDefault();
+      (e.shiftKey ? last : first).focus();
+    } else if (e.shiftKey && (active === first || active === dialogEl)) {
       e.preventDefault();
       last.focus();
-    } else if (!e.shiftKey && document.activeElement === last) {
+    } else if (!e.shiftKey && active === last) {
       e.preventDefault();
       first.focus();
     }
   }
 
-  async function runAsk(q, history) {
-    asking = true;
-    askError = null;
-    try {
-      const res = await session.ask(q, history);
-      messages.push({
-        id: seq++,
-        role: 'assistant',
-        text: res.answer,
-        sources: res.sources,
-        reasoning: res.reasoning,
-        reasoningMs: res.reasoningMs,
-      });
-    } catch {
-      const k = chat.error?.kind;
-      askError = {
-        kind: ['rate', 'quota', 'key'].includes(k) ? k : 'generic',
-        // A per-day cap knows when it lifts; the card names that time.
-        resetAt: k === 'quota' ? (chat.error?.resetAt ?? null) : null,
-        // Engine-crafted diagnostics (e.g. the embedding-dim mismatch) are
-        // written for humans — surface them instead of the generic copy.
-        detail: k === 'corpus' ? chat.error?.message : null,
-      };
-    } finally {
-      asking = false;
+  // The control that started an action is about to be disabled or removed
+  // (the ask button, a starter, a fault card's button), which would drop
+  // focus to <body>. A keyboard user lands on the input, ready for the next
+  // question; a pointer or touch user lands on the conversation, so a phone
+  // keyboard does not jump back up over the answer. A click's `detail` is 0
+  // when a key (Enter/Space) produced it.
+  async function settleFocus(e) {
+    await tick();
+    if (e?.detail === 0) inputEl?.focus();
+    else logEl?.focus({ preventScroll: true });
+  }
+
+  let askActivation = null;
+
+  function onSubmit(e) {
+    e.preventDefault();
+    const fromButton = e.submitter && document.activeElement === e.submitter;
+    if (conversation.submit() && fromButton) settleFocus(askActivation);
+  }
+
+  function chipPick(q, e) {
+    if (canAsk) {
+      if (conversation.submit(q)) settleFocus(e);
+    } else {
+      convo.draft = q;
     }
   }
 
-  function submit(text) {
-    const q = (typeof text === 'string' ? text : question).trim();
-    if (!q || !canAsk) return;
-    question = '';
-    lastQuestion = q;
-    const history = messages.map((m) => ({ role: m.role, content: m.text }));
-    messages.push({ id: seq++, role: 'user', text: q });
-    runAsk(q, history);
-  }
-
-  function retryAsk() {
-    if (!lastQuestion || asking) return;
+  function retryAsk(e) {
     if (askError?.kind === 'key') {
-      session.clearKey();
-      askError = null;
+      // A rejected key is replaced through the swap form, which keeps the
+      // stored key until a new one connects.
+      conversation.dismissError();
+      swapping = true;
       return;
     }
-    runAsk(
-      lastQuestion,
-      messages.slice(0, -1).map((m) => ({ role: m.role, content: m.text }))
-    );
+    conversation.retry();
+    settleFocus(e);
   }
 
-  // Spending the visitor's credits is their call, so this only ever runs
-  // from an explicit click on the quota card.
-  function usePaidModel() {
+  function usePaidModel(e) {
     if (!paidModel) return;
-    session.setChatModel(paidModel);
-    askError = null;
-    retryAsk();
+    conversation.retryOnModel(paidModel);
+    settleFocus(e);
   }
 
-  function chipPick(q) {
-    if (canAsk) submit(q);
-    else question = q;
+  async function clearConversation() {
+    conversation.clear();
+    await tick();
+    inputEl?.focus();
+  }
+
+  async function undoClear() {
+    conversation.undoClear();
+    await tick();
+    inputEl?.focus();
+  }
+
+  async function retryLoad() {
+    session.ensureReady();
+    await tick();
+    dialogEl?.focus();
   }
 </script>
 
-<svelte:window
-  onkeydown={(e) => {
-    if (e.key === 'Escape') close();
-  }}
-/>
+<svelte:window onkeydown={onWindowKeydown} />
 
 <div class="cc-backdrop" onclick={close} role="presentation">
-  <div
-    class="cc"
-    role="dialog"
-    aria-modal="true"
-    aria-label={copy.navLabel}
-    tabindex="-1"
-    bind:this={dialogEl}
-    onclick={(e) => e.stopPropagation()}
-    onkeydown={onDialogKeydown}
-  >
+  <div class="cc" role="dialog" aria-modal="true" aria-label={copy.navLabel} tabindex="-1" bind:this={dialogEl} onclick={(e) => e.stopPropagation()}>
     {#if brand.motifSvg}
       <!-- Trusted, site-owned markup (config.brand.motifSvg); never model or visitor input. -->
       <div class="cc-motif" aria-hidden="true">{@html brand.motifSvg}</div>
@@ -211,10 +217,12 @@
         <span class="cc-slabel"><LatticeIcon size={14} />{copy.label}</span>
         <h2 class="cc-title">{copy.title}</h2>
       </div>
-      <p class="cc-status" data-tone={tone} aria-live="polite" title={pill}>
+      <p class="cc-status" data-tone={tone} title={pill}>
         <span class="cc-status-dot" aria-hidden="true"></span>
         <span class="cc-status-text">{pill}</span>
       </p>
+      <!-- What a screen reader hears: each stage once, never the running byte count. -->
+      <p class="cc-sr" role="status">{announce}</p>
       <button type="button" class="cc-close" onclick={close} aria-label={copy.closeLabel}>✕</button>
     </header>
 
@@ -226,15 +234,21 @@
           resetText=""
           paidLabel=""
           onpaid={() => {}}
-          onretry={() => session.ensureReady()}
+          onretry={retryLoad}
         />
       </div>
     {:else if loading}
       <LoaderPanel {chat} {copy} />
     {:else}
-      <div class="cc-log" bind:this={logEl} role="log" aria-live="polite">
+      <div class="cc-log" bind:this={logEl} role="log" aria-live="polite" aria-label={copy.conversation.label} aria-busy={convo.asking} tabindex="-1">
         {#if chat.offline}<p class="cc-offline">{copy.offlineBadge}</p>{/if}
-        {#if messages.length === 0}
+        {#if convo.messages.length === 0}
+          {#if convo.cleared}
+            <p class="cc-cleared" role="status">
+              {copy.conversation.cleared}
+              <button type="button" class="cc-undo" onclick={undoClear}>{copy.conversation.undo}</button>
+            </p>
+          {/if}
           <p class="cc-sub">{copy.sub}</p>
           <div class="cc-boot">
             {#each copy.boot as line}
@@ -248,14 +262,14 @@
           </div>
           <div class="cc-chips">
             {#each copy.starters as starter}
-              <button type="button" class="cc-chip" onclick={() => chipPick(starter)}>{starter}</button>
+              <button type="button" class="cc-chip" onclick={(e) => chipPick(starter, e)}>{starter}</button>
             {/each}
           </div>
         {/if}
         {#each rendered as m (m.id)}
           <ChatMessage message={m.live ? null : m} live={m.live ?? null} {sourcesOpen} {copy} showCorpus={chat.corpora.length > 1} />
         {/each}
-        {#if !streamLive && asking}
+        {#if !streamLive && convo.asking}
           <p class="cc-pending">
             <span class="cc-status-dot" aria-hidden="true"></span>
             {copy.phase[chat.msgPhase] ?? copy.phase.writing}
@@ -266,7 +280,7 @@
           <ErrorCard
             entry={copy.errors[askError.kind]}
             detail={askError.detail}
-            resetText={askError.kind === 'quota' && resetLabel ? `${copy.errors.quota.reset} ${resetLabel}.` : ''}
+            resetText={quotaReset}
             paidLabel={askError.kind === 'quota' && paidModel ? copy.errors.quota.paid : ''}
             onpaid={usePaidModel}
             onretry={retryAsk}
@@ -275,19 +289,13 @@
       </div>
     {/if}
 
-    <KeyRow {session} {copy} onsaved={() => inputEl?.focus()} onswapped={() => (askError = null)} />
+    <KeyRow {session} {copy} {convo} bind:swapping onsaved={() => inputEl?.focus()} />
 
-    <form
-      class="cc-input-row"
-      onsubmit={(e) => {
-        e.preventDefault();
-        submit();
-      }}
-    >
+    <form class="cc-input-row" onsubmit={onSubmit}>
       <span class="cc-prompt" aria-hidden="true">❯</span>
       <input
         class="cc-input"
-        bind:value={question}
+        bind:value={convo.draft}
         bind:this={inputEl}
         placeholder={copy.input.placeholder}
         aria-label={copy.navLabel}
@@ -295,9 +303,13 @@
         autocomplete="off"
         spellcheck="false"
       />
-      <button type="submit" class="cc-ask" disabled={!canAsk || !question.trim()}>{copy.input.ask}</button>
+      <button type="submit" class="cc-ask" disabled={!canAsk || !convo.draft.trim()} onclick={(e) => (askActivation = e)}>{copy.input.ask}</button>
     </form>
     <div class="cc-foot">
+      {#if convo.messages.length > 0 && !convo.asking}
+        <!-- Away from "ask" on purpose; undoable from the notice it leaves. -->
+        <button type="button" class="cc-clear" onclick={clearConversation}>{copy.conversation.clear}</button>
+      {/if}
       <span class="cc-hint" aria-live="polite">
         {#if !ready && !loadError}{copy.input.hintLoading}{:else if chat.keyState === 'missing'}{copy.input.hintNoKey}{/if}
       </span>

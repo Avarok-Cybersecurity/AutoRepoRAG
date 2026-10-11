@@ -23,6 +23,8 @@ export const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export const clock = {
   now: () => performance.now(),
+  // Wall-clock epoch ms, for comparing against server stamps (a quota reset).
+  epochMs: () => Date.now(),
   requestFrame: (cb) => requestAnimationFrame(cb),
   cancelFrame: (id) => cancelAnimationFrame(id),
 };

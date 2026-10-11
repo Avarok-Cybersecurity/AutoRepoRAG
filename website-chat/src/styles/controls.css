@@ -243,6 +243,59 @@
   text-decoration: underline;
 }
 
+/* ---- secondary text actions: undo, keep/forget a key, new conversation ---- */
+/* Quiet underlined text buttons, each at least 24px tall (WCAG 2.2). */
+.cc-undo,
+.cc-key-undo,
+.cc-key-keep,
+.cc-key-forget,
+.cc-clear {
+  min-height: 24px;
+  background: none;
+  border: 0;
+  padding: 0.15rem 0;
+  cursor: pointer;
+  font-family: var(--arr-font-mono);
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--arr-accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.cc-undo:hover,
+.cc-key-undo:hover,
+.cc-key-keep:hover,
+.cc-key-forget:hover,
+.cc-clear:hover {
+  color: var(--arr-accent-deep);
+}
+/* The key form's top line: the tag, and (over a stored key) the way back and
+   the way to forget, kept a full line above "connect". */
+.cc-key-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.4rem 1rem;
+}
+.cc-key-back {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+.cc-key-forgotten {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-top: 0.35rem;
+  font-size: 0.72rem;
+  color: var(--arr-text3);
+}
+.cc-foot .cc-clear {
+  margin-right: auto;
+}
+
 /* ---- input row + fine print ------------------------------------------------ */
 .cc-input-row {
   display: flex;

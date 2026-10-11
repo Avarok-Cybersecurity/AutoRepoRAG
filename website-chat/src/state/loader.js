@@ -11,7 +11,7 @@
 // (or loading-cached -> indexing), so several corpora repeat the walk.
 // =============================================================================
 
-import { classifyStreamError } from '../core/ask-errors.js';
+import { classifyStreamError, corpusFaultKind, manifestFaultKind } from '../core/ask-errors.js';
 import { createLineSplitter, parseHeader, parsePoint } from '../core/jsonl.js';
 import { sharedEmbedding, validateMeta } from '../core/manifest.js';
 
@@ -169,7 +169,8 @@ export function createLoader({ chat, corpora, upsertBatch, ports }) {
   /**
    * The validated manifest of `corpus`. When it is unreachable or invalid,
    * fall back to the newest cached copy of that corpus (the offline path);
-   * with no cached copy the load fails as 'manifest'.
+   * with no cached copy the load fails as 'manifest' (no response: the
+   * connection) or 'unavailable' (the server's error, or an invalid meta).
    */
   async function resolveManifest(token, corpus) {
     let raw;
@@ -180,14 +181,14 @@ export function createLoader({ chat, corpora, upsertBatch, ports }) {
       throwIfAborted(token);
       const cached = await cache.newestOffline(corpus.id);
       throwIfAborted(token);
-      if (!cached) throw fail('manifest', err);
+      if (!cached) throw fail(manifestFaultKind(err), err);
       let meta;
       try {
         meta = validateMeta(cached.rawMeta, corpus.id);
       } catch {
-        throw fail('manifest', err);
+        throw fail(manifestFaultKind(err), err);
       }
-      if (meta.commitSha !== cached.sha) throw fail('manifest', err);
+      if (meta.commitSha !== cached.sha) throw fail(manifestFaultKind(err), err);
       chat.offline = true;
       return { corpus, raw: cached.rawMeta, meta, file: cached.file };
     }
@@ -222,7 +223,7 @@ export function createLoader({ chat, corpora, upsertBatch, ports }) {
     } catch (err) {
       throwIfAborted(token);
       if (err?.name === 'AbortError') throw err;
-      throw fail('corpus', err);
+      throw fail(corpusFaultKind(err), err);
     }
 
     // Determinate progress: Content-Length when the server provides it for

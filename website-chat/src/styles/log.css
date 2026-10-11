@@ -21,6 +21,19 @@
   gap: 1rem;
   background-image: repeating-linear-gradient(transparent, transparent 27px, var(--arr-rule) 27px, var(--arr-rule) 28px);
 }
+/* Focus lands here after a pointer Ask; the ring sits inside the scroller. */
+.cc-log:focus-visible {
+  outline-offset: -3px;
+}
+/* What "new conversation" leaves behind: one line and its undo. */
+.cc-cleared {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  font-size: 0.74rem;
+  color: var(--arr-text3);
+}
 .cc-sub {
   font-family: var(--arr-font-sans);
   font-size: 0.88rem;
@@ -303,7 +316,10 @@
   border-top: 1.5px dashed var(--arr-border-strong);
   padding-top: 0.55rem;
 }
+/* WCAG 2.2 target size: the toggle is at least 24px tall at any font size. */
 .cm-sources summary {
+  min-height: 24px;
+  line-height: 24px;
   cursor: pointer;
   font-family: var(--arr-font-mono);
   font-size: 0.66rem;

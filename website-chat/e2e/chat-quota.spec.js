@@ -14,7 +14,6 @@ import {
   rerankHandler,
   dailyQuota429Handler,
   freeQuotaPaidOkHandler,
-  QUOTA_RESET_AT,
 } from './fixtures/openrouter.js';
 import { META, routeCorpus, openChat, waitReady, withKey, askQuestion } from './fixtures/chat-helpers.js';
 
@@ -31,7 +30,9 @@ test.describe('@quota daily allowance', () => {
     await routeCorpus(context);
     await routeRetrieval(context);
     const attempts = [];
-    await context.route(OR_CHAT, dailyQuota429Handler({ log: attempts }));
+    // The live API stamps the next reset; 3 h 12 min ahead of now here.
+    const resetAt = Date.now() + (3 * 60 + 12) * 60_000;
+    await context.route(OR_CHAT, dailyQuota429Handler({ log: attempts, resetAt }));
 
     await withKey(page);
     await page.goto('/');
@@ -48,11 +49,16 @@ test.describe('@quota daily allowance', () => {
     // The momentary-rate copy must never appear here: waiting seconds is a lie.
     await expect(card.locator('.cc-error-body')).not.toContainText('catching their breath');
 
-    const expected = new Date(QUOTA_RESET_AT).toLocaleTimeString([], {
+    // The reset names its time zone and how long is left, so a visitor in
+    // another zone (or reading at 11 PM about an 8 AM reset) is not misled.
+    const expected = new Date(resetAt).toLocaleTimeString([], {
       hour: 'numeric',
       minute: '2-digit',
+      timeZoneName: 'short',
     });
-    await expect(card.locator('.cc-error-reset')).toContainText(expected);
+    const reset = card.locator('.cc-error-reset');
+    await expect(reset).toContainText(expected);
+    await expect(reset).toContainText(/3 h 1[12] min from now/);
 
     expect(attempts.length).toBe(1); // no backoff loop on a per-day cap
   });

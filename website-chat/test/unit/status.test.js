@@ -5,7 +5,7 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 
 import { COPY_EN } from '../../src/copy-en.js';
-import { loaderStages, progressPct, statusText } from '../../src/core/status.js';
+import { announceText, loaderStages, progressPct, statusText } from '../../src/core/status.js';
 
 const progress = (o = {}) => ({ loadedBytes: 0, totalBytes: 0, indexed: 0, totalPoints: 0, ...o });
 const corpus = (id, commit, chunks) => ({ id, commit, chunks, dim: 8, files: 3, repo: 'o/r' });
@@ -35,5 +35,20 @@ describe('loader', () => {
     assert.deepEqual(loaderStages(chat, COPY_EN).map((s) => s.state), ['done', 'done', 'active', 'pending']);
     assert.equal(progressPct(chat), 25);
     assert.equal(progressPct({ status: 'manifest', progress: progress() }), null);
+  });
+});
+
+describe('announceText', () => {
+  it('says the stage, never the running numbers', () => {
+    const p = progress({ loadedBytes: 1048576, totalBytes: 3 * 1048576, indexed: 5, totalPoints: 20 });
+    assert.equal(announceText({ status: 'downloading', corpora: [], progress: p }, COPY_EN, false), 'downloading corpus');
+    assert.equal(announceText({ status: 'indexing', corpora: [], progress: p }, COPY_EN, false), 'indexing');
+  });
+
+  it('ready, a fault and the asking phase read as the pill does', () => {
+    const chat = { status: 'ready', corpora: [corpus('code', 'a3f9c1e7b2d8', 20)], offline: false, progress: progress(), msgPhase: 'thinking' };
+    assert.equal(announceText(chat, COPY_EN, false), statusText(chat, COPY_EN, false));
+    assert.equal(announceText(chat, COPY_EN, true), 'reasoning');
+    assert.equal(announceText({ status: 'error', corpora: [], progress: progress() }, COPY_EN, false), 'fault');
   });
 });

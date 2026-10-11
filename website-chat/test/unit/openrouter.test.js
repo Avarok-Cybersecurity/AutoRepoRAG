@@ -7,7 +7,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { createOpenRouter, OpenRouterError } from '../../src/adapters/openrouter.js';
+import { createOpenRouter, OpenRouterError, OpenRouterUnreachable } from '../../src/adapters/openrouter.js';
 
 const PROVIDER = { apiUrl: 'https://or.test/api/v1', appTitle: 'T', referer: 'https://site.test', maxAttempts: 3, retryBaseMs: 700 };
 
@@ -134,6 +134,22 @@ describe('retry policy', () => {
     assert.equal(e.resetAt, 1786924800000);
     assert.equal(calls.length, 1);
     assert.deepEqual(sleeps, []);
+  });
+
+  it('a request that never reaches OpenRouter is retried, then names itself unreachable', async () => {
+    const { or, calls, sleeps } = harness([() => Promise.reject(new TypeError('Failed to fetch'))]);
+    const e = await caught(or.getEmbeddings(['q'], 'k', 'm'));
+    assert.ok(e instanceof OpenRouterUnreachable);
+    assert.equal(e.network, true);
+    assert.equal(e.transient, true);
+    assert.match(e.message, /could not reach OpenRouter: Failed to fetch/);
+    assert.equal(calls.length, 3);
+    assert.deepEqual(sleeps, [700, 1400]);
+
+    const c = harness([() => Promise.reject(new TypeError('Failed to fetch'))]);
+    const ce = await caught(c.or.chat([{ role: 'user', content: 'q' }], 'sys', 'k', { onDelta: () => {}, model: 'm' }));
+    assert.ok(ce instanceof OpenRouterUnreachable);
+    assert.equal(c.calls.length, 3);
   });
 
   it('a 401 is not transient', async () => {

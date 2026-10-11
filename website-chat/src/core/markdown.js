@@ -3,7 +3,9 @@
 // markdown.js — escape-first mini markdown renderer for assistant answers.
 // XSS-safe by construction: ALL input text is HTML-escaped before any markup
 // is generated, and the only attributes ever emitted are a fixed rel/target
-// pair and an https?-validated href. Pure function — no DOM, no state.
+// pair, an https?-validated href, a fence's language class, and the fixed
+// tabindex/role plus the escaped site-copy aria-label that make a code block
+// a keyboard-reachable scroll region. Pure function — no DOM, no state.
 //
 // Supported: fenced code blocks, inline code, **bold**, [text](https?://…)
 // links, unordered/ordered lists, paragraphs, and [n] citations rendered as
@@ -62,10 +64,15 @@ function renderList(lines, ordered) {
 /**
  * Render markdown `src` to an HTML string.
  * @param {string} src
+ * @param {string} codeLabel  accessible name of each code block (config.copy.codeLabel)
  * @returns {string}
  */
-export function renderMarkdown(src) {
+export function renderMarkdown(src, codeLabel) {
+  if (typeof codeLabel !== 'string' || codeLabel.trim() === '') throw new Error('renderMarkdown: codeLabel must be a non-empty string');
   if (typeof src !== 'string' || src.length === 0) return '';
+  // A wide line makes the block scroll sideways; tabindex lets a keyboard
+  // reach it (and scroll it with the arrows), the role and label name it.
+  const preOpen = `<pre class="cc-fence" tabindex="0" role="region" aria-label="${escapeHtml(codeLabel)}">`;
   const lines = src.replace(/\r\n?/g, '\n').split('\n');
   const html = [];
   let block = [];
@@ -94,7 +101,7 @@ export function renderMarkdown(src) {
       }
       // (An unterminated fence swallows to EOF — matches common renderers.)
       const cls = lang ? ` class="language-${lang}"` : '';
-      html.push(`<pre class="cc-fence"><code${cls}>${escapeHtml(code.join('\n'))}</code></pre>`);
+      html.push(`${preOpen}<code${cls}>${escapeHtml(code.join('\n'))}</code></pre>`);
       continue;
     }
     if (line.trim() === '') {
