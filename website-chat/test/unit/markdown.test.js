@@ -14,6 +14,10 @@ import assert from 'node:assert/strict';
 
 import { renderMarkdown } from '../../src/core/markdown.js';
 
+// The code-block label the UI passes from config.copy.codeLabel.
+const LABEL = 'code block';
+const md = (src) => renderMarkdown(src, LABEL);
+
 // Every tag the documented feature set can produce. Anything else reaching the
 // DOM is a breakout, so the set is closed and the helper fails on a newcomer.
 const ALLOWED = new Set(['p', 'br', 'a', 'strong', 'code', 'pre', 'ol', 'ul', 'li', 'sup']);
@@ -30,7 +34,7 @@ function liveMarkup(html) {
 }
 
 function expectInert(src) {
-  const { rogueTags, handlers, foreignHref } = liveMarkup(renderMarkdown(src));
+  const { rogueTags, handlers, foreignHref } = liveMarkup(md(src));
   assert.deepEqual(rogueTags, []);
   assert.equal(handlers, false);
   assert.equal(foreignHref, false);
@@ -67,11 +71,11 @@ test('a link cannot smuggle a scheme or break out of its own href', () => {
 // capture is interpolated into markup rather than escaped.
 test('a fence language cannot open a second attribute', () => {
   expectInert('```js" onload="alert(1)\nbody\n```');
-  assert.ok(renderMarkdown('```js\nx\n```').includes('<code class="language-js">'));
+  assert.ok(md('```js\nx\n```').includes('<code class="language-js">'));
 });
 
 test('a javascript: URL is left as text even when it looks like a link', () => {
-  const html = renderMarkdown('[click](javascript:alert(1))');
+  const html = md('[click](javascript:alert(1))');
   assert.ok(!html.includes('<a '));
   assert.ok(html.includes('javascript:alert(1)'));
 });
@@ -79,25 +83,25 @@ test('a javascript: URL is left as text even when it looks like a link', () => {
 // Correctness of the documented features — a renderer that escaped everything
 // into oblivion would pass the tests above and be useless.
 test('the documented markup still renders', () => {
-  assert.equal(renderMarkdown('**bold**'), '<p><strong>bold</strong></p>');
-  assert.equal(renderMarkdown('`code`'), '<p><code>code</code></p>');
-  assert.equal(renderMarkdown('- a\n- b'), '<ul><li>a</li><li>b</li></ul>');
-  assert.equal(renderMarkdown('1. a\n2. b'), '<ol><li>a</li><li>b</li></ol>');
-  assert.ok(renderMarkdown('See [1] there').includes('<sup class="cc-cite">[1]</sup>'));
-  const link = renderMarkdown('[t](https://a.com)');
+  assert.equal(md('**bold**'), '<p><strong>bold</strong></p>');
+  assert.equal(md('`code`'), '<p><code>code</code></p>');
+  assert.equal(md('- a\n- b'), '<ul><li>a</li><li>b</li></ul>');
+  assert.equal(md('1. a\n2. b'), '<ol><li>a</li><li>b</li></ol>');
+  assert.ok(md('See [1] there').includes('<sup class="cc-cite">[1]</sup>'));
+  const link = md('[t](https://a.com)');
   assert.ok(link.includes('href="https://a.com"'));
   assert.ok(link.includes('rel="noopener nofollow"'));
 });
 
 test('an ampersand in a URL survives as one character, not a double escape', () => {
-  assert.ok(renderMarkdown('[t](https://a.com/?a=1&b=2)').includes('href="https://a.com/?a=1&amp;b=2"'));
+  assert.ok(md('[t](https://a.com/?a=1&b=2)').includes('href="https://a.com/?a=1&amp;b=2"'));
 });
 
 test('empty and non-string input render nothing rather than throwing', () => {
-  assert.equal(renderMarkdown(''), '');
-  assert.equal(renderMarkdown(undefined), '');
-  assert.equal(renderMarkdown(null), '');
-  assert.equal(renderMarkdown(42), '');
+  assert.equal(md(''), '');
+  assert.equal(md(undefined), '');
+  assert.equal(md(null), '');
+  assert.equal(md(42), '');
 });
 
 // The header claims "the only attributes ever emitted are a fixed rel/target
@@ -121,7 +125,7 @@ test('every emitted anchor carries exactly href, rel and target', () => {
     '[x](https://e.com/**a) more **b',
     '[x](https://e.com/a[0]b*c)',
   ]) {
-    for (const attrs of anchorAttrs(renderMarkdown(src))) {
+    for (const attrs of anchorAttrs(md(src))) {
       assert.deepEqual(attrs, ['href', 'rel', 'target']);
     }
   }
@@ -131,8 +135,28 @@ test('a URL carrying the rewrite characters produces no anchor at all', () => {
   // Left as text, which is the safe direction: a link that does not render is
   // visibly wrong, an anchor with its rel silently stripped is not.
   for (const src of ['[x](https://e.com/[1]z)', '[x](https://e.com/**a)']) {
-    assert.ok(!renderMarkdown(src).includes('<a '));
+    assert.ok(!md(src).includes('<a '));
   }
   // And the ordinary case still links.
-  assert.ok(renderMarkdown('[t](https://a.com/ok)').includes('<a href="https://a.com/ok"'));
+  assert.ok(md('[t](https://a.com/ok)').includes('<a href="https://a.com/ok"'));
+});
+
+// A fenced block scrolls sideways when a line is wider than the card, so a
+// keyboard user must be able to focus it (axe scrollable-region-focusable);
+// focusable means it also needs a name. The name comes from copy, so it is
+// escaped like everything else.
+test('a code fence is a focusable, named region', () => {
+  const html = md('```rust\nlet x = 1;\n```');
+  assert.match(html, /^<pre class="cc-fence" tabindex="0" role="region" aria-label="code block"><code class="language-rust">let x = 1;<\/code><\/pre>$/);
+});
+
+test('the code label is escaped into its attribute', () => {
+  const html = renderMarkdown('```\nx\n```', 'a "quoted" <label>');
+  assert.match(html, /aria-label="a &quot;quoted&quot; &lt;label&gt;"/);
+  assert.equal(liveMarkup(html).rogueTags.length, 0);
+});
+
+test('the code label is required (no implicit default)', () => {
+  assert.throws(() => renderMarkdown('```\nx\n```'), /codeLabel/);
+  assert.throws(() => renderMarkdown('plain', ''), /codeLabel/);
 });

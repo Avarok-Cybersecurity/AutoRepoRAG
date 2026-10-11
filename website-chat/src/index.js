@@ -11,7 +11,8 @@
 // This file is the composition root: it validates the config, binds every
 // adapter to it, and mounts the UI. Nothing below it reads a global constant.
 // A session is reused while the page lives, so a closed-then-reopened chat
-// with the same corpora and provider is instantly ready again.
+// with the same corpora and provider is instantly ready again, with its
+// conversation and drafts intact.
 // =============================================================================
 
 import { mount, unmount } from 'svelte';

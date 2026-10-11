@@ -62,7 +62,7 @@
       </div>
     {/if}
     {#if answer || !live}
-      <div class="cm-body">{@html renderMarkdown(answer)}</div>
+      <div class="cm-body">{@html renderMarkdown(answer, copy.codeLabel)}</div>
     {/if}
     {#if message?.sources?.length}
       <details class="cm-sources" open={sourcesOpen}>

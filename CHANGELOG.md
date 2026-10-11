@@ -7,6 +7,52 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.1.1] - 2026-10-11
+
+Website chat fixes from the UX review of its first integration (metrale.ai).
+The config contract is unchanged except for new `COPY_EN` keys (listed
+below): a site that spreads `COPY_EN` or merges its overrides over it gets
+them automatically; a site that replaces a whole copy object must add them.
+
+### Fixed
+- **"swap key" no longer deletes the stored OpenRouter key.** It opens a
+  replacement form over the stored key, which keeps working until a new key
+  is connected. "keep current key" goes back; "forget key" removes the key and
+  leaves an undo (the removed key is held in memory only). Both sit on the
+  form's top line, away from "connect". A rejected key's "swap key" opens the
+  same form instead of deleting the key.
+- **Closing the dialog keeps the conversation, the unsent question and a
+  half-typed key** for the rest of the page session; an answer that lands
+  while the dialog is closed is there on reopen. "new conversation" clears
+  the log explicitly, with an undo until the next question.
+- **Focus stays in the dialog.** A keyboard Ask (or starter) keeps focus on
+  the input, a pointer Ask moves it to the conversation, Tab from a focus that
+  fell to the page lands on the dialog's first or last control, and focus
+  moved behind the dialog comes back. The conversation is labelled and is
+  `aria-busy` while an answer streams.
+- **Sources toggle** is at least 24×24 CSS px (WCAG 2.2 target size).
+- **Code blocks** are focusable, named scroll regions (`tabindex="0"`,
+  `role="region"`, `aria-label` from `copy.codeLabel`), so a wide line can be
+  scrolled from the keyboard.
+- **The status announcer** says each loading stage once; the pill keeps its
+  running MB and chunk counts but is no longer a live region.
+- **Fault cards name the culprit:** a request that never reached OpenRouter is
+  "no connection" (and is retried like a transient error), only a transient
+  refusal is "rate limited", any other refusal is the generic card; a corpus
+  manifest or file the server answered for with an error (or an invalid
+  manifest) is "corpus unavailable", not the visitor's connection.
+- **The daily-limit reset** names its time zone and the time left.
+- **The connected key row** no longer wraps a word per line at 390px.
+
+### Added
+- `COPY_EN` keys: `key.swapTag`, `key.swapLead`, `key.keep`, `key.forget`,
+  `key.forgotten`, `key.undo`, `conversation.{label,clear,cleared,undo}`,
+  `codeLabel`, `errors.network`, `errors.unavailable`, `errors.quota.resetIn`.
+- Browser suite: `@axe-core/playwright` checks the open dialog for serious or
+  critical violations (WCAG 2.2 AA + best practice) in desktop Chromium and at
+  390×844; new specs for keys, session persistence and focus, faults and
+  accessibility.
+
 ## [2.1.0] - 2026-10-11
 
 ### Added

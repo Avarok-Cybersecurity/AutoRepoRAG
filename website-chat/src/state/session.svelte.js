@@ -2,12 +2,15 @@
 // =============================================================================
 // session.svelte.js — one chat session (Svelte 5 runes): the reactive state
 // the UI renders, the visitor's key and answer-model choice, the corpus load
-// (state/loader.js) and asking. Built from a validated config and its ports
-// at openRepoChat() time; nothing here reads a module-level constant.
+// (state/loader.js), asking, and the conversation (state/conversation.svelte.js).
+// Built from a validated config and its ports at openRepoChat() time; nothing
+// here reads a module-level constant. A session outlives the dialog, so
+// everything here survives a close and reopen within the page.
 // =============================================================================
 
 import { classifyAskError } from '../core/ask-errors.js';
 import { askCorpora } from '../core/rag.js';
+import { createConversation } from './conversation.svelte.js';
 import { createLoader } from './loader.js';
 
 /**
@@ -24,8 +27,9 @@ export function createSession(config, ports) {
     corpora: [], // [{ id, collection, commit, repo, files, chunks, dim, generatedAt }] once ready
     embedding: null, // { model, dim } shared by every corpus, once ready
     offline: false, // serving a cached corpus because its manifest fetch failed
-    error: null, // { kind: 'wasm'|'manifest'|'corpus'|'decompress'|'config'|'rate'|'quota'|'key', message, resetAt? }
+    error: null, // { kind: 'wasm'|'manifest'|'unavailable'|'corpus'|'decompress'|'config'|'network'|'rate'|'quota'|'key'|'generic', message, resetAt? }
     keyState: keys.getKey() ? 'set' : 'missing',
+    keyForgotten: false, // forgetKey() ran and undoForgetKey() can still bring the key back
     chatModel: keys.getChatModel() || defaultChatModel, // answer model, overridable by the visitor
     msgPhase: null, // null|'retrieving'|'reranking'|'thinking'|'writing'
     // In-flight streamed message, non-null only while ask() runs. The UI
@@ -57,18 +61,35 @@ export function createSession(config, ports) {
   }
 
   // --- key management --------------------------------------------------------
+  // A key is a secret the visitor typed, so no single click loses it: a new
+  // key replaces the old one only once it is connected (setKey), and
+  // forgetKey() keeps the removed key in memory (never in storage) until
+  // undoForgetKey() puts it back or a new key is connected.
+
+  let forgotten = null;
 
   function setKey(key) {
     const trimmed = String(key ?? '').trim();
     if (!trimmed) return;
     keys.setKey(trimmed);
+    forgotten = null;
+    chat.keyForgotten = false;
     chat.keyState = 'set';
     if (chat.error?.kind === 'key') chat.error = null;
   }
 
-  function clearKey() {
+  function forgetKey() {
+    const current = keys.getKey();
+    if (!current) return;
+    forgotten = current;
     keys.clearKey();
+    chat.keyForgotten = true;
     chat.keyState = 'missing';
+  }
+
+  function undoForgetKey() {
+    if (forgotten === null) return;
+    setKey(forgotten);
   }
 
   // Chat-time errors must not knock the machine out of 'ready' — the corpus
@@ -87,7 +108,8 @@ export function createSession(config, ports) {
    * retrieving -> reranking -> thinking -> writing. Resolves
    * { answer, sources, reasoning, reasoningMs } (see core/rag.js). Rejects on
    * failure after recording a chat.error of kind 'key' (missing/rejected
-   * key), 'quota', 'corpus' or 'rate' (transient upstream saturation).
+   * key), 'quota', 'corpus', 'network' (OpenRouter unreachable), 'rate'
+   * (transient upstream saturation) or 'generic'.
    */
   async function ask(question, history) {
     if (chat.status !== 'ready') {
@@ -160,7 +182,7 @@ export function createSession(config, ports) {
         },
         onDelta,
       });
-      if (['rate', 'quota', 'key'].includes(chat.error?.kind)) chat.error = null;
+      if (['network', 'rate', 'quota', 'key', 'generic'].includes(chat.error?.kind)) chat.error = null;
       const reasoningMs = chat.stream?.reasoningMs || (thinkStart ? clock.now() - thinkStart : 0);
       return { ...result, reasoning: reasoningAll, reasoningMs };
     } catch (err) {
@@ -174,15 +196,19 @@ export function createSession(config, ports) {
     }
   }
 
+  const conversation = createConversation({ chat, ask, setChatModel });
+
   return {
     chat,
+    conversation,
+    epochMs: clock.epochMs,
     defaultChatModel,
     ensureReady: loader.ensureReady,
     abortLoad: loader.abortLoad,
     setKey,
-    clearKey,
+    forgetKey,
+    undoForgetKey,
     setChatModel,
     resetChatModel,
-    ask,
   };
 }

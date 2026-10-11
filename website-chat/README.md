@@ -25,8 +25,10 @@ warmRepoChat(config);               // links the stylesheet, prefetches the wasm
 ```
 
 A closed chat reopened with the same corpora and provider on the same page is
-ready instantly (the session is kept). `config.onReady` / `config.onClose`
-are optional callbacks.
+ready instantly, with its conversation, the unsent question and any half-typed
+key still there (the session is kept; an answer that lands while the dialog
+is closed is there on reopen). `config.onReady` / `config.onClose` are
+optional callbacks.
 
 ## Config
 
@@ -73,6 +75,20 @@ fail to load with an error naming both.
   unit test keeps it that way.
 - **Phone:** at ≤860px the dialog is a full-bleed sheet with the input
   pinned, and source receipts start collapsed.
+- **Closing is not starting over.** Only "new conversation" clears the log,
+  and it leaves an undo until the next question.
+- **The key is never lost to one click.** "swap key" opens a replacement form
+  over the stored key, which keeps working until a new key is connected;
+  "keep current key" goes back, and "forget key" removes it with an undo. The
+  back and forget actions sit a full line above "connect".
+- **Focus stays in the dialog.** A keyboard Ask keeps focus on the input; a
+  pointer Ask moves it to the conversation (so a phone keyboard does not jump
+  up over the answer); Tab from a focus that fell to the page comes back in.
+  Screen readers hear each loading stage once, not every progress tick.
+- **Faults name the culprit:** "no connection" when OpenRouter could not be
+  reached, "rate limited" only for a transient refusal, "corpus unavailable"
+  when the server answered but the corpus is not published, and a daily-limit
+  reset with its time zone and the time left.
 
 ## Developing
 

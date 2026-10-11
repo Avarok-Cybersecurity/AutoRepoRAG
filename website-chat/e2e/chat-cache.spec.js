@@ -147,7 +147,10 @@ test('closing mid-download aborts cleanly and leaves no partial corpus', async (
   }
 });
 
-test('corpus 404 shows the download-failed card and retry recovers', async ({ page, context }) => {
+// A 404 is the site's publishing, not a broken transfer: it gets the
+// "corpus unavailable" card (see chat-faults.spec.js), and retry still works
+// once the file is there.
+test('corpus 404 shows the corpus-unavailable card and retry recovers', async ({ page, context }) => {
   const hits = { meta: 0, gz: 0 };
   await context.route(CODE.metaUrl, (route) => route.fulfill({ status: 200, headers: JSON_HEADERS, body: JSON.stringify(META) }));
   await context.route(CODE.gzUrl, (route) => route.fulfill({ status: 404, headers: JSON_HEADERS, body: 'not found' }));
@@ -156,7 +159,7 @@ test('corpus 404 shows the download-failed card and retry recovers', async ({ pa
 
   const card = page.locator('.cc-error[role="alert"]');
   await expect(card).toBeVisible({ timeout: 20_000 });
-  await expect(card.locator('.cc-error-tag')).toHaveText('download failed');
+  await expect(card.locator('.cc-error-tag')).toHaveText('corpus unavailable');
   expect(await opfsFiles(page)).toEqual([]);
 
   await restoreFastCorpus(context, hits);

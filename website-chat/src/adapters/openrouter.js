@@ -21,6 +21,19 @@ export class OpenRouterError extends Error {
   }
 }
 
+/**
+ * The request never got a response: offline, DNS, a dropped connection, or a
+ * CORS refusal. Transient (a blink is worth a retry), and the UI says it is the
+ * connection rather than a busy provider.
+ */
+export class OpenRouterUnreachable extends OpenRouterError {
+  constructor(cause) {
+    super(`could not reach OpenRouter: ${cause?.message ?? cause}`, true);
+    this.name = 'OpenRouterUnreachable';
+    this.network = true;
+  }
+}
+
 // OpenRouter returns 429 for two very different situations. A saturated
 // provider clears in seconds, so it is worth retrying. A per-day free-model
 // allowance does not clear until its reset stamp, so retrying only burns time
@@ -209,7 +222,12 @@ export function createOpenRouter(provider, io) {
     throw lastError;
   }
 
-  const post = (path, apiKey, body) => io.fetch(`${apiUrl}${path}`, { method: 'POST', headers: headersFor(apiKey), body });
+  // fetch rejects only when no response came back at all; an HTTP error
+  // status resolves and is judged by parseResponse.
+  const post = (path, apiKey, body) =>
+    io.fetch(`${apiUrl}${path}`, { method: 'POST', headers: headersFor(apiKey), body }).catch((err) => {
+      throw new OpenRouterUnreachable(err);
+    });
 
   /**
    * Embed a batch of texts in a single request. Results are returned in the
