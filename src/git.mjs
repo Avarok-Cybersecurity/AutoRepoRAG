@@ -9,7 +9,9 @@
 
 import { execFileSync } from 'node:child_process';
 import { realpathSync } from 'node:fs';
-import { isAbsolute, join, normalize, sep } from 'node:path';
+import { join } from 'node:path';
+
+import { relativeInside } from './paths.mjs';
 
 const NAME = /^[A-Za-z0-9_.-]+$/;
 const FULL_SHA = /^[0-9a-f]{40}$/;
@@ -17,14 +19,7 @@ const FULL_SHA = /^[0-9a-f]{40}$/;
 /** Join a workspace-relative source-dir onto the workspace; '' means the workspace itself. */
 export function resolveSourceRoot(workspace, sourceDir) {
   if (sourceDir === '') return workspace;
-  if (isAbsolute(sourceDir)) {
-    throw new Error(`source-dir must be relative to the workspace, got absolute path ${JSON.stringify(sourceDir)}`);
-  }
-  const rel = normalize(sourceDir);
-  if (rel === '..' || rel.startsWith(`..${sep}`)) {
-    throw new Error(`source-dir must stay inside the workspace, got ${JSON.stringify(sourceDir)}`);
-  }
-  return join(workspace, rel);
+  return join(workspace, relativeInside(sourceDir, 'source-dir', 'workspace'));
 }
 
 /** Strip any user:token@ so a remote URL can appear in an error message. */

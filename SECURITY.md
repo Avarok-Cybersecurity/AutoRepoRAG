@@ -35,6 +35,13 @@ Please do **not** open a public issue for security reports.
 ## Supply-chain posture
 
 - Zero npm dependencies — the action runs vendored, plain Node ESM sources.
+- The website-chat library is prebuilt and committed (`website-chat/dist/`);
+  CI rebuilds it from a lockfile and fails if the committed bytes differ. The
+  LatticeDB wasm pair it ships is downloaded from the pinned `lattice-version`
+  release and verified against that release's `lattice-db-wasm.sha256`.
+- In the browser, the visitor's OpenRouter key lives only in their own
+  `localStorage` and is sent only to the configured `provider.apiUrl`.
+  Model output is rendered by an escape-first markdown renderer.
 - The `lattice-server` binary is downloaded from a **pinned release tag**
   (`lattice-version`, a required input) and verified against its published
   SHA-256 checksum before it is executed; it listens on loopback only.

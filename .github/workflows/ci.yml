@@ -67,7 +67,7 @@ jobs:
       - name: Float formatter parity (Rust serde_json byte fixtures)
         run: node test/float-parity.mjs
 
-      - name: Unit tests (input contract vs action.yml, git source derivation)
+      - name: Unit tests (input contract vs action.yml, git source derivation, checksums, website-chat emitter)
         run: node --test test/unit/*.test.mjs
 
       - name: actionlint (pinned + checksum-verified)
@@ -90,7 +90,9 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - name: Run action (mock, run A)
+      # Run A also emits the website chat, so every e2e matrix leg proves
+      # the bundle the action writes on that runner.
+      - name: Run action (mock, run A, with the website chat)
         id: run-a
         uses: ./
         with:
@@ -106,7 +108,8 @@ jobs:
           lattice-version: ${{ env.CORPUS_LATTICE_VERSION }}
           collection: ${{ env.CORPUS_COLLECTION }}
           request-interval-ms: ${{ env.CORPUS_REQUEST_INTERVAL_MS }}
-          generate-website-chat: 'false'
+          generate-website-chat: 'true'
+          website-chat-dir: chat
 
       - name: Run action (mock, run B — determinism twin)
         id: run-b
@@ -132,6 +135,16 @@ jobs:
           CORPUS_GZ_FILE: ${{ steps.run-a.outputs.corpus-gz-file }}
           METADATA_FILE: ${{ steps.run-a.outputs.metadata-file }}
         run: node test/schema-check.mjs "$CORPUS_FILE" "$CORPUS_GZ_FILE" "$METADATA_FILE"
+
+      - name: Website chat bundle check (files, manifest, release wasm)
+        env:
+          CHAT_DIR: ${{ steps.run-a.outputs.website-chat-dir }}
+        run: |
+          set -euo pipefail
+          [ "$CHAT_DIR" = "$GITHUB_WORKSPACE/out-a/chat" ] || { echo "::error::website-chat-dir output is '$CHAT_DIR'"; exit 1; }
+          curl -fsSL -o wasm.sha256 \
+            "https://github.com/Avarok-Cybersecurity/lattice-db/releases/download/${CORPUS_LATTICE_VERSION}/lattice-db-wasm.sha256"
+          node test/website-chat-check.mjs "$CHAT_DIR" "$CORPUS_LATTICE_VERSION" wasm.sha256
 
       - name: Determinism check (byte-identical corpora)
         env:
@@ -336,6 +349,64 @@ jobs:
         run: |
           node test/source-dir-check.mjs "$CORPUS_FILE" "$METADATA_FILE" \
             "$LATTICE_DB_REPO" "$LATTICE_DB_SHA" .sources/lattice-db
+
+  website-chat:
+    name: Website chat (build, unit, browser)
+    if: github.event_name != 'schedule'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: website-chat
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: website-chat/package-lock.json
+
+      - name: Install (lockfile only)
+        run: npm ci --no-audit --no-fund
+
+      # dist/ is committed: what the action and the release ship must be what
+      # this source builds. A stale or extra file fails here.
+      - name: Build, and fail on a stale committed dist
+        run: |
+          set -euo pipefail
+          npm run build
+          git diff --exit-code -- dist
+          untracked="$(git status --porcelain --untracked-files=all -- dist)"
+          [ -z "$untracked" ] || { echo "::error::dist differs from the build:"; echo "$untracked"; exit 1; }
+
+      - name: Build again, byte for byte
+        run: |
+          set -euo pipefail
+          sha256sum dist/* > "$RUNNER_TEMP/first.sha256"
+          npm run build
+          sha256sum -c "$RUNNER_TEMP/first.sha256"
+
+      - name: Unit tests (config contract, core, adapters, theme and source rules)
+        run: npm run test:unit
+
+      # The browser suite runs against the bundle the ACTION's emitter writes
+      # (dist + the sha256-verified wasm pair + manifest), not against src/.
+      - name: Emit the bundle the browser suite serves
+        run: node ../scripts/emit-website-chat.mjs "$CORPUS_LATTICE_VERSION" e2e/.site/repo-chat "$RUNNER_TEMP/lattice-wasm"
+
+      - name: Install Chromium for Playwright
+        run: npx playwright install --with-deps chromium
+
+      - name: Browser suite (desktop chromium + 390x844 phone)
+        run: npx playwright test
+
+      - name: Keep the Playwright traces on failure
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: website-chat-playwright
+          path: website-chat/test-results/
+          retention-days: 7
 
   drift-canary:
     name: Drift canary (newest lattice-db)

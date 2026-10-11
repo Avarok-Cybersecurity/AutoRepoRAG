@@ -2,8 +2,8 @@
 //
 // Contract: fetches lattice-db-linux-{x64|arm64}.tar.gz plus its checksum
 // file from the pinned lattice-db GitHub release (or releases/latest/download
-// when version is "latest"), verifies the archive with
-// `grep <stable-name> checksums | sha256sum -c`, caches the verified pair per
+// when version is "latest"), verifies the archive against its checksum line
+// (src/checksum.mjs), caches the verified pair per
 // version tag and skips the download while the cache still verifies, extracts
 // the single `lattice-server` binary, asserts the loopback port is free,
 // spawns the server on 127.0.0.1:port with a throwaway LATTICE_DATA_DIR,
@@ -16,6 +16,7 @@ import { spawn, execFileSync } from 'node:child_process';
 import { mkdirSync, writeFileSync, openSync, closeSync, readFileSync, existsSync, rmSync } from 'node:fs';
 import { connect } from 'node:net';
 import { join } from 'node:path';
+import { verifyChecksum } from './checksum.mjs';
 import { LatticeClient } from './lattice.mjs';
 import { log, sleep } from './util.mjs';
 
@@ -34,36 +35,19 @@ export function detectArch() {
 }
 
 /** Download URL for a release asset; "latest" uses the floating-latest form. */
-function releaseUrl(version, file) {
+export function releaseUrl(version, file) {
   return version === 'latest'
     ? `${RELEASE_BASE}/latest/download/${file}`
     : `${RELEASE_BASE}/download/${version}/${file}`;
 }
 
-async function download(url, dest) {
+/** Fetch `url` (following redirects) into `dest`; any non-2xx fails. */
+export async function download(url, dest) {
   const res = await fetch(url, { redirect: 'follow' });
   if (!res.ok) {
     throw new Error(`download failed: HTTP ${res.status} for ${url}`);
   }
   writeFileSync(dest, Buffer.from(await res.arrayBuffer()));
-}
-
-/**
- * `grep <asset> <checksums> | sha256sum -c` in dir. Returns { ok, detail };
- * sha256sum -c fails on mismatch and on an empty grep (no formatted lines).
- */
-function checksumResult(dir, asset, checksums) {
-  try {
-    const out = execFileSync('bash', ['-ec', `grep -F -- "${asset}" "${checksums}" | sha256sum -c -`], {
-      cwd: dir,
-      encoding: 'utf8',
-      stdio: ['ignore', 'pipe', 'pipe'],
-    });
-    return { ok: true, detail: out.trim() };
-  } catch (e) {
-    const detail = `${e.stdout ?? ''}${e.stderr ?? ''}`.trim() || e.message;
-    return { ok: false, detail };
-  }
 }
 
 /**
@@ -107,7 +91,7 @@ export async function provisionServer({ version, port, workDir, pidFile }) {
   // "latest" floats between runs, so only pinned tags are cache-eligible.
   let verified = false;
   if (version !== 'latest' && existsSync(join(dir, asset)) && existsSync(join(dir, checksums))) {
-    const cached = checksumResult(dir, asset, checksums);
+    const cached = verifyChecksum(join(dir, asset), join(dir, checksums), asset);
     if (cached.ok) {
       log(`[server] using cached ${asset} (${version}, sha256 re-verified)`);
       verified = true;
@@ -119,7 +103,7 @@ export async function provisionServer({ version, port, workDir, pidFile }) {
     log(`[server] downloading ${asset} (${version})`);
     await download(releaseUrl(version, asset), join(dir, asset));
     await download(releaseUrl(version, checksums), join(dir, checksums));
-    const fresh = checksumResult(dir, asset, checksums);
+    const fresh = verifyChecksum(join(dir, asset), join(dir, checksums), asset);
     if (!fresh.ok) {
       throw new Error(`sha256 verification failed for ${asset} (${version}): ${fresh.detail}`);
     }

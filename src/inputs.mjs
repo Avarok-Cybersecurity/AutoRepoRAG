@@ -7,9 +7,8 @@
 // required here; plumbing inputs get their default from action.yml and are
 // still read as required, so a bare-env invocation must state them too.
 
+import { relativeInside } from './paths.mjs';
 import { getBoolInput, getInput, getIntInput, getRequiredInput } from './util.mjs';
-
-export const WEBSITE_CHAT_UNAVAILABLE = 'website chat library not available in this version';
 
 function lines(raw) {
   return raw.split('\n').map((s) => s.trim()).filter(Boolean);
@@ -71,7 +70,11 @@ export function readInputs(env) {
     inputs.generateWebsiteChat, 'generate-website-chat is "true"',
   );
   if (inputs.generateWebsiteChat) {
-    throw new Error(`generate-website-chat is "true": ${WEBSITE_CHAT_UNAVAILABLE}`);
+    const rel = relativeInside(inputs.websiteChatDir, 'website-chat-dir', 'output-dir');
+    if (rel === '.') {
+      throw new Error('website-chat-dir must name a subdirectory of the output-dir, not the output-dir itself');
+    }
+    inputs.websiteChatDir = rel;
   }
   return inputs;
 }
