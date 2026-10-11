@@ -37,20 +37,29 @@ jobs:
 
       - name: Build corpus (incremental against the published one)
         id: rag
-        uses: Avarok-Cybersecurity/AutoRepoRAG@v1
+        uses: Avarok-Cybersecurity/AutoRepoRAG@v2
         with:
           paths: |
             crates/**/*.rs
             crates/**/*.cu
             kernels/**/*.cu
             kernels/**/*.cuh
-          collection: coderag
           output-name: coderag
+          embedding-endpoint: https://openrouter.ai/api/v1
           embedding-model: nvidia/llama-nemotron-embed-vl-1b-v2:free
           embedding-api-key: ${{ secrets.OPENROUTER_API_KEY }}
+          collection: coderag
+          chunk-lines: '90'
+          chunk-overlap: '15'
+          max-chunk-bytes: '16384'
+          vector-precision: '6'
+          request-interval-ms: '2500'
+          lattice-version: v0.3.3
+          generate-website-chat: 'false'
           # First run 404s here -> the action warns and does a full embed.
           # Every later run only embeds chunks whose content changed.
           previous-corpus-url: https://OWNER.github.io/REPO/coderag/coderag.jsonl.gz
+          previous-corpus-meta-url: https://OWNER.github.io/REPO/coderag/coderag.meta.json
 
       - name: Upload CI copy (30-day artifact)
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1

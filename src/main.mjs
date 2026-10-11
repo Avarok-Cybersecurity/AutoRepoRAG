@@ -1,7 +1,8 @@
 // main.mjs — AutoRepoRAG orchestrator.
 //
 // Contract: reads composite-action inputs from INPUT_* env vars, provisions a
-// pinned local lattice-server, chunks the repository, reuses vectors from a
+// pinned local lattice-server, chunks the repository (or the external
+// checkout named by source-dir), reuses vectors from a
 // previous corpus (chunk_hash match, guarded by dim + model), embeds the rest
 // (mock or live), quantizes every vector (significant digits + fround) BEFORE
 // both upsert and export, loads + verifies the collection (points_count,
@@ -9,18 +10,18 @@
 // 1e-6), writes the lattice-jsonl corpus + gzip -9 twin + meta.json, and
 // emits GITHUB_OUTPUT / GITHUB_STEP_SUMMARY. Exits nonzero on any failure.
 
-import { execFileSync } from 'node:child_process';
 import { randomBytes } from 'node:crypto';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { isAbsolute, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import {
-  addMask, appendGithubFile, getBoolInput, getInput, getIntInput, getRequiredInput,
-  gunzip, gzip9, isGzipBytes, log, quantizeVector, sha256Hex, warning,
+  addMask, appendGithubFile, getInput, gunzip, gzip9, isGzipBytes, log, quantizeVector, sha256Hex, warning,
 } from './util.mjs';
 import { buildChunks } from './chunk.mjs';
 import { embedTexts, mockEmbedding } from './embed.mjs';
+import { gitContext } from './git.mjs';
+import { readInputs } from './inputs.mjs';
 import { parseCorpus, serializeCorpus, FORMAT, FORMAT_VERSION } from './jsonl.mjs';
 import { LatticeClient } from './lattice.mjs';
 import { provisionServer } from './server.mjs';
@@ -31,61 +32,6 @@ const SELF_RETRIEVAL_MAX_DISTANCE = 1e-3; // score is a cosine DISTANCE: 0 = ide
 const SCROLL_TOLERANCE = 1e-6;
 const SCROLL_SAMPLE_LIMIT = 256;
 
-function readInputs() {
-  const apiKey = getInput('embedding-api-key');
-  addMask(apiKey); // before any other output
-
-  const mock = getBoolInput('mock-embeddings');
-  const inputs = {
-    paths: getRequiredInput('paths').split('\n').map((s) => s.trim()).filter(Boolean),
-    exclude: getInput('exclude').split('\n').map((s) => s.trim()).filter(Boolean),
-    // Fallbacks mirror action.yml defaults (these inputs are required: false
-    // there); getRequiredInput would wrongly reject a bare-env invocation.
-    collection: getInput('collection') || 'coderag',
-    outputDir: getInput('output-dir') || 'autoreporag-out',
-    outputName: getInput('output-name') || 'coderag',
-    gzip: getBoolInput('gzip'),
-    endpoint: getInput('embedding-endpoint'),
-    model: getInput('embedding-model'),
-    apiKey,
-    mock,
-    mockDim: getIntInput('mock-dim', { min: 1 }),
-    chunkLines: getIntInput('chunk-lines', { min: 2 }),
-    chunkOverlap: getIntInput('chunk-overlap', { min: 0 }),
-    maxChunkBytes: getIntInput('max-chunk-bytes', { min: 64 }),
-    batchSize: getIntInput('batch-size', { min: 1 }),
-    requestIntervalMs: getIntInput('request-interval-ms', { min: 0 }),
-    maxRetries: getIntInput('max-retries', { min: 1 }),
-    maxChunks: getIntInput('max-chunks', { min: 0 }),
-    vectorPrecision: getIntInput('vector-precision', { min: 1 }),
-    previousCorpusUrl: getInput('previous-corpus-url'),
-    latticeVersion: getInput('lattice-version') || 'v0.3.3',
-    latticePort: getIntInput('lattice-port', { min: 1, max: 65535 }),
-  };
-  if (inputs.chunkOverlap >= inputs.chunkLines) {
-    throw new Error(`chunk-overlap (${inputs.chunkOverlap}) must be < chunk-lines (${inputs.chunkLines})`);
-  }
-  if (!inputs.mock) {
-    if (!inputs.endpoint) throw new Error('embedding-endpoint is required when mock-embeddings is false');
-    if (!inputs.model) throw new Error('embedding-model is required when mock-embeddings is false');
-    if (!inputs.apiKey) throw new Error('embedding-api-key is required when mock-embeddings is false');
-  }
-  return inputs;
-}
-
-function gitContext(root) {
-  const run = (args) => execFileSync('git', ['-C', root, ...args], { encoding: 'utf8' }).trim();
-  const commitSha = process.env.GITHUB_SHA || run(['rev-parse', 'HEAD']);
-  let repo = process.env.GITHUB_REPOSITORY;
-  if (!repo) {
-    const remote = run(['config', '--get', 'remote.origin.url']);
-    const m = /[:/]([^/:]+\/[^/]+?)(?:\.git)?$/.exec(remote);
-    if (!m) throw new Error(`cannot derive "owner/repo" from remote ${remote}; set GITHUB_REPOSITORY`);
-    repo = m[1];
-  }
-  return { commitSha, repo };
-}
-
 async function fetchBytes(url) {
   if (url.startsWith('file://')) return readFileSync(fileURLToPath(url));
   if (/^https?:\/\//.test(url)) {
@@ -93,16 +39,16 @@ async function fetchBytes(url) {
     if (!res.ok) throw new Error(`HTTP ${res.status} for ${url}`);
     return Buffer.from(await res.arrayBuffer());
   }
-  throw new Error(`previous-corpus-url must be file:// or http(s)://, got ${url}`);
+  throw new Error(`previous corpus URLs must be file:// or http(s)://, got ${url}`);
 }
 
 /**
- * Load a previous corpus for incremental reuse. The sibling meta.json
- * (<url stripped of .gz/.jsonl> + .meta.json) declares which model produced
- * it; without a verifiable model match the cache is discarded (a corpus of
- * foreign vectors mixed into fresh ones would verify and still be garbage).
+ * Load a previous corpus for incremental reuse. Its meta.json (the explicit
+ * previous-corpus-meta-url) declares which model produced it; without a
+ * verifiable model match the cache is discarded (a corpus of foreign vectors
+ * mixed into fresh ones would verify and still be garbage).
  */
-async function loadPreviousCorpus(url, expectedModel, expectedDim) {
+async function loadPreviousCorpus(url, metaUrl, expectedModel, expectedDim) {
   let dump;
   let metaModel = null;
   try {
@@ -113,7 +59,6 @@ async function loadPreviousCorpus(url, expectedModel, expectedDim) {
     warning(`previous-corpus-url unusable, doing a full embed: ${e.message}`);
     return null;
   }
-  const metaUrl = `${url.replace(/\.gz$/, '').replace(/\.jsonl$/, '')}.meta.json`;
   try {
     metaModel = JSON.parse((await fetchBytes(metaUrl)).toString('utf8')).model ?? null;
   } catch (e) {
@@ -274,12 +219,14 @@ function setOutput(name, value) {
 }
 
 async function run() {
-  const inputs = readInputs();
-  const root = process.env.GITHUB_WORKSPACE || process.cwd();
-  const { commitSha, repo } = gitContext(root);
-  const outputDir = isAbsolute(inputs.outputDir) ? inputs.outputDir : resolve(root, inputs.outputDir);
+  addMask(getInput(process.env, 'embedding-api-key')); // before any other output
+  const inputs = readInputs(process.env);
+  const workspace = process.env.GITHUB_WORKSPACE || process.cwd();
+  const { root, commitSha, repo } = gitContext(workspace, inputs.sourceDir, process.env);
+  if (inputs.sourceDir) log(`[source] ${inputs.sourceDir}: ${repo} @ ${commitSha}`);
+  const outputDir = isAbsolute(inputs.outputDir) ? inputs.outputDir : resolve(workspace, inputs.outputDir);
   mkdirSync(outputDir, { recursive: true });
-  const tempBase = process.env.RUNNER_TEMP || resolve(root, '.work');
+  const tempBase = process.env.RUNNER_TEMP || resolve(workspace, '.work');
   mkdirSync(tempBase, { recursive: true });
   const pidFile = join(tempBase, 'autoreporag-lattice.pid');
 
@@ -311,7 +258,9 @@ async function run() {
 
     const expectedModel = inputs.mock ? 'mock' : inputs.model;
     const prev = inputs.previousCorpusUrl
-      ? await loadPreviousCorpus(inputs.previousCorpusUrl, expectedModel, inputs.mock ? inputs.mockDim : null)
+      ? await loadPreviousCorpus(
+        inputs.previousCorpusUrl, inputs.previousCorpusMetaUrl, expectedModel, inputs.mock ? inputs.mockDim : null,
+      )
       : null;
 
     const { points, dim, embedded, reused } = await resolveVectors(chunks, inputs, prev);

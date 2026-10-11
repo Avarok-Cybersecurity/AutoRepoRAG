@@ -6,7 +6,8 @@ Only the most recent release line receives security fixes.
 
 | Version | Supported |
 | ------- | --------- |
-| 0.1.x (moving `v1` once released) | ✅ |
+| 2.x (moving `v2`) | ✅ |
+| 1.x (`v1`, frozen) | ❌ |
 | anything older | ❌ |
 
 ## Reporting a Vulnerability
@@ -35,6 +36,6 @@ Please do **not** open a public issue for security reports.
 
 - Zero npm dependencies — the action runs vendored, plain Node ESM sources.
 - The `lattice-server` binary is downloaded from a **pinned release tag**
-  (`lattice-version`, default `v0.3.3`) and verified against its published
+  (`lattice-version`, a required input) and verified against its published
   SHA-256 checksum before it is executed; it listens on loopback only.
 - Our own CI pins every third-party action by full commit SHA.

@@ -11,36 +11,16 @@ concurrency:
   group: release-${{ github.ref }}
 
 jobs:
-  # The exact tagged tree must pass the mock e2e before anything is published.
-  e2e-mock:
-    name: E2E mock on tag (${{ matrix.os }})
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, ubuntu-24.04-arm]
-    runs-on: ${{ matrix.os }}
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-
-      - name: Run action (mock)
-        id: run
-        uses: ./
-        with:
-          paths: |
-            test/fixtures/**
-          mock-embeddings: 'true'
-          output-dir: release-out
-
-      - name: Schema check
-        env:
-          CORPUS_FILE: ${{ steps.run.outputs.corpus-file }}
-          CORPUS_GZ_FILE: ${{ steps.run.outputs.corpus-gz-file }}
-          METADATA_FILE: ${{ steps.run.outputs.metadata-file }}
-        run: node test/schema-check.mjs "$CORPUS_FILE" "$CORPUS_GZ_FILE" "$METADATA_FILE"
+  # The exact tagged tree must pass the full CI (lint, unit tests, every e2e
+  # job) before anything is published. Reusing ci.yml keeps one definition of
+  # the inputs those runs state.
+  ci:
+    name: CI on tag
+    uses: ./.github/workflows/ci.yml
 
   release:
     name: Create GitHub Release
-    needs: e2e-mock
+    needs: ci
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -77,13 +57,27 @@ jobs:
             --title "AutoRepoRAG $TAG" \
             --notes-file notes.md
 
-      # Consumers pin `uses: Avarok-Cybersecurity/AutoRepoRAG@v1`; every
-      # v1.x.y release moves that major tag to the released commit.
-      - name: Move major tag v1
-        if: startsWith(github.ref_name, 'v1.')
+      # Consumers pin `uses: Avarok-Cybersecurity/AutoRepoRAG@v<major>`; a
+      # release moves its major tag (v2.3.1 -> v2) to the released commit, but
+      # only when it is the newest release of that major (a v2.0.5 patch cut
+      # after v2.1.0 must not drag v2 backwards). 0.x has no moving tag.
+      - name: Move major tag
+        env:
+          TAG: ${{ github.ref_name }}
         run: |
           set -euo pipefail
+          major="${TAG%%.*}"
+          if [ "$major" = v0 ]; then
+            echo "pre-1.0 release: no moving major tag"
+            exit 0
+          fi
+          newest="$(git ls-remote --tags --refs origin \
+            | sed 's|.*refs/tags/||' | grep -E "^${major}\.[0-9]+\.[0-9]+\$" | sort -V | tail -n 1)"
+          if [ "$newest" != "$TAG" ]; then
+            echo "$TAG is not the newest ${major} release ($newest is); leaving ${major} alone"
+            exit 0
+          fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git tag -f v1 "$GITHUB_SHA"
-          git push --force origin v1
+          git tag -f "$major" "$GITHUB_SHA"
+          git push --force origin "refs/tags/${major}"
