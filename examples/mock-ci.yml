@@ -20,12 +20,23 @@ jobs:
 
       - name: Build mock corpus
         id: rag
-        uses: Avarok-Cybersecurity/AutoRepoRAG@v1
+        uses: Avarok-Cybersecurity/AutoRepoRAG@v2
         with:
           paths: |
             src/**/*.rs
           mock-embeddings: 'true'
           mock-dim: '256'
+          # Mock mode still states every corpus-shaping input: the dry run
+          # must chunk exactly like the real publish does.
+          embedding-endpoint: https://openrouter.ai/api/v1
+          collection: coderag
+          chunk-lines: '90'
+          chunk-overlap: '15'
+          max-chunk-bytes: '16384'
+          vector-precision: '6'
+          request-interval-ms: '2500'
+          lattice-version: v0.3.3
+          generate-website-chat: 'false'
 
       - name: Report
         env:

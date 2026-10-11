@@ -51,11 +51,12 @@ function buildEnv({ outDir, runnerTemp, githubOutput, port }) {
   const inputs = {
     paths: 'src/**/*.rs\nkernels/**',
     exclude: '',
+    'source-dir': '',
     collection: 'coderag',
     'output-dir': outDir,
     'output-name': 'coderag',
     gzip: 'true',
-    'embedding-endpoint': '',
+    'embedding-endpoint': 'https://openrouter.ai/api/v1',
     'embedding-model': '',
     'embedding-api-key': '',
     'mock-embeddings': 'true',
@@ -69,8 +70,11 @@ function buildEnv({ outDir, runnerTemp, githubOutput, port }) {
     'max-chunks': '0',
     'vector-precision': '6',
     'previous-corpus-url': '',
+    'previous-corpus-meta-url': '',
     'lattice-version': LATTICE_VERSION,
     'lattice-port': String(port),
+    'generate-website-chat': 'false',
+    'website-chat-dir': '',
   };
   for (const [name, value] of Object.entries(inputs)) {
     env[`INPUT_${name.replace(/-/g, '_').toUpperCase()}`] = value;

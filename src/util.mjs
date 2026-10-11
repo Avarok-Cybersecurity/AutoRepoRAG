@@ -205,27 +205,32 @@ export function inputEnvName(name) {
   return `INPUT_${name.replace(/-/g, '_').toUpperCase()}`;
 }
 
-/** Read a composite-action input mapped to INPUT_* by action.yml. Trimmed; '' when unset. */
-export function getInput(name) {
-  const v = process.env[inputEnvName(name)];
+/**
+ * Read a composite-action input from an INPUT_* environment map (action.yml
+ * maps every input to one). Trimmed; '' when unset. The map is a parameter so
+ * input parsing stays pure: callers pass process.env, tests pass a literal.
+ */
+export function getInput(env, name) {
+  const v = env[inputEnvName(name)];
   return v === undefined ? '' : v.trim();
 }
 
-export function getRequiredInput(name) {
-  const v = getInput(name);
+export function getRequiredInput(env, name) {
+  const v = getInput(env, name);
   if (!v) throw new Error(`input "${name}" is required (env ${inputEnvName(name)} is empty)`);
   return v;
 }
 
-export function getBoolInput(name) {
-  const v = getInput(name).toLowerCase();
+export function getBoolInput(env, name) {
+  const raw = getRequiredInput(env, name);
+  const v = raw.toLowerCase();
   if (v === 'true') return true;
   if (v === 'false') return false;
-  throw new Error(`input "${name}" must be "true" or "false", got ${JSON.stringify(getInput(name))}`);
+  throw new Error(`input "${name}" must be "true" or "false", got ${JSON.stringify(raw)}`);
 }
 
-export function getIntInput(name, { min, max }) {
-  const raw = getInput(name);
+export function getIntInput(env, name, { min, max }) {
+  const raw = getRequiredInput(env, name);
   if (!/^-?\d+$/.test(raw)) {
     throw new Error(`input "${name}" must be a base-10 integer, got ${JSON.stringify(raw)}`);
   }

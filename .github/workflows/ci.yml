@@ -5,6 +5,8 @@ on:
     branches: [main]
   pull_request:
   workflow_dispatch:
+  # release.yml runs this whole workflow against the exact tagged tree.
+  workflow_call:
   schedule:
     # Weekly drift canary against the newest lattice-db release.
     - cron: '17 5 * * 1'
@@ -21,6 +23,19 @@ env:
   # Pinned lint toolchain (verified before execution).
   ACTIONLINT_VERSION: 1.7.12
   ACTIONLINT_SHA256: 8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8
+  # The corpus-shaping inputs every run below states (v2 gives them no
+  # default). Values equal v1's old defaults, so v1 corpora stay comparable.
+  CORPUS_EMBEDDING_ENDPOINT: https://openrouter.ai/api/v1
+  CORPUS_CHUNK_LINES: '90'
+  CORPUS_CHUNK_OVERLAP: '15'
+  CORPUS_MAX_CHUNK_BYTES: '16384'
+  CORPUS_VECTOR_PRECISION: '6'
+  CORPUS_LATTICE_VERSION: v0.3.3
+  CORPUS_COLLECTION: coderag
+  CORPUS_REQUEST_INTERVAL_MS: '2500'
+  # External source for the source-dir job: lattice-db v0.3.3, pinned by sha.
+  LATTICE_DB_REPO: Avarok-Cybersecurity/lattice-db
+  LATTICE_DB_SHA: a1a407515e8765ce93db9870ee4c076fc3de459a
 
 jobs:
   lint:
@@ -52,6 +67,9 @@ jobs:
       - name: Float formatter parity (Rust serde_json byte fixtures)
         run: node test/float-parity.mjs
 
+      - name: Unit tests (input contract vs action.yml, git source derivation)
+        run: node --test test/unit/*.test.mjs
+
       - name: actionlint (pinned + checksum-verified)
         run: |
           set -euo pipefail
@@ -80,6 +98,15 @@ jobs:
             test/fixtures/**
           mock-embeddings: 'true'
           output-dir: out-a
+          embedding-endpoint: ${{ env.CORPUS_EMBEDDING_ENDPOINT }}
+          chunk-lines: ${{ env.CORPUS_CHUNK_LINES }}
+          chunk-overlap: ${{ env.CORPUS_CHUNK_OVERLAP }}
+          max-chunk-bytes: ${{ env.CORPUS_MAX_CHUNK_BYTES }}
+          vector-precision: ${{ env.CORPUS_VECTOR_PRECISION }}
+          lattice-version: ${{ env.CORPUS_LATTICE_VERSION }}
+          collection: ${{ env.CORPUS_COLLECTION }}
+          request-interval-ms: ${{ env.CORPUS_REQUEST_INTERVAL_MS }}
+          generate-website-chat: 'false'
 
       - name: Run action (mock, run B — determinism twin)
         id: run-b
@@ -89,6 +116,15 @@ jobs:
             test/fixtures/**
           mock-embeddings: 'true'
           output-dir: out-b
+          embedding-endpoint: ${{ env.CORPUS_EMBEDDING_ENDPOINT }}
+          chunk-lines: ${{ env.CORPUS_CHUNK_LINES }}
+          chunk-overlap: ${{ env.CORPUS_CHUNK_OVERLAP }}
+          max-chunk-bytes: ${{ env.CORPUS_MAX_CHUNK_BYTES }}
+          vector-precision: ${{ env.CORPUS_VECTOR_PRECISION }}
+          lattice-version: ${{ env.CORPUS_LATTICE_VERSION }}
+          collection: ${{ env.CORPUS_COLLECTION }}
+          request-interval-ms: ${{ env.CORPUS_REQUEST_INTERVAL_MS }}
+          generate-website-chat: 'false'
 
       - name: Schema check (lattice-jsonl v1 invariants)
         env:
@@ -125,6 +161,15 @@ jobs:
             test/fixtures/**
           mock-embeddings: 'true'
           output-dir: seed-out
+          embedding-endpoint: ${{ env.CORPUS_EMBEDDING_ENDPOINT }}
+          chunk-lines: ${{ env.CORPUS_CHUNK_LINES }}
+          chunk-overlap: ${{ env.CORPUS_CHUNK_OVERLAP }}
+          max-chunk-bytes: ${{ env.CORPUS_MAX_CHUNK_BYTES }}
+          vector-precision: ${{ env.CORPUS_VECTOR_PRECISION }}
+          lattice-version: ${{ env.CORPUS_LATTICE_VERSION }}
+          collection: ${{ env.CORPUS_COLLECTION }}
+          request-interval-ms: ${{ env.CORPUS_REQUEST_INTERVAL_MS }}
+          generate-website-chat: 'false'
 
       - name: Keep seed corpus as artifact
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -141,7 +186,17 @@ jobs:
             test/fixtures/**
           mock-embeddings: 'true'
           output-dir: incr-out
+          embedding-endpoint: ${{ env.CORPUS_EMBEDDING_ENDPOINT }}
+          chunk-lines: ${{ env.CORPUS_CHUNK_LINES }}
+          chunk-overlap: ${{ env.CORPUS_CHUNK_OVERLAP }}
+          max-chunk-bytes: ${{ env.CORPUS_MAX_CHUNK_BYTES }}
+          vector-precision: ${{ env.CORPUS_VECTOR_PRECISION }}
+          lattice-version: ${{ env.CORPUS_LATTICE_VERSION }}
+          collection: ${{ env.CORPUS_COLLECTION }}
+          request-interval-ms: ${{ env.CORPUS_REQUEST_INTERVAL_MS }}
+          generate-website-chat: 'false'
           previous-corpus-url: file://${{ github.workspace }}/seed-out/coderag.jsonl.gz
+          previous-corpus-meta-url: file://${{ github.workspace }}/seed-out/coderag.meta.json
 
       - name: Assert full reuse
         env:
@@ -156,6 +211,129 @@ jobs:
           [ "$EMBEDDED" -eq 0 ]
           [ "$REUSED" -eq "$POINTS" ]
           [ "$SEED_SHA" = "$INCR_SHA" ]
+
+  required-input:
+    name: Missing required input fails
+    if: github.event_name != 'schedule'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # Every required input but embedding-endpoint. GitHub hands an omitted
+      # input to a composite action as '', so '' is what "missing" looks like
+      # to the action; it is written out because actionlint (rightly) rejects
+      # a call that omits a required input of a local action.
+      - name: Run action without embedding-endpoint (must fail)
+        id: missing
+        continue-on-error: true
+        uses: ./
+        with:
+          paths: |
+            test/fixtures/**
+          mock-embeddings: 'true'
+          output-dir: missing-out
+          embedding-endpoint: ''
+          chunk-lines: ${{ env.CORPUS_CHUNK_LINES }}
+          chunk-overlap: ${{ env.CORPUS_CHUNK_OVERLAP }}
+          max-chunk-bytes: ${{ env.CORPUS_MAX_CHUNK_BYTES }}
+          vector-precision: ${{ env.CORPUS_VECTOR_PRECISION }}
+          lattice-version: ${{ env.CORPUS_LATTICE_VERSION }}
+          collection: ${{ env.CORPUS_COLLECTION }}
+          request-interval-ms: ${{ env.CORPUS_REQUEST_INTERVAL_MS }}
+          generate-website-chat: 'false'
+
+      - name: Assert the action failed and wrote no corpus
+        env:
+          OUTCOME: ${{ steps.missing.outcome }}
+          CORPUS_FILE: ${{ steps.missing.outputs.corpus-file }}
+        run: |
+          set -euo pipefail
+          echo "outcome=$OUTCOME corpus-file='$CORPUS_FILE'"
+          [ "$OUTCOME" = failure ]
+          [ -z "$CORPUS_FILE" ]
+          [ ! -e missing-out/coderag.jsonl ]
+
+      # The step above cannot expose its log, so re-run the entrypoint with
+      # the same inputs (embedding-endpoint unset) and check the message.
+      - name: Assert the failure names the input
+        env:
+          INPUT_PATHS: test/fixtures/**
+          INPUT_MOCK_EMBEDDINGS: 'true'
+          INPUT_OUTPUT_DIR: missing-out
+          INPUT_OUTPUT_NAME: coderag
+          INPUT_GZIP: 'true'
+          INPUT_MOCK_DIM: '256'
+          INPUT_BATCH_SIZE: '32'
+          INPUT_MAX_RETRIES: '3'
+          INPUT_MAX_CHUNKS: '0'
+          INPUT_LATTICE_PORT: '6334'
+          INPUT_CHUNK_LINES: ${{ env.CORPUS_CHUNK_LINES }}
+          INPUT_CHUNK_OVERLAP: ${{ env.CORPUS_CHUNK_OVERLAP }}
+          INPUT_MAX_CHUNK_BYTES: ${{ env.CORPUS_MAX_CHUNK_BYTES }}
+          INPUT_VECTOR_PRECISION: ${{ env.CORPUS_VECTOR_PRECISION }}
+          INPUT_LATTICE_VERSION: ${{ env.CORPUS_LATTICE_VERSION }}
+          INPUT_COLLECTION: ${{ env.CORPUS_COLLECTION }}
+          INPUT_REQUEST_INTERVAL_MS: ${{ env.CORPUS_REQUEST_INTERVAL_MS }}
+          INPUT_GENERATE_WEBSITE_CHAT: 'false'
+        run: |
+          set -uo pipefail
+          out="$(node src/main.mjs 2>&1)"
+          status=$?
+          printf '%s\n' "$out"
+          [ "$status" -ne 0 ] || { echo '::error::main.mjs succeeded without embedding-endpoint'; exit 1; }
+          grep -F 'input "embedding-endpoint" is required' <<<"$out" \
+            || { echo '::error::failure did not name embedding-endpoint'; exit 1; }
+
+  source-dir:
+    name: E2E source-dir (external checkout)
+    if: github.event_name != 'schedule'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Check out lattice-db at the pinned sha
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: ${{ env.LATTICE_DB_REPO }}
+          ref: ${{ env.LATTICE_DB_SHA }}
+          path: .sources/lattice-db
+          persist-credentials: false
+
+      - name: Run action on the external checkout (mock)
+        id: ext
+        uses: ./
+        with:
+          source-dir: .sources/lattice-db
+          paths: |
+            README.md
+            crates/lattice-core/src/**/*.rs
+          mock-embeddings: 'true'
+          output-dir: ext-out
+          output-name: lattice-db
+          embedding-endpoint: ${{ env.CORPUS_EMBEDDING_ENDPOINT }}
+          chunk-lines: ${{ env.CORPUS_CHUNK_LINES }}
+          chunk-overlap: ${{ env.CORPUS_CHUNK_OVERLAP }}
+          max-chunk-bytes: ${{ env.CORPUS_MAX_CHUNK_BYTES }}
+          vector-precision: ${{ env.CORPUS_VECTOR_PRECISION }}
+          lattice-version: ${{ env.CORPUS_LATTICE_VERSION }}
+          collection: ${{ env.CORPUS_COLLECTION }}
+          request-interval-ms: ${{ env.CORPUS_REQUEST_INTERVAL_MS }}
+          generate-website-chat: 'false'
+
+      - name: Schema check
+        env:
+          CORPUS_FILE: ${{ steps.ext.outputs.corpus-file }}
+          CORPUS_GZ_FILE: ${{ steps.ext.outputs.corpus-gz-file }}
+          METADATA_FILE: ${{ steps.ext.outputs.metadata-file }}
+        run: node test/schema-check.mjs "$CORPUS_FILE" "$CORPUS_GZ_FILE" "$METADATA_FILE"
+
+      - name: Every point carries lattice-db's repo and the pinned sha
+        env:
+          CORPUS_FILE: ${{ steps.ext.outputs.corpus-file }}
+          METADATA_FILE: ${{ steps.ext.outputs.metadata-file }}
+        run: |
+          node test/source-dir-check.mjs "$CORPUS_FILE" "$METADATA_FILE" \
+            "$LATTICE_DB_REPO" "$LATTICE_DB_SHA" .sources/lattice-db
 
   drift-canary:
     name: Drift canary (newest lattice-db)
@@ -186,7 +364,15 @@ jobs:
             test/fixtures/**
           mock-embeddings: 'true'
           output-dir: canary-out
+          embedding-endpoint: ${{ env.CORPUS_EMBEDDING_ENDPOINT }}
+          chunk-lines: ${{ env.CORPUS_CHUNK_LINES }}
+          chunk-overlap: ${{ env.CORPUS_CHUNK_OVERLAP }}
+          max-chunk-bytes: ${{ env.CORPUS_MAX_CHUNK_BYTES }}
+          vector-precision: ${{ env.CORPUS_VECTOR_PRECISION }}
           lattice-version: ${{ steps.latest.outputs.tag }}
+          collection: ${{ env.CORPUS_COLLECTION }}
+          request-interval-ms: ${{ env.CORPUS_REQUEST_INTERVAL_MS }}
+          generate-website-chat: 'false'
 
       - name: Schema check
         env:

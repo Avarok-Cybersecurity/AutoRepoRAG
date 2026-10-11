@@ -82,22 +82,23 @@ fi
 export GITHUB_SHA
 export GITHUB_REPOSITORY="${GITHUB_REPOSITORY:-Avarok-Cybersecurity/AutoRepoRAG-dryrun}"
 
-# run_pipeline <out-dir> <port> <mock|live> <previous-corpus-url>
+# run_pipeline <out-dir> <port> <mock|live> <previous-corpus-url> <previous-corpus-meta-url>
 run_pipeline() {
-  local out_dir="$1" port="$2" emode="$3" prev_url="$4"
+  local out_dir="$1" port="$2" emode="$3" prev_url="$4" prev_meta_url="$5"
   mkdir -p "$out_dir" "$out_dir/temp"
-  local mock_flag=true model='' endpoint='' key=''
+  local mock_flag=true model='' key=''
   if [ "$emode" = "live" ]; then
-    mock_flag=false; model="$EMBED_MODEL"; endpoint="$EMBED_ENDPOINT"; key="$OPENROUTER_API_KEY"
+    mock_flag=false; model="$EMBED_MODEL"; key="$OPENROUTER_API_KEY"
   fi
   env \
     INPUT_PATHS="$PATHS" \
     INPUT_EXCLUDE="" \
+    INPUT_SOURCE_DIR="" \
     INPUT_COLLECTION="coderag" \
     INPUT_OUTPUT_DIR="$out_dir" \
     INPUT_OUTPUT_NAME="coderag" \
     INPUT_GZIP="true" \
-    INPUT_EMBEDDING_ENDPOINT="$endpoint" \
+    INPUT_EMBEDDING_ENDPOINT="$EMBED_ENDPOINT" \
     INPUT_EMBEDDING_MODEL="$model" \
     INPUT_EMBEDDING_API_KEY="$key" \
     INPUT_MOCK_EMBEDDINGS="$mock_flag" \
@@ -111,8 +112,11 @@ run_pipeline() {
     INPUT_MAX_CHUNKS="0" \
     INPUT_VECTOR_PRECISION="6" \
     INPUT_PREVIOUS_CORPUS_URL="$prev_url" \
+    INPUT_PREVIOUS_CORPUS_META_URL="$prev_meta_url" \
     INPUT_LATTICE_VERSION="$LATTICE_VERSION" \
     INPUT_LATTICE_PORT="$port" \
+    INPUT_GENERATE_WEBSITE_CHAT="false" \
+    INPUT_WEBSITE_CHAT_DIR="" \
     GITHUB_WORKSPACE="$TARGET_DIR" \
     RUNNER_TEMP="$out_dir/temp" \
     GITHUB_OUTPUT="$out_dir/github-output.txt" \
@@ -140,7 +144,7 @@ echo "verified + extracted: $WORK/lattice-server"
 
 banner "STAGE 2: MOCK PIPELINE RUN (port $PORT)"
 OUT1="$WORK/out-mock-1"
-run_pipeline "$OUT1" "$PORT" mock ""
+run_pipeline "$OUT1" "$PORT" mock "" ""
 CORPUS1="$(get_output corpus-file "$OUT1")"
 [ -s "$CORPUS1" ] || die "mock run produced no corpus at '$CORPUS1'"
 echo "corpus: $CORPUS1 (points=$(get_output points "$OUT1"), dim=$(get_output dim "$OUT1"))"
@@ -150,7 +154,7 @@ node "$REPO_ROOT/test/schema-check.mjs" "$CORPUS1"
 
 banner "STAGE 4: BYTE-DETERMINISM (second run, port $((PORT + 1)), cmp)"
 OUT2="$WORK/out-mock-2"
-run_pipeline "$OUT2" "$((PORT + 1))" mock ""
+run_pipeline "$OUT2" "$((PORT + 1))" mock "" ""
 CORPUS2="$(get_output corpus-file "$OUT2")"
 cmp "$CORPUS1" "$CORPUS2" || die "mock corpora differ between runs"
 cmp "$CORPUS1.gz" "$CORPUS2.gz" || die "gz twins differ between runs"
@@ -206,7 +210,7 @@ INCR_BASE_OUT="$OUT1"
 if [ "$MODE" = "live" ]; then
   banner "STAGE 6: LIVE EMBEDDING RUN (port $((PORT + 3)), model $EMBED_MODEL)"
   OUT_LIVE="$WORK/out-live"
-  run_pipeline "$OUT_LIVE" "$((PORT + 3))" live ""
+  run_pipeline "$OUT_LIVE" "$((PORT + 3))" live "" ""
   LIVE_CORPUS="$(get_output corpus-file "$OUT_LIVE")"
   node "$REPO_ROOT/test/schema-check.mjs" "$LIVE_CORPUS"
   echo "live corpus: dim=$(get_output dim "$OUT_LIVE"), embedded=$(get_output embedded "$OUT_LIVE")"
@@ -217,8 +221,9 @@ fi
 
 banner "STAGE 7: INCREMENTAL RERUN (previous-corpus-url=file://..., expect embedded=0)"
 BASE_GZ="$(get_output corpus-gz-file "$INCR_BASE_OUT")"
+BASE_META="$(get_output metadata-file "$INCR_BASE_OUT")"
 OUT_INCR="$WORK/out-incremental"
-run_pipeline "$OUT_INCR" "$PORT" "$MODE" "file://$BASE_GZ"
+run_pipeline "$OUT_INCR" "$PORT" "$MODE" "file://$BASE_GZ" "file://$BASE_META"
 EMBEDDED="$(get_output embedded "$OUT_INCR")"
 REUSED="$(get_output reused "$OUT_INCR")"
 POINTS="$(get_output points "$OUT_INCR")"

@@ -21,15 +21,24 @@ jobs:
 
       - name: Build corpus
         id: rag
-        uses: Avarok-Cybersecurity/AutoRepoRAG@v1
+        uses: Avarok-Cybersecurity/AutoRepoRAG@v2
         with:
           paths: |
             src/**/*.rs
             src/**/*.ts
           exclude: |
             **/*_test.*
+          embedding-endpoint: https://openrouter.ai/api/v1
           embedding-model: nvidia/llama-nemotron-embed-vl-1b-v2:free
           embedding-api-key: ${{ secrets.OPENROUTER_API_KEY }}
+          collection: coderag
+          chunk-lines: '90'
+          chunk-overlap: '15'
+          max-chunk-bytes: '16384'
+          vector-precision: '6'
+          request-interval-ms: '2500'
+          lattice-version: v0.3.3
+          generate-website-chat: 'false'
 
       - name: Upload corpus artifact
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1

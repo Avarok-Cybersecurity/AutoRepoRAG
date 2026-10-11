@@ -10,18 +10,32 @@ branding:
   icon: database
   color: purple
 
+# Inputs that shape the corpus (endpoint, chunking, precision, server
+# version, collection, pacing) are required with no default: two corpora are
+# only comparable when every one of them was stated. "required" is enforced by
+# src/inputs.mjs, which fails naming the input (GitHub does not enforce it for
+# composite actions). Plumbing inputs keep their defaults here, the only place
+# they are defined.
 inputs:
   paths:
-    description: Newline-separated include globs (** / * / ? and {a,b}), relative to the repository root.
+    description: Newline-separated include globs (** / * / ? and {a,b}), relative to the source root (source-dir, or the workspace).
     required: true
   exclude:
     description: Newline-separated exclude globs applied after `paths`.
     required: false
     default: ''
+  source-dir:
+    description: >-
+      Workspace-relative directory holding an external git checkout to chunk
+      instead of the workspace (e.g. a repo checked out by actions/checkout at
+      a pinned SHA). Its repo and commit are derived from the checkout itself;
+      it must be the root of a git checkout with a remote.origin.url. Empty =
+      the workspace, with GITHUB_REPOSITORY / GITHUB_SHA as in v1.
+    required: false
+    default: ''
   collection:
     description: LatticeDB collection name recorded in the corpus header.
-    required: false
-    default: coderag
+    required: true
   output-dir:
     description: Directory (relative to the workspace) where corpus, gzip and metadata are written.
     required: false
@@ -35,9 +49,8 @@ inputs:
     required: false
     default: 'true'
   embedding-endpoint:
-    description: OpenAI-compatible embeddings API base URL (POST <endpoint>/embeddings).
-    required: false
-    default: https://openrouter.ai/api/v1
+    description: OpenAI-compatible embeddings API base URL (POST <endpoint>/embeddings). Required in mock mode too.
+    required: true
   embedding-model:
     description: Embedding model id. Required unless mock-embeddings is true.
     required: false
@@ -56,24 +69,20 @@ inputs:
     default: '256'
   chunk-lines:
     description: Lines per chunk window.
-    required: false
-    default: '90'
+    required: true
   chunk-overlap:
     description: Lines of overlap between consecutive chunks (stride = chunk-lines - chunk-overlap).
-    required: false
-    default: '15'
+    required: true
   max-chunk-bytes:
     description: Hard byte cap per chunk text (UTF-8).
-    required: false
-    default: '16384'
+    required: true
   batch-size:
     description: Texts per embeddings request.
     required: false
     default: '32'
   request-interval-ms:
     description: Minimum milliseconds between embeddings request starts (free-tier pacing).
-    required: false
-    default: '2500'
+    required: true
   max-retries:
     description: Attempts per embeddings request (700ms * 2^n backoff on transient failures).
     required: false
@@ -84,24 +93,38 @@ inputs:
     default: '0'
   vector-precision:
     description: Significant digits vectors are rounded to (then f32-cast) before upsert and export.
-    required: false
-    default: '6'
+    required: true
   previous-corpus-url:
     description: >-
       file:// or http(s):// URL of a previously published corpus (.jsonl or
-      .jsonl.gz) for incremental reuse by chunk_hash; its sibling .meta.json
-      must declare the same model, and dims must match, else the cache is
-      discarded with a warning.
+      .jsonl.gz) for incremental reuse by chunk_hash. Requires
+      previous-corpus-meta-url.
+    required: false
+    default: ''
+  previous-corpus-meta-url:
+    description: >-
+      file:// or http(s):// URL of that corpus's .meta.json; it must declare
+      the same model, and dims must match, else the cache is discarded with a
+      warning. Required when previous-corpus-url is set, rejected otherwise.
     required: false
     default: ''
   lattice-version:
-    description: Pinned lattice-db release tag whose lattice-server binary is downloaded and sha256-verified.
-    required: false
-    default: v0.3.3
+    description: Pinned lattice-db release tag whose lattice-server binary is downloaded and sha256-verified (e.g. v0.3.3).
+    required: true
   lattice-port:
     description: Loopback port for the throwaway lattice-server.
     required: false
     default: '6334'
+  generate-website-chat:
+    description: >-
+      'true' or 'false'. 'true' emits the "Talk to the Repo" website-chat
+      library into website-chat-dir; this version does not ship the library
+      and fails fast on 'true'.
+    required: true
+  website-chat-dir:
+    description: Workspace-relative directory for the website-chat library. Required when generate-website-chat is 'true', rejected otherwise.
+    required: false
+    default: ''
 
 outputs:
   corpus-file:
@@ -138,6 +161,7 @@ runs:
       env:
         INPUT_PATHS: ${{ inputs.paths }}
         INPUT_EXCLUDE: ${{ inputs.exclude }}
+        INPUT_SOURCE_DIR: ${{ inputs.source-dir }}
         INPUT_COLLECTION: ${{ inputs.collection }}
         INPUT_OUTPUT_DIR: ${{ inputs.output-dir }}
         INPUT_OUTPUT_NAME: ${{ inputs.output-name }}
@@ -156,8 +180,11 @@ runs:
         INPUT_MAX_CHUNKS: ${{ inputs.max-chunks }}
         INPUT_VECTOR_PRECISION: ${{ inputs.vector-precision }}
         INPUT_PREVIOUS_CORPUS_URL: ${{ inputs.previous-corpus-url }}
+        INPUT_PREVIOUS_CORPUS_META_URL: ${{ inputs.previous-corpus-meta-url }}
         INPUT_LATTICE_VERSION: ${{ inputs.lattice-version }}
         INPUT_LATTICE_PORT: ${{ inputs.lattice-port }}
+        INPUT_GENERATE_WEBSITE_CHAT: ${{ inputs.generate-website-chat }}
+        INPUT_WEBSITE_CHAT_DIR: ${{ inputs.website-chat-dir }}
       run: node "$GITHUB_ACTION_PATH/src/main.mjs"
 
     - name: Stop lattice-server

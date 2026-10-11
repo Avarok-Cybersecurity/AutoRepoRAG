@@ -40,25 +40,49 @@ composite action running vendored Node ESM.
 
 - name: Build code corpus
   id: rag
-  uses: Avarok-Cybersecurity/AutoRepoRAG@v1
+  uses: Avarok-Cybersecurity/AutoRepoRAG@v2
   with:
     paths: |
       src/**/*.rs
       src/**/*.ts
+    embedding-endpoint: https://openrouter.ai/api/v1
     embedding-model: nvidia/llama-nemotron-embed-vl-1b-v2:free
     embedding-api-key: ${{ secrets.OPENROUTER_API_KEY }}
+    collection: coderag
+    chunk-lines: '90'
+    chunk-overlap: '15'
+    max-chunk-bytes: '16384'
+    vector-precision: '6'
+    request-interval-ms: '2500'
+    lattice-version: v0.3.3
+    generate-website-chat: 'false'
 
 - run: echo "Built ${{ steps.rag.outputs.points }} points at dim ${{ steps.rag.outputs.dim }}"
 ```
 
-No secrets? Use mock mode — same pipeline, deterministic vectors:
+Every input that shapes the corpus is required and has no default (see
+[Inputs](#inputs)): a corpus records exactly what produced it, and two
+corpora are only comparable when the same values were stated for both.
+
+No secrets? Use mock mode — same pipeline, deterministic vectors. It still
+states the corpus-shaping inputs, so a dry run chunks exactly like the real
+publish:
 
 ```yaml
-- uses: Avarok-Cybersecurity/AutoRepoRAG@v1
+- uses: Avarok-Cybersecurity/AutoRepoRAG@v2
   with:
     paths: |
       src/**/*.rs
     mock-embeddings: 'true'
+    embedding-endpoint: https://openrouter.ai/api/v1
+    collection: coderag
+    chunk-lines: '90'
+    chunk-overlap: '15'
+    max-chunk-bytes: '16384'
+    vector-precision: '6'
+    request-interval-ms: '2500'
+    lattice-version: v0.3.3
+    generate-website-chat: 'false'
 ```
 
 Runs on `ubuntu-latest` and `ubuntu-24.04-arm` (Linux x64/arm64 runners; the
@@ -66,30 +90,49 @@ pinned `lattice-server` release binaries target Linux).
 
 ## Inputs
 
-| Input | Required | Default | Description |
-|---|---|---|---|
-| `paths` | **yes** | — | Newline-separated include globs (`**` / `*` / `?` and `{a,b}`), relative to the repository root. |
-| `exclude` | no | `''` | Newline-separated exclude globs applied after `paths`. |
-| `collection` | no | `coderag` | LatticeDB collection name recorded in the corpus header. |
-| `output-dir` | no | `autoreporag-out` | Directory (relative to the workspace) where corpus, gzip and metadata are written. |
-| `output-name` | no | `coderag` | Basename for outputs (`<name>.jsonl`, `<name>.jsonl.gz`, `<name>.meta.json`). |
-| `gzip` | no | `true` | Also write a `gzip -9` twin of the corpus. |
-| `embedding-endpoint` | no | `https://openrouter.ai/api/v1` | OpenAI-compatible embeddings API base URL (`POST <endpoint>/embeddings`). |
-| `embedding-model` | no | `''` | Embedding model id. Required unless `mock-embeddings` is true. |
-| `embedding-api-key` | no | `''` | API key for the embedding endpoint. Masked immediately; required unless `mock-embeddings` is true. |
-| `mock-embeddings` | no | `false` | Use deterministic sha256-seeded L2-normalized mock vectors (CI needs no secrets). |
-| `mock-dim` | no | `256` | Vector dimensionality in mock mode. |
-| `chunk-lines` | no | `90` | Lines per chunk window. |
-| `chunk-overlap` | no | `15` | Lines of overlap between consecutive chunks (stride = `chunk-lines` − `chunk-overlap`). |
-| `max-chunk-bytes` | no | `16384` | Hard byte cap per chunk text (UTF-8). |
-| `batch-size` | no | `32` | Texts per embeddings request. |
-| `request-interval-ms` | no | `2500` | Minimum milliseconds between embeddings request starts (free-tier pacing). |
-| `max-retries` | no | `3` | Attempts per embeddings request (`700ms × 2ⁿ` backoff on transient failures). |
-| `max-chunks` | no | `0` | Upper bound on chunks (`0` = unlimited); truncates with a warning. |
-| `vector-precision` | no | `6` | Significant digits vectors are rounded to (then f32-cast) before upsert and export. |
-| `previous-corpus-url` | no | `''` | `file://` or `http(s)://` URL of a previously published corpus (`.jsonl` or `.jsonl.gz`) for incremental reuse by `chunk_hash`; its sibling `.meta.json` must declare the same model, and dims must match, else the cache is discarded with a warning. |
-| `lattice-version` | no | `v0.3.3` | Pinned lattice-db release tag whose `lattice-server` binary is downloaded and sha256-verified. |
-| `lattice-port` | no | `6334` | Loopback port for the throwaway `lattice-server`. |
+**Required, no default** — these shape the corpus. The action fails at once
+with `input "<name>" is required` when one is missing (GitHub does not enforce
+`required` for composite actions; the action does).
+
+| Input | Description |
+|---|---|
+| `paths` | Newline-separated include globs (`**` / `*` / `?` and `{a,b}`), relative to the source root (`source-dir`, or the workspace). |
+| `embedding-endpoint` | OpenAI-compatible embeddings API base URL (`POST <endpoint>/embeddings`). Required in mock mode too. |
+| `collection` | LatticeDB collection name recorded in the corpus header. |
+| `chunk-lines` | Lines per chunk window. |
+| `chunk-overlap` | Lines of overlap between consecutive chunks (stride = `chunk-lines` − `chunk-overlap`). |
+| `max-chunk-bytes` | Hard byte cap per chunk text (UTF-8). |
+| `vector-precision` | Significant digits vectors are rounded to (then f32-cast) before upsert and export. |
+| `request-interval-ms` | Minimum milliseconds between embeddings request starts (free-tier pacing). |
+| `lattice-version` | Pinned lattice-db release tag (e.g. `v0.3.3`) whose `lattice-server` binary is downloaded and sha256-verified. |
+| `generate-website-chat` | `'true'` or `'false'`. `'true'` emits the website-chat library into `website-chat-dir`; this version does not ship the library and fails fast on `'true'`. |
+
+**Conditionally required** — required when their condition holds, and
+rejected when it does not (a silently ignored input is a misconfiguration).
+
+| Input | Required when | Description |
+|---|---|---|
+| `embedding-model` | `mock-embeddings` is false | Embedding model id. |
+| `embedding-api-key` | `mock-embeddings` is false | API key for the embedding endpoint. Masked immediately. |
+| `previous-corpus-meta-url` | `previous-corpus-url` is set | `file://` or `http(s)://` URL of that corpus's `.meta.json`. It must declare the same model, and dims must match, else the cache is discarded with a warning. |
+| `website-chat-dir` | `generate-website-chat` is `'true'` | Workspace-relative directory for the website-chat library. |
+
+**Optional** — plumbing with defaults declared once, in `action.yml`.
+
+| Input | Default | Description |
+|---|---|---|
+| `source-dir` | `''` | Workspace-relative directory holding an external git checkout to chunk instead of the workspace — see [External sources](#external-sources-source-dir). `''` = the workspace. |
+| `exclude` | `''` | Newline-separated exclude globs applied after `paths`. |
+| `output-dir` | `autoreporag-out` | Directory (relative to the workspace) where corpus, gzip and metadata are written. |
+| `output-name` | `coderag` | Basename for outputs (`<name>.jsonl`, `<name>.jsonl.gz`, `<name>.meta.json`). |
+| `gzip` | `true` | Also write a `gzip -9` twin of the corpus. |
+| `mock-embeddings` | `false` | Use deterministic sha256-seeded L2-normalized mock vectors (CI needs no secrets). |
+| `mock-dim` | `256` | Vector dimensionality in mock mode. |
+| `batch-size` | `32` | Texts per embeddings request. |
+| `max-retries` | `3` | Attempts per embeddings request (`700ms × 2ⁿ` backoff on transient failures). |
+| `max-chunks` | `0` | Upper bound on chunks (`0` = unlimited); truncates with a warning. |
+| `previous-corpus-url` | `''` | `file://` or `http(s)://` URL of a previously published corpus (`.jsonl` or `.jsonl.gz`) for incremental reuse by `chunk_hash`. Requires `previous-corpus-meta-url`. |
+| `lattice-port` | `6334` | Loopback port for the throwaway `lattice-server`. |
 
 ## Outputs
 
@@ -111,11 +154,44 @@ pinned `lattice-server` release binaries target Linux).
 | **CI self-test** | any | none | `mock-embeddings: 'true'` | this repo's [`ci.yml`](.github/workflows/ci.yml) |
 | **PR dry run** | `pull_request` | none | `mock-embeddings: 'true'` — proves chunking/corpus still build, fork-safe | [`examples/mock-ci.yml`](examples/mock-ci.yml) |
 | **Merge-to-main publish** | `push: main` | embedding key | `embedding-model`, `embedding-api-key`, publish step after | [`examples/basic.yml`](examples/basic.yml), [`examples/publish-pages.yml`](examples/publish-pages.yml) |
-| **Incremental refresh** | `push: main` | embedding key | `previous-corpus-url` pointing at the last published corpus | [`examples/publish-pages.yml`](examples/publish-pages.yml) |
+| **Incremental refresh** | `push: main` | embedding key | `previous-corpus-url` + `previous-corpus-meta-url` pointing at the last published corpus | [`examples/publish-pages.yml`](examples/publish-pages.yml) |
 
 The action deliberately does **not** upload artifacts or publish anywhere —
 your workflow composes that (see [Hosting the corpus](#hosting-the-corpus)),
 so the corpus can go to artifacts, Pages, releases, or your own bucket.
+
+## External sources (`source-dir`)
+
+To build a corpus of a repository other than the one running the workflow
+(a dependency, a docs site, a book), check it out at a pinned commit and point
+`source-dir` at it:
+
+```yaml
+- uses: actions/checkout@v7
+- uses: actions/checkout@v7
+  with:
+    repository: rust-lang/book
+    ref: <full commit sha>        # pin it: the corpus records this commit
+    path: .sources/rust-book
+    persist-credentials: false
+
+- uses: Avarok-Cybersecurity/AutoRepoRAG@v2
+  with:
+    source-dir: .sources/rust-book
+    paths: |
+      src/**/*.md
+    output-name: books-rust
+    # ...the required inputs, with a prose chunk profile
+```
+
+`paths` are then relative to `source-dir`, and every chunk's `repo` and
+`commit_sha` come from that checkout: `git rev-parse HEAD` and
+`remote.origin.url` (https and ssh forms are normalised to `owner/name`).
+The workflow's own `GITHUB_REPOSITORY` / `GITHUB_SHA` are ignored, since they
+describe a different repository. The action refuses a `source-dir` that is
+absolute, escapes the workspace, is not the root of a git checkout (a plain
+subdirectory of your repo would silently inherit your repo's identity), has
+no commit, or has no `origin` remote it can parse.
 
 ## Output format
 
@@ -189,24 +265,57 @@ const hits = await db.search('coderag', queryVector, 5);
 ## Rate limits & incremental refresh
 
 A first full run on a mid-sized repo is a few hundred embedding requests
-(`ceil(chunks / batch-size)`), paced by `request-interval-ms` (default 2.5 s
-between request starts — sized for free-tier endpoints; ~9,000 chunks ≈ 300
+(`ceil(chunks / batch-size)`), paced by `request-interval-ms` (2500 ms
+between request starts suits free-tier endpoints; ~9,000 chunks ≈ 300
 requests ≈ 15–20 minutes). Transient failures (HTTP 429/5xx **and**
 200-with-error bodies, common on saturated free tiers) retry up to
 `max-retries` times with `700ms × 2ⁿ` backoff.
 
 After the first publish, pass `previous-corpus-url` pointing at the published
-corpus. Vectors are reused by `chunk_hash`, so steady-state runs embed **only
+corpus and `previous-corpus-meta-url` pointing at its `.meta.json`. Vectors are reused by `chunk_hash`, so steady-state runs embed **only
 chunks whose content changed** — typically a handful of requests per merge.
 Guardrails, all fail-safe to a full re-embed with a warning:
 
-- the previous corpus's sibling `.meta.json` must declare the **same model**;
+- the `.meta.json` at `previous-corpus-meta-url` must declare the **same model**;
 - dimensionality must match (also re-checked against the first live response);
 - an unreachable/corrupt previous corpus is simply discarded.
 
 Budget levers: `chunk-lines` (bigger chunks → fewer requests),
 `vector-precision` (smaller corpus file), `max-chunks` (hard cap),
 `request-interval-ms` (pacing).
+
+## Multi-corpus hosting (100 MB cap)
+
+GitHub rejects any single pushed file over **100 MB**, and a Pages site may
+be at most **1 GB** in total. Treat the per-file cap as the binding one and
+build **one corpus per source** rather than one ever-growing file:
+
+| Corpus | `source-dir` | `output-name` | Chunk profile |
+|---|---|---|---|
+| your code | `''` | `code` | code windows (e.g. 90 / 15 lines) |
+| your docs | `''` (with `paths: docs/**`) | `docs` | prose windows |
+| a book or dependency | `.sources/<name>` | `books-<name>` | prose windows |
+
+- Give each corpus its own `output-name` and its own
+  `previous-corpus-url` / `previous-corpus-meta-url` pair, so each reuses
+  only its own vectors.
+- Fail the publish before the cap, not at it. Leave headroom for growth:
+
+  ```bash
+  max=$((95 * 1024 * 1024))
+  size=$(stat -c %s "$CORPUS_GZ")
+  [ "$size" -le "$max" ] || { echo "::error::$CORPUS_GZ is $size B (> 95 MiB)"; exit 1; }
+  ```
+
+- Lower `vector-precision` (e.g. `4`) to shrink a large code corpus; vectors
+  dominate the file size.
+- Publish every corpus in the **same** job when you force-push an orphan
+  `gh-pages` branch: that push replaces the whole site, so a corpus built in
+  another job would be deleted. Corpora built on different schedules (a book
+  rebuilt only when its pin moves) should instead check out the current
+  `gh-pages` tree and replace only their own files.
+- A browser client loads each corpus into its own collection (or one
+  collection with distinct ids per corpus) and merges results by distance.
 
 ## Hosting the corpus
 
@@ -231,16 +340,46 @@ https://<owner>.github.io/<repo>/coderag/coderag.meta.json
 
 ## Versioning
 
-- **`@v1` is a moving major tag**: every `v1.x.y` release re-points it
-  (semver-compatible changes only). Pin the full commit SHA if you want
-  absolute immutability: `uses: Avarok-Cybersecurity/AutoRepoRAG@<sha> # v1.x.y`.
-- **`lattice-version` is pinned** (default `v0.3.3`) and the downloaded server
-  binary is sha256-verified — a new lattice-db release can never silently
-  change your corpus. A weekly canary in this repo's CI runs against the
-  newest lattice-db release to catch drift early.
-- **Format guarantee**: within action v1, the corpus stays `lattice-jsonl`
-  format version 1 with the documented payload keys. A corpus format break
+- **`@v2` is a moving major tag**: every `v2.x.y` release re-points it, as
+  long as it is the newest `v2` release (semver-compatible changes only). Pin
+  the full commit SHA if you want absolute immutability:
+  `uses: Avarok-Cybersecurity/AutoRepoRAG@<sha> # v2.x.y`.
+- **`@v1` is frozen** at `v1.0.0` and receives no further changes.
+- **`lattice-version` is yours to pin** (`v0.3.3` is the version this
+  action's CI uses) and the downloaded server binary is sha256-verified — a
+  new lattice-db release can never silently change your corpus. A weekly
+  canary in this repo's CI runs against the newest lattice-db release to
+  catch drift early.
+- **Format guarantee**: the corpus stays `lattice-jsonl` format version 1
+  with the documented payload keys (unchanged from v1). A corpus format break
   means a new action major version.
+
+## Migrating from v1 to v2
+
+v2 changes the inputs only; the corpus format and the outputs are unchanged.
+
+1. Change `@v1` to `@v2`.
+2. State every input that used to have a default and now does not. These
+   are the v1 defaults; stating them keeps v1's chunking, precision, pacing
+   and server version:
+
+   ```yaml
+   embedding-endpoint: https://openrouter.ai/api/v1
+   collection: coderag
+   chunk-lines: '90'
+   chunk-overlap: '15'
+   max-chunk-bytes: '16384'
+   vector-precision: '6'
+   request-interval-ms: '2500'
+   lattice-version: v0.3.3
+   generate-website-chat: 'false'
+   ```
+
+3. If you use `previous-corpus-url`, add `previous-corpus-meta-url`. v1
+   derived it from the corpus URL (`<name>.jsonl.gz` → `<name>.meta.json`);
+   v2 reads only the URL you give it.
+4. Nothing else changes for a workflow that chunks its own repository. The
+   new `source-dir` input is opt-in.
 
 ## Security
 
@@ -258,8 +397,10 @@ loopback only; the action has zero npm dependencies; report vulnerabilities to
 
 Issues and PRs welcome. Before opening a PR:
 
-1. `node --check src/*.mjs` must pass (CI lints every `.mjs` and workflow).
-2. Run the mock e2e locally: the action is plain Node — no build step.
+1. `node --check src/*.mjs` and `node --test test/unit/*.test.mjs` must pass
+   (CI lints every `.mjs` and workflow and runs the unit tests).
+2. Run the mock e2e locally (`scripts/local-dry-run.sh`): the action is plain
+   Node — no build step.
 3. Keep the zero-dependency rule: no `package.json`, no `node_modules`.
 4. `CHANGELOG.md` follows Keep a Changelog — add your entry under
    `[Unreleased]`.
