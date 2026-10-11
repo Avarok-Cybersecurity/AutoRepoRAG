@@ -7,6 +7,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.1.0] - unreleased
+
+### Added
+- **Website chat library** (`website-chat/`): the "Talk to the Repo" chat
+  modal as one ES module, `openRepoChat(config)` → `{ close(), ready }`, plus
+  `warmRepoChat(config)` and `COPY_EN`. Imported from Metrale/metrale.ai
+  (`site/src/lib/chat`) and relicensed to Apache-2.0 by its author.
+  - Every config key is required; an invalid config throws one `ConfigError`
+    listing every missing or invalid path.
+  - Multi-corpus: one LatticeDB collection and one OPFS cache file per corpus
+    and commit; candidates from every corpus merge by cosine distance and are
+    reranked once; receipts name their corpus.
+  - The embedding model is read from each corpus's `meta.json`; corpora that
+    disagree on model or dimension fail at load with a clear error.
+  - Themed only through `--arr-*` custom properties; no colour literal in the
+    library's styles (enforced by a test). No built-in watermark
+    (`brand.motifSvg: null`).
+- `generate-website-chat: 'true'` now emits the library, the sha256-verified
+  LatticeDB wasm pair of `lattice-version` and `repo-chat.manifest.json` into
+  `<output-dir>/<website-chat-dir>`; new output `website-chat-dir`.
+- Releases attach `repo-chat-<tag>.tar.gz` and its `.sha256`.
+- CI: a `website-chat` job (lockfile install, stale-dist check, byte-stable
+  rebuild, unit tests, Playwright in desktop Chromium and at 390×844 against
+  the emitted bundle with fixture corpora and a mocked OpenRouter).
+
+### Changed
+- `website-chat-dir` is now relative to `output-dir` (it was documented as
+  workspace-relative while unused) and may not be absolute, escape
+  `output-dir`, or be `output-dir` itself.
+- Release-asset checksums are verified in Node (`src/checksum.mjs`, exact
+  basename match) instead of `grep | sha256sum -c`.
+
 ## [2.0.0] - 2026-10-11
 
 Breaking: inputs only. The corpus format (`lattice-jsonl` v1, payload keys)

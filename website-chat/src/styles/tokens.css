@@ -1,0 +1,43 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+/* =============================================================================
+   repo-chat: tokens and a scoped reset. index.js sets the config.theme
+   properties (--arr-bg, --arr-accent, ... see src/core/theme.js) on the
+   .arr-root element; this file derives the few extra shades the instrument
+   needs from them, so a site themes the whole chat with config.theme alone.
+   No colour literal belongs in library CSS (test/unit/styles.test.js).
+   ========================================================================== */
+
+.arr-root {
+  /* emphasis: the accent a fifth of the way toward the ink */
+  --arr-accent-deep: color-mix(in srgb, var(--arr-accent) 80%, var(--arr-text));
+  /* recessed surface for code fences */
+  --arr-sunk: color-mix(in srgb, var(--arr-bg2) 50%, var(--arr-bg));
+  --arr-green-soft: color-mix(in srgb, var(--arr-green) 14%, transparent);
+  --arr-shadow-sm: 0 1px 0 var(--arr-border);
+  /* the veil behind the dialog, and the log's ruled-paper lines */
+  --arr-scrim: color-mix(in srgb, var(--arr-bg) 72%, transparent);
+  --arr-rule: color-mix(in srgb, var(--arr-border) 55%, transparent);
+
+  font-family: var(--arr-font-sans);
+  color: var(--arr-text);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Zero-specificity reset, so the host page's own resets neither leak in nor
+   matter: every rule in the other stylesheets wins over it. */
+:where(.arr-root *),
+:where(.arr-root *)::before,
+:where(.arr-root *)::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+:where(.arr-root) a {
+  color: var(--arr-accent);
+}
+:where(.arr-root) :focus-visible {
+  outline: 2.5px solid var(--arr-accent);
+  outline-offset: 3px;
+  border-radius: 4px;
+}

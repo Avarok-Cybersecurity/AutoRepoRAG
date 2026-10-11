@@ -10,6 +10,12 @@ permissions:
 concurrency:
   group: release-${{ github.ref }}
 
+env:
+  # The LatticeDB release whose wasm pair ships in repo-chat-<tag>.tar.gz
+  # (recorded in its repo-chat.manifest.json). Sites using the action pick
+  # their own with the lattice-version input.
+  RELEASE_LATTICE_VERSION: v0.3.3
+
 jobs:
   # The exact tagged tree must pass the full CI (lint, unit tests, every e2e
   # job) before anything is published. Reusing ci.yml keeps one definition of
@@ -46,6 +52,29 @@ jobs:
           echo '--- release notes ---'
           cat notes.md
 
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '22'
+
+      # repo-chat-<tag>.tar.gz: the committed library dist (CI on this tag
+      # already proved it equals a fresh build), the sha256-verified wasm
+      # pair, and the manifest, under one repo-chat-<tag>/ directory. The
+      # archive is byte-reproducible (sorted, zero mtimes and owners).
+      - name: Package the website-chat library
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          lib="$(node -p "require('./website-chat/package.json').version")"
+          [ "v$lib" = "$TAG" ] || { echo "::error::website-chat/package.json is $lib, tag is $TAG"; exit 1; }
+          stage="$RUNNER_TEMP/stage"
+          node scripts/emit-website-chat.mjs "$RELEASE_LATTICE_VERSION" "$stage/repo-chat-$TAG" "$RUNNER_TEMP/lattice-wasm"
+          tar --sort=name --mtime=@0 --owner=0 --group=0 --numeric-owner -C "$stage" -cf - "repo-chat-$TAG" \
+            | gzip -9n > "repo-chat-$TAG.tar.gz"
+          sha256sum "repo-chat-$TAG.tar.gz" > "repo-chat-$TAG.tar.gz.sha256"
+          cat "repo-chat-$TAG.tar.gz.sha256"
+          tar -tzvf "repo-chat-$TAG.tar.gz"
+
       - name: Create release
         env:
           GH_TOKEN: ${{ github.token }}
@@ -55,7 +84,9 @@ jobs:
           gh release create "$TAG" \
             --verify-tag \
             --title "AutoRepoRAG $TAG" \
-            --notes-file notes.md
+            --notes-file notes.md \
+            "repo-chat-$TAG.tar.gz" \
+            "repo-chat-$TAG.tar.gz.sha256"
 
       # Consumers pin `uses: Avarok-Cybersecurity/AutoRepoRAG@v<major>`; a
       # release moves its major tag (v2.3.1 -> v2) to the released commit, but

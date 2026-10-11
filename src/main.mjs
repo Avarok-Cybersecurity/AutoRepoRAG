@@ -7,8 +7,9 @@
 // (mock or live), quantizes every vector (significant digits + fround) BEFORE
 // both upsert and export, loads + verifies the collection (points_count,
 // 5-sample self-retrieval with cosine-distance <= 1e-3, scroll fidelity at
-// 1e-6), writes the lattice-jsonl corpus + gzip -9 twin + meta.json, and
-// emits GITHUB_OUTPUT / GITHUB_STEP_SUMMARY. Exits nonzero on any failure.
+// 1e-6), writes the lattice-jsonl corpus + gzip -9 twin + meta.json, emits
+// the website-chat bundle into <output-dir>/<website-chat-dir> when asked,
+// and emits GITHUB_OUTPUT / GITHUB_STEP_SUMMARY. Exits nonzero on any failure.
 
 import { randomBytes } from 'node:crypto';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
@@ -25,6 +26,7 @@ import { readInputs } from './inputs.mjs';
 import { parseCorpus, serializeCorpus, FORMAT, FORMAT_VERSION } from './jsonl.mjs';
 import { LatticeClient } from './lattice.mjs';
 import { provisionServer } from './server.mjs';
+import { emitWebsiteChat, LIBRARY_DIR } from './website-chat.mjs';
 
 const UPSERT_BATCH = 256;
 const SELF_RETRIEVAL_SAMPLES = 5;
@@ -306,6 +308,16 @@ async function run() {
     const metaFile = join(outputDir, `${inputs.outputName}.meta.json`);
     writeFileSync(metaFile, `${JSON.stringify(meta, null, 2)}\n`);
 
+    let chatDir = '';
+    if (inputs.generateWebsiteChat) {
+      ({ dir: chatDir } = await emitWebsiteChat({
+        outDir: join(outputDir, inputs.websiteChatDir),
+        latticeVersion: inputs.latticeVersion,
+        cacheDir: join(tempBase, 'autoreporag', 'lattice-wasm'),
+        libraryDir: LIBRARY_DIR,
+      }));
+    }
+
     setOutput('corpus-file', corpusFile);
     setOutput('corpus-gz-file', gzFile);
     setOutput('metadata-file', metaFile);
@@ -314,6 +326,7 @@ async function run() {
     setOutput('embedded', String(embedded));
     setOutput('reused', String(reused));
     setOutput('sha256', sha256);
+    setOutput('website-chat-dir', chatDir);
 
     appendGithubFile(
       'GITHUB_STEP_SUMMARY',
@@ -330,6 +343,7 @@ async function run() {
         `| commit | \`${commitSha}\` |`,
         `| corpus | \`${corpusFile}\` (${bytes} B${gzBytes ? `, ${gzBytes} B gz` : ''}) |`,
         `| sha256 | \`${sha256}\` |`,
+        ...(chatDir ? [`| website chat | \`${chatDir}\` |`] : []),
         '',
       ].join('\n'),
     );

@@ -105,7 +105,7 @@ with `input "<name>" is required` when one is missing (GitHub does not enforce
 | `vector-precision` | Significant digits vectors are rounded to (then f32-cast) before upsert and export. |
 | `request-interval-ms` | Minimum milliseconds between embeddings request starts (free-tier pacing). |
 | `lattice-version` | Pinned lattice-db release tag (e.g. `v0.3.3`) whose `lattice-server` binary is downloaded and sha256-verified. |
-| `generate-website-chat` | `'true'` or `'false'`. `'true'` emits the website-chat library into `website-chat-dir`; this version does not ship the library and fails fast on `'true'`. |
+| `generate-website-chat` | `'true'` or `'false'`. `'true'` emits the [website chat library](#website-chat-library) into `<output-dir>/<website-chat-dir>`. |
 
 **Conditionally required** — required when their condition holds, and
 rejected when it does not (a silently ignored input is a misconfiguration).
@@ -115,7 +115,7 @@ rejected when it does not (a silently ignored input is a misconfiguration).
 | `embedding-model` | `mock-embeddings` is false | Embedding model id. |
 | `embedding-api-key` | `mock-embeddings` is false | API key for the embedding endpoint. Masked immediately. |
 | `previous-corpus-meta-url` | `previous-corpus-url` is set | `file://` or `http(s)://` URL of that corpus's `.meta.json`. It must declare the same model, and dims must match, else the cache is discarded with a warning. |
-| `website-chat-dir` | `generate-website-chat` is `'true'` | Workspace-relative directory for the website-chat library. |
+| `website-chat-dir` | `generate-website-chat` is `'true'` | Directory for the website-chat library, relative to `output-dir`; not absolute, not outside it, not `output-dir` itself. |
 
 **Optional** — plumbing with defaults declared once, in `action.yml`.
 
@@ -146,6 +146,7 @@ rejected when it does not (a silently ignored input is a misconfiguration).
 | `embedded` | Chunks embedded fresh this run. |
 | `reused` | Chunks whose vectors were reused from `previous-corpus-url`. |
 | `sha256` | sha256 of the raw corpus file. |
+| `website-chat-dir` | Absolute path of the emitted website-chat bundle (empty when `generate-website-chat` is `'false'`). |
 
 ## Scenarios
 
@@ -261,6 +262,85 @@ const hits = await db.search('coderag', queryVector, 5);
 // ⚠ `score` is a cosine DISTANCE, not a similarity: 0.0 = identical,
 // lower = closer. Do not expect "score ≈ 1.0" for good matches.
 ```
+
+## Website chat library
+
+`generate-website-chat: 'true'` writes a ready-to-host "Talk to the Repo"
+chat into `<output-dir>/<website-chat-dir>/`, next to your corpus:
+
+| File | What it is |
+|---|---|
+| `repo-chat.js` | The library: one ES module, Svelte runtime bundled, no dependencies. |
+| `repo-chat.css` | Its stylesheet. Every colour and font is a `--arr-*` property set from your `theme`. |
+| `lattice_server.js`, `lattice_server_bg.wasm` | The LatticeDB wasm build of `lattice-version`, downloaded from that release and verified against its `lattice-db-wasm.sha256`. |
+| `repo-chat.manifest.json` | `library_version`, `lattice_version` and the sha256 of every file above. No timestamp: the same inputs give the same bytes. |
+
+Retrieval runs in the visitor's browser (LatticeDB in wasm, one collection
+per corpus, cached in OPFS per commit); the question embedding, the rerank
+and the answer come from OpenRouter with the visitor's own key, kept in
+their browser. Each release also attaches the same bundle as
+`repo-chat-<tag>.tar.gz` (one `repo-chat-<tag>/` directory) with a
+`.sha256`, for sites that vendor it instead of building a corpus.
+
+Host the bundle on your own origin (it is CSP-friendly: no inline styles or
+scripts, theme values are applied through CSSOM) and open it with one call.
+Import it lazily so nothing loads until the visitor asks:
+
+```js
+const BASE = '/repo-chat/2.1.0/';
+let lib;
+const load = () => (lib ??= import(`${BASE}repo-chat.js`));
+
+// Every key is required; openRepoChat({}) throws one error listing them all.
+const config = (COPY_EN) => ({
+  mount: document.body,
+  assets: { cssHref: `${BASE}repo-chat.css` },
+  wasm: { jsUrl: `${BASE}lattice_server.js`, binUrl: `${BASE}lattice_server_bg.wasm` },
+  corpora: [
+    { id: 'code', gzUrl: 'https://your-org.github.io/your-repo/coderag/code.jsonl.gz', metaUrl: 'https://your-org.github.io/your-repo/coderag/code.meta.json' },
+    { id: 'docs', gzUrl: 'https://your-org.github.io/your-repo/coderag/docs.jsonl.gz', metaUrl: 'https://your-org.github.io/your-repo/coderag/docs.meta.json' },
+  ],
+  provider: {
+    apiUrl: 'https://openrouter.ai/api/v1',
+    rerankModel: 'nvidia/llama-nemotron-rerank-vl-1b-v2:free',
+    chatModel: 'nvidia/nemotron-3-ultra-550b-a55b:free',
+    appTitle: 'Your Project: Ask the Codebase',
+    referer: 'https://your.site',
+    maxAttempts: 3,
+    retryBaseMs: 700,
+  },
+  retrieval: { topK: 3, rerankMultiplier: 4, upsertBatch: 256 },
+  storage: { keyPrefix: 'your-site-' },
+  copy: { ...COPY_EN, starters: ['Where does a request enter the server?'] },
+  brand: { productName: 'Your Project', motifSvg: null },
+  theme: {
+    bg: 'var(--bg)', bg2: 'var(--bg2)', card: 'var(--card)', border: 'var(--border)',
+    borderStrong: 'var(--border-strong)', text: 'var(--text)', text2: 'var(--text-2)', text3: 'var(--text-3)',
+    accent: 'var(--accent)', accentSoft: 'var(--accent-soft)', onAccent: 'var(--on-accent)',
+    green: 'var(--green)', amber: 'var(--amber)', fontMono: 'ui-monospace, monospace',
+    fontSans: 'system-ui, sans-serif', shadowLg: '0 18px 50px rgba(0, 0, 0, 0.5)',
+  },
+});
+
+button.addEventListener('pointerenter', async () => {
+  const { warmRepoChat, COPY_EN } = await load();
+  warmRepoChat(config(COPY_EN)); // stylesheet + idle wasm prefetch, never a corpus
+});
+button.addEventListener('click', async () => {
+  const { openRepoChat, COPY_EN } = await load();
+  const chat = openRepoChat(config(COPY_EN)); // { close(), ready }
+});
+```
+
+- The embedding model is not configuration: it is read from each corpus's
+  `meta.json`, and corpora built with different models or dimensions refuse
+  to load with a message naming both.
+- Several corpora are searched with one question embedding (each returns
+  `topK × rerankMultiplier` candidates), merged by cosine distance, cut back
+  to that many, and reranked once; each source receipt names its corpus.
+- The corpora must be served with CORS (GitHub Pages is). See
+  [`website-chat/README.md`](website-chat/README.md) for the full config
+  reference, the theme keys and how to build and test the library.
 
 ## Rate limits & incremental refresh
 
@@ -401,6 +481,10 @@ Issues and PRs welcome. Before opening a PR:
    (CI lints every `.mjs` and workflow and runs the unit tests).
 2. Run the mock e2e locally (`scripts/local-dry-run.sh`): the action is plain
    Node — no build step.
-3. Keep the zero-dependency rule: no `package.json`, no `node_modules`.
+3. Keep the zero-dependency rule for the action: no root `package.json`,
+   no runtime `node_modules`. The website chat under `website-chat/` has
+   build-time devDependencies only (Svelte, Vite, Playwright) and ships as
+   the committed `website-chat/dist/`; CI rebuilds it and fails on any
+   difference, so run `npm ci && npm run build` there after changing it.
 4. `CHANGELOG.md` follows Keep a Changelog — add your entry under
    `[Unreleased]`.

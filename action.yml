@@ -118,11 +118,15 @@ inputs:
   generate-website-chat:
     description: >-
       'true' or 'false'. 'true' emits the "Talk to the Repo" website-chat
-      library into website-chat-dir; this version does not ship the library
-      and fails fast on 'true'.
+      library into <output-dir>/<website-chat-dir>: repo-chat.js,
+      repo-chat.css, the LatticeDB wasm pair of lattice-version (downloaded
+      from that release and sha256-verified) and repo-chat.manifest.json.
     required: true
   website-chat-dir:
-    description: Workspace-relative directory for the website-chat library. Required when generate-website-chat is 'true', rejected otherwise.
+    description: >-
+      Directory for the website-chat library, relative to output-dir (it may
+      not be absolute, climb out of output-dir, or be output-dir itself).
+      Required when generate-website-chat is 'true', rejected otherwise.
     required: false
     default: ''
 
@@ -151,6 +155,9 @@ outputs:
   sha256:
     description: sha256 of the raw corpus file.
     value: ${{ steps.build.outputs.sha256 }}
+  website-chat-dir:
+    description: Absolute path of the emitted website-chat bundle (empty when generate-website-chat is 'false').
+    value: ${{ steps.build.outputs.website-chat-dir }}
 
 runs:
   using: composite

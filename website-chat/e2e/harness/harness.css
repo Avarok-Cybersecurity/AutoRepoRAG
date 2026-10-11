@@ -1,0 +1,40 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+/* The consumer site's own palette. The library reads none of this directly:
+   harness.js passes these as config.theme values. */
+:root {
+  --h-bg: #0f141b;
+  --h-bg2: #131922;
+  --h-card: #181f28;
+  --h-border: #232a34;
+  --h-border-strong: #2f3742;
+  --h-t1: #e6e6e9;
+  --h-t2: #cfd1d6;
+  --h-t3: #8a8f99;
+  --h-accent: #e07a50;
+  --h-accent-soft: rgba(198, 90, 46, 0.16);
+  --h-on-accent: #0f141b;
+  --h-green: #12b981;
+  --h-amber: #e4c070;
+  --h-shadow-lg: 0 18px 50px rgba(0, 0, 0, 0.55);
+  color-scheme: dark;
+}
+body {
+  margin: 0;
+  background: var(--h-bg);
+  color: var(--h-t1);
+  font-family: system-ui, sans-serif;
+}
+.page {
+  padding: 2rem 1rem;
+  max-width: 40rem;
+  margin: 0 auto;
+}
+.open-chat {
+  padding: 0.6rem 1rem;
+  font: inherit;
+  color: var(--h-on-accent);
+  background: var(--h-accent);
+  border: 0;
+  border-radius: 8px;
+  cursor: pointer;
+}

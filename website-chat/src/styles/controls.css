@@ -1,0 +1,348 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+/* =============================================================================
+   repo-chat: fault cards, the key entry and connected row, the answer
+   model chip, the input row and the fine print, and reduced motion.
+   Every colour and font is a --arr-* custom property (tokens.css); no colour
+   literal belongs in this file (test/unit/styles.test.js enforces it).
+   ========================================================================== */
+
+/* ---- error cards ----------------------------------------------------------- */
+.cc-error {
+  border: 1.5px dashed color-mix(in srgb, var(--arr-amber) 50%, transparent);
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--arr-amber) 6%, transparent);
+  padding: 0.85rem 1rem;
+}
+.cc-error-tag {
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--arr-amber);
+}
+.cc-error-body {
+  font-family: var(--arr-font-sans);
+  font-size: 0.84rem;
+  color: var(--arr-text2);
+  line-height: 1.55;
+  margin-top: 0.35rem;
+}
+.cc-error-retry {
+  margin-top: 0.6rem;
+  padding: 0.4rem 0.85rem;
+  cursor: pointer;
+  font-family: var(--arr-font-mono);
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--arr-accent-deep);
+  background: var(--arr-accent-soft);
+  border: 1px solid color-mix(in srgb, var(--arr-accent) 30%, transparent);
+  border-radius: 6px;
+  transition:
+    background 0.15s,
+    color 0.15s;
+}
+.cc-error-retry:hover {
+  background: var(--arr-accent);
+  color: var(--arr-on-accent);
+}
+
+/* A spent daily allowance names its reset and offers the paid twin. The paid
+   action leads because it is the only one that helps before the reset. */
+.cc-error-reset {
+  font-family: var(--arr-font-mono);
+  font-size: 0.74rem;
+  color: var(--arr-text3);
+  margin-top: 0.4rem;
+  font-variant-numeric: tabular-nums;
+}
+.cc-error-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+.cc-error-paid {
+  margin-top: 0.6rem;
+  padding: 0.4rem 0.85rem;
+  cursor: pointer;
+  font-family: var(--arr-font-mono);
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--arr-on-accent);
+  background: var(--arr-accent);
+  border: 1px solid var(--arr-accent-deep);
+  border-radius: 6px;
+  transition: background 0.15s;
+}
+.cc-error-paid:hover {
+  background: var(--arr-accent-deep);
+}
+
+/* ---- answer model chip ----------------------------------------------------- */
+.cc-model {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 0;
+  font-family: var(--arr-font-mono);
+  font-size: 0.68rem;
+  color: var(--arr-text3);
+}
+.cc-model-label {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.cc-model-id {
+  color: var(--arr-text2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 15rem;
+}
+.cc-model-reset {
+  cursor: pointer;
+  font-family: var(--arr-font-mono);
+  font-size: 0.66rem;
+  font-weight: 700;
+  color: var(--arr-accent);
+  background: none;
+  border: none;
+  padding: 0;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.cc-model-reset:hover {
+  color: var(--arr-accent-deep);
+}
+
+/* ---- key entry (a pending receipt) ---------------------------------------- */
+.cc-link {
+  color: var(--arr-accent);
+  text-decoration: none;
+  font-weight: 600;
+  border-bottom: 1px solid color-mix(in srgb, var(--arr-accent) 35%, transparent);
+}
+.cc-link:hover {
+  border-bottom-color: var(--arr-accent);
+  color: var(--arr-text);
+}
+.cc-key {
+  margin: 0 1.5rem 0.9rem;
+  padding: 0.85rem 1rem;
+  position: relative;
+  z-index: 1;
+  border: 1.5px dashed var(--arr-border-strong);
+  border-radius: 4px;
+  background: var(--arr-bg);
+}
+.cc-key-tag {
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--arr-accent);
+}
+.cc-key-lead {
+  font-family: var(--arr-font-sans);
+  font-size: 0.82rem;
+  color: var(--arr-text2);
+  line-height: 1.55;
+  margin-top: 0.35rem;
+}
+.cc-key-form {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.65rem;
+}
+.cc-key-input {
+  flex: 1;
+  min-width: 0;
+  padding: 0.5rem 0.7rem;
+  font-family: var(--arr-font-mono);
+  font-size: 0.8rem;
+  color: var(--arr-text);
+  background: var(--arr-card);
+  border: 1px solid var(--arr-border-strong);
+  border-radius: 7px;
+}
+.cc-key-toggle,
+.cc-key-save {
+  flex-shrink: 0;
+  padding: 0.45rem 0.8rem;
+  cursor: pointer;
+  font-family: var(--arr-font-mono);
+  font-size: 0.72rem;
+  font-weight: 700;
+  border-radius: 7px;
+}
+.cc-key-toggle {
+  background: var(--arr-bg2);
+  color: var(--arr-text2);
+  border: 1px solid var(--arr-border-strong);
+}
+.cc-key-toggle:hover {
+  color: var(--arr-text);
+  border-color: var(--arr-accent);
+}
+.cc-key-save {
+  background: var(--arr-accent);
+  color: var(--arr-on-accent);
+  border: 1px solid var(--arr-accent);
+}
+.cc-key-save:hover {
+  background: var(--arr-accent-deep);
+}
+.cc-key-save:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.cc-keyrow {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  margin: 0 1.5rem 0.7rem;
+  position: relative;
+  z-index: 1;
+}
+.cc-connected {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.22rem 0.65rem;
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--arr-green);
+  background: var(--arr-green-soft);
+  border: 1px solid color-mix(in srgb, var(--arr-green) 30%, transparent);
+  border-radius: 999px;
+}
+.cc-connected-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+.cc-keyrow-note {
+  font-size: 0.68rem;
+  color: var(--arr-text3);
+}
+.cc-keyrow-swap {
+  margin-left: auto;
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  font-family: var(--arr-font-mono);
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--arr-accent);
+}
+.cc-keyrow-swap:hover {
+  color: var(--arr-accent-deep);
+  text-decoration: underline;
+}
+
+/* ---- input row + fine print ------------------------------------------------ */
+.cc-input-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.85rem 1.5rem;
+  border-top: 1px solid var(--arr-border);
+  background: var(--arr-card);
+  position: relative;
+  z-index: 1;
+}
+.cc-input-row:focus-within {
+  box-shadow: inset 0 2px 0 var(--arr-accent);
+}
+.cc-prompt {
+  color: var(--arr-accent);
+  font-weight: 800;
+  font-size: 1rem;
+}
+.cc-input {
+  flex: 1;
+  min-width: 0;
+  padding: 0.45rem 0;
+  border: 0;
+  background: transparent;
+  font-family: var(--arr-font-mono);
+  font-size: 0.86rem;
+  color: var(--arr-text);
+}
+.cc-input::placeholder {
+  color: var(--arr-text3);
+}
+.cc-input:focus {
+  outline: none;
+} /* the row's focus-within rule carries the cue */
+.cc-input:disabled {
+  color: var(--arr-text3);
+}
+.cc-ask {
+  flex-shrink: 0;
+  padding: 0.5rem 1.15rem;
+  cursor: pointer;
+  font-family: var(--arr-font-mono);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--arr-on-accent);
+  background: var(--arr-accent);
+  border: 0;
+  border-radius: 8px;
+  transition: background 0.15s;
+}
+.cc-ask:hover:not(:disabled) {
+  background: var(--arr-accent-deep);
+}
+.cc-ask:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.cc-foot {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  padding: 0 1.5rem 0.85rem;
+  position: relative;
+  z-index: 1;
+  background: var(--arr-card);
+  font-size: 0.64rem;
+  color: var(--arr-text3);
+}
+.cc-hint {
+  color: var(--arr-accent-deep);
+  font-weight: 600;
+}
+
+/* ---- reduced motion -------------------------------------------------------- */
+/* The instrument's own cues stop; the receipt prints in place. */
+@media (prefers-reduced-motion: reduce) {
+  .cc-status-dot,
+  .cc-stage-glyph,
+  .cc-shimmer,
+  .cc-pending .cc-status-dot {
+    animation: none !important;
+  }
+  .cc-bar-fill {
+    transition: none;
+  }
+  /* static caret, instant trace collapse */
+  .cm-card[data-streaming='thinking'] .cm-think-text::after,
+  .cm-card[data-streaming='writing'] .cm-body > :last-child::after {
+    animation: none;
+    opacity: 0.6;
+  }
+  .cm-think-clip {
+    transition: none;
+  }
+  .cm-print {
+    animation: none;
+    clip-path: none;
+    opacity: 1;
+  }
+}

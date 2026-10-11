@@ -1,0 +1,22 @@
+{
+  "name": "repo-chat",
+  "version": "2.1.0",
+  "description": "The \"Talk to the Repo\" website chat: in-browser LatticeDB retrieval over AutoRepoRAG corpora, answers via OpenRouter.",
+  "license": "Apache-2.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=20.19"
+  },
+  "scripts": {
+    "build": "vite build",
+    "test:unit": "node --test 'test/unit/*.test.js'",
+    "test:e2e": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.62.1",
+    "@sveltejs/vite-plugin-svelte": "7.3.0",
+    "svelte": "5.56.9",
+    "vite": "8.2.1"
+  }
+}

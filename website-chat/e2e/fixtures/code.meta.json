@@ -1,0 +1,12 @@
+{
+  "bytes": 14921,
+  "commit_sha": "a3f9c1e7b2d84056917e2c3a4b5d6f7089abcde1",
+  "dim": 8,
+  "files": 15,
+  "generated_at": "2026-08-16T00:00:00Z",
+  "gz_bytes": 5741,
+  "model": "nvidia/llama-nemotron-embed-vl-1b-v2:free",
+  "points": 20,
+  "repo": "example-org/engine",
+  "sha256": "dfa9ef046c6eced5b42a3d56977b0f9752a70b360b4a8eb61ffff79012d9379d"
+}

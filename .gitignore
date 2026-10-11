@@ -3,3 +3,6 @@
 node_modules/
 npm-debug.log*
 *.log
+website-chat/e2e/.site/
+website-chat/test-results/
+website-chat/playwright-report/

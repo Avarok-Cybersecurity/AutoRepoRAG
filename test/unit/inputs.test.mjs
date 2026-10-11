@@ -12,7 +12,7 @@ import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { readInputs, WEBSITE_CHAT_UNAVAILABLE } from '../../src/inputs.mjs';
+import { readInputs } from '../../src/inputs.mjs';
 import { inputEnvName } from '../../src/util.mjs';
 
 const ACTION_YML = join(dirname(fileURLToPath(import.meta.url)), '..', '..', 'action.yml');
@@ -158,16 +158,43 @@ describe('readInputs', () => {
     assert.throws(() => readInputs(envOf({ 'generate-website-chat': 'yes' })), { message: /must be "true" or "false"/ });
   });
 
-  it('fails fast on generate-website-chat "true" (library not shipped)', () => {
-    assert.throws(
-      () => readInputs(envOf({ 'generate-website-chat': 'true', 'website-chat-dir': 'site/chat' })),
-      { message: new RegExp(WEBSITE_CHAT_UNAVAILABLE) },
-    );
+  it('accepts generate-website-chat "true" with a website-chat-dir, normalised', () => {
+    const inputs = readInputs(envOf({ 'generate-website-chat': 'true', 'website-chat-dir': 'site/./chat/' }));
+    assert.equal(inputs.generateWebsiteChat, true);
+    assert.equal(inputs.websiteChatDir, 'site/chat');
+  });
+
+  it('requires website-chat-dir when generate-website-chat is "true"', () => {
     assert.throws(
       () => readInputs(envOf({ 'generate-website-chat': 'true' })),
       { message: /"website-chat-dir" is required when generate-website-chat is "true"/ },
     );
   });
+
+  it('refuses an absolute website-chat-dir', () => {
+    assert.throws(
+      () => readInputs(envOf({ 'generate-website-chat': 'true', 'website-chat-dir': '/srv/www' })),
+      { message: /^website-chat-dir must be relative to the output-dir, got absolute path "\/srv\/www"/ },
+    );
+  });
+
+  for (const esc of ['..', '../site', 'chat/../../x']) {
+    it(`refuses a website-chat-dir escaping the output-dir (${esc})`, () => {
+      assert.throws(
+        () => readInputs(envOf({ 'generate-website-chat': 'true', 'website-chat-dir': esc })),
+        { message: /^website-chat-dir must stay inside the output-dir/ },
+      );
+    });
+  }
+
+  for (const self of ['.', './', 'chat/..']) {
+    it(`refuses website-chat-dir naming the output-dir itself (${self})`, () => {
+      assert.throws(
+        () => readInputs(envOf({ 'generate-website-chat': 'true', 'website-chat-dir': self })),
+        { message: /must name a subdirectory of the output-dir/ },
+      );
+    });
+  }
 
   it('rejects website-chat-dir when generate-website-chat is "false"', () => {
     assert.throws(
