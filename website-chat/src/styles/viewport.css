@@ -151,6 +151,7 @@
   .cc-chip,
   .cc-key-toggle,
   .cc-key-save,
+  .cc-consent-accept,
   .cc-error-retry,
   .cc-close {
     min-height: 42px;
@@ -161,6 +162,7 @@
   .cc-key-undo,
   .cc-undo,
   .cc-clear,
+  .cc-consent-decline,
   .cm-sources summary {
     padding-block: 0.55rem;
   }

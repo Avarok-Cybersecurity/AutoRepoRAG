@@ -8,7 +8,7 @@
 
 import { test, expect } from '@playwright/test';
 import { CORS_HEADERS, OR_EMBEDDINGS, OR_RERANK, embeddingsHandler, rerankHandler } from './fixtures/openrouter.js';
-import { CODE, META, askQuestion, openChat, routeAnswer, routeCorpus, statusText, waitReady, withKey } from './fixtures/chat-helpers.js';
+import { CODE, META, acceptDownload, askQuestion, openChat, routeAnswer, routeCorpus, statusText, waitReady, withKey } from './fixtures/chat-helpers.js';
 
 const errorCard = (page) => page.locator('.cc-error[role="alert"]');
 
@@ -65,6 +65,7 @@ test('a corpus file the server does not have is the site, not the connection', a
   await context.route(CODE.gzUrl, (route) => route.fulfill({ status: 404, headers: CORS_HEADERS, body: 'not found' }));
   await page.goto('/');
   await openChat(page);
+  await acceptDownload(page);
   await expect(errorCard(page).locator('.cc-error-tag')).toHaveText('corpus unavailable', { timeout: 20_000 });
 });
 

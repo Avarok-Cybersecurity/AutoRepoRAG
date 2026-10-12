@@ -7,6 +7,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.2.0] - 2026-10-11
+
+### Added
+- **The website chat asks before its first download.** On open, when any
+  configured corpus has no cached copy (OPFS) at its current commit, the
+  dialog shows what would be downloaded: each missing corpus by id with its
+  size, plus the search engine when it is not cached and the server reports its
+  size. It also shows the total, a primary "download <size>" button, and
+  "not now". Before the button is pressed, only the small `meta.json` files are
+  fetched (and the engine is sized from the warm-up cache or a `HEAD`); no
+  `.jsonl.gz` is requested and the wasm engine is not started. "not now" closes
+  the dialog cleanly and keeps nothing. A fully cached open starts with no
+  question; a partly cached one asks only for what is missing. Consent holds
+  for a retry after a failed download and is withdrawn by closing. This is
+  fixed behaviour, not a config switch; the config contract is unchanged.
+  - Accessibility: focus lands on the "download" button, whose name carries the
+    size (no live region repeats it). "not now" sits at the far end of the
+    row. Both actions are full-size targets at 390×844.
+  - New status `consent` ("download needed"). The loader stages now run
+    manifest, then engine, then corpus, then index.
+- `COPY_EN` keys: `status.consent`, `size.{kb,mb}`,
+  `consent.{title,lead,engine,accept,decline}`. Sites that spread `COPY_EN` or
+  merge their overrides over it get them automatically.
+
+### Fixed
+- The dialog's open effect re-ran on every load status change (it read the
+  status through `ensureReady()`), which pulled focus back to the dialog each
+  time. It now runs once per open.
+
 ## [2.1.1] - 2026-10-11
 
 Website chat fixes from the UX review of its first integration (metrale.ai).

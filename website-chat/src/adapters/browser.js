@@ -74,6 +74,28 @@ function connectionAllowsPrefetch() {
   return true;
 }
 
+/**
+ * How many bytes the wasm binary still has to come down: 0 when the warm-up
+ * prefetch already holds it in `cacheName`, else the Content-Length of a HEAD
+ * request (no body is transferred), or null when the server does not say.
+ * Both lookups are best-effort sizing for the consent step: a failure means
+ * "size unknown" (null), never a failed load.
+ */
+export async function wasmDownloadBytes(binUrl, cacheName) {
+  try {
+    if (typeof caches !== 'undefined' && (await caches.match(binUrl, { cacheName }))) return 0;
+  } catch {
+    // Cache Storage unavailable (e.g. an opaque origin): fall through to HEAD.
+  }
+  try {
+    const res = await fetch(binUrl, { method: 'HEAD' });
+    const length = Number(res.headers.get('content-length'));
+    return res.ok && Number.isFinite(length) && length > 0 ? length : null;
+  } catch {
+    return null;
+  }
+}
+
 const prefetched = new Set();
 
 /**

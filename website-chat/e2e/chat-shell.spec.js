@@ -15,6 +15,7 @@ import {
   LS_OPENROUTER_KEY,
   READY_LINE,
   TEST_KEY,
+  acceptDownload,
   isMobile,
   openChat,
   routeCorpus,
@@ -113,6 +114,8 @@ test('no corpus or manifest request before the modal opens, even after warming',
 
   await openChat(page);
   await expect.poll(() => hits.meta, { timeout: 15_000 }).toBeGreaterThan(0);
+  // The corpus itself waits for the visitor's go-ahead (chat-consent.spec.js).
+  await acceptDownload(page);
   await expect.poll(() => hits.gz, { timeout: 15_000 }).toBeGreaterThan(0);
 });
 
@@ -144,6 +147,7 @@ test('first open walks download with MB progress to ready with fixture stats', a
     });
 
     await openChat(page);
+    await acceptDownload(page);
     // The loader panel is up with the determinate bar while downloading.
     await expect(page.locator('.cc-load')).toBeVisible();
     await expect(page.locator('.cc-bar[role="progressbar"]')).toBeVisible();
@@ -221,6 +225,7 @@ test.describe('openRepoChat', () => {
     const hits = await routeCorpus(context);
     await page.goto('/');
     await openChat(page);
+    await acceptDownload(page);
     await page.evaluate(() => window.__handle.ready);
     expect(await page.evaluate(() => window.__events)).toEqual(['ready']);
     await page.evaluate(() => window.__handle.close());

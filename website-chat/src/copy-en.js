@@ -55,6 +55,7 @@ export const COPY_EN = deepFreeze({
   },
   status: {
     idle: 'standby',
+    consent: 'download needed',
     'wasm-init': 'starting engine',
     manifest: 'fetching manifest',
     'loading-cached': 'reading local cache',
@@ -73,6 +74,17 @@ export const COPY_EN = deepFreeze({
     bytes: '{loaded} of {total} MB',
     count: '{done} of {total}',
     size: '{total} MB',
+  },
+  size: {
+    kb: '{n} KB',
+    mb: '{n} MB',
+  },
+  consent: {
+    title: 'download the search index?',
+    lead: 'The first visit downloads the index into this browser, once. Later visits read it from there and start instantly.',
+    engine: 'search engine',
+    accept: 'download {size}',
+    decline: 'not now',
   },
   offlineBadge: 'cached · offline',
   phase: {

@@ -1,10 +1,17 @@
 // SPDX-License-Identifier: Apache-2.0
 // =============================================================================
 // loader.js — drives the session's reactive `chat` object to 'ready':
-// wasm init -> every corpus's manifest (or its cached copy when offline) ->
-// one shared embedding space -> per corpus, an OPFS-cached load OR a streamed
+// every corpus's manifest (or its cached copy when offline) -> one shared
+// embedding space -> the OPFS lookup -> when anything large is missing, the
+// visitor's consent (status 'consent', what is missing on chat.consent, until
+// accept()) -> wasm init -> per corpus, an OPFS-cached load OR a streamed
 // download (fetch -> DecompressionStream -> tee to OPFS + parser) -> batched
 // indexing into that corpus's own collection -> ready.
+//
+// Consent is fixed behaviour, not configuration: before it only the small
+// meta.json files are fetched (and the engine's size is probed). It holds for
+// retries after a failure; closing (abortLoad) withdraws it, so the next open
+// asks again for whatever is still missing.
 //
 // All I/O goes through the injected ports; this file only sequences it and
 // writes state. Status walk per corpus: downloading -> caching -> indexing
@@ -13,6 +20,7 @@
 
 import { classifyStreamError, corpusFaultKind, manifestFaultKind } from '../core/ask-errors.js';
 import { createLineSplitter, parseHeader, parsePoint } from '../core/jsonl.js';
+import { missingDownload } from '../core/consent.js';
 import { sharedEmbedding, validateMeta } from '../core/manifest.js';
 
 class AbortedError extends Error {
@@ -35,15 +43,19 @@ class FailedError extends Error {
  * @param {object} deps.chat       the session's $state object
  * @param {Array<{id: string, gzUrl: string, metaUrl: string}>} deps.corpora
  * @param {number} deps.upsertBatch
- * @param {object} deps.ports      { lattice, cache, net, idleYield }
+ * @param {object} deps.ports      { lattice, cache, net, idleYield, wasmBytes }
+ *   wasmBytes(): bytes the engine still has to fetch (0 when cached, null when unknown)
  */
 export function createLoader({ chat, corpora, upsertBatch, ports }) {
-  const { lattice, cache, net, idleYield } = ports;
+  const { lattice, cache, net, idleYield, wasmBytes } = ports;
 
   let loadPromise = null; // in-flight ensureReady(); cleared on error/abort
   let controller = null; // AbortController for the current corpus download
   let writer = null; // OPFS corpus writer (partial file cleanup on abort)
   let loadToken = null; // { aborted } — lets abortLoad() stop non-fetch phases
+  let consented = false; // the visitor pressed "download" for this open
+  let consentGate = null; // { resolve, reject } while waiting in 'consent'
+  let wasmReady = false; // the engine initialized once this session
 
   const throwIfAborted = (token) => {
     if (token.aborted) throw new AbortedError();
@@ -99,6 +111,10 @@ export function createLoader({ chat, corpora, upsertBatch, ports }) {
   function abortLoad() {
     if (chat.status === 'ready' || chat.status === 'idle') return;
     if (loadToken) loadToken.aborted = true;
+    consented = false;
+    consentGate?.reject(new AbortedError());
+    consentGate = null;
+    chat.consent = null;
     controller?.abort();
     const w = writer;
     writer = null;
@@ -110,26 +126,35 @@ export function createLoader({ chat, corpora, upsertBatch, ports }) {
     chat.status = 'idle';
   }
 
+  /** The visitor pressed "download": the waiting load goes on. */
+  function accept() {
+    if (!consentGate) return;
+    consented = true;
+    chat.consent = null;
+    consentGate.resolve();
+    consentGate = null;
+  }
+
+  /** Wait in 'consent' until accept() or abortLoad(). */
+  function awaitConsent(missing) {
+    chat.consent = missing;
+    chat.status = 'consent';
+    return new Promise((resolve, reject) => {
+      consentGate = { resolve, reject };
+    });
+  }
+
   async function load(token) {
     chat.error = null;
     chat.offline = false;
     resetProgress();
 
-    // 1) wasm
-    chat.status = 'wasm-init';
-    try {
-      await lattice.init();
-    } catch (err) {
-      throw fail('wasm', err);
-    }
-    throwIfAborted(token);
-
-    // 2) every manifest preflight (tiny meta.json: sha/size/dim/model)
+    // 1) every manifest preflight (tiny meta.json: sha/size/dim/model)
     chat.status = 'manifest';
     const plan = [];
     for (const corpus of corpora) plan.push(await resolveManifest(token, corpus));
 
-    // 3) one question embedding searches every corpus, so they must agree
+    // 2) one question embedding searches every corpus, so they must agree
     let embedding;
     try {
       embedding = sharedEmbedding(plan.map((p) => ({ id: p.corpus.id, meta: p.meta })));
@@ -137,15 +162,33 @@ export function createLoader({ chat, corpora, upsertBatch, ports }) {
       throw fail('config', err);
     }
 
-    // 4) OPFS hits are served with zero corpus network
+    // 3) OPFS hits are served with zero corpus network
     for (const p of plan) {
       if (!p.file) p.file = await cache.getCachedCorpus(p.corpus.id, p.meta.commitSha, p.meta.bytes);
       throwIfAborted(token);
     }
+
+    // 4) anything large missing: ask first, with its size
+    if (!consented && plan.some((p) => !p.file)) {
+      const engine = wasmReady ? 0 : await wasmBytes();
+      throwIfAborted(token);
+      await awaitConsent(missingDownload(plan, engine));
+      throwIfAborted(token);
+    }
+
+    // 5) wasm
+    chat.status = 'wasm-init';
+    try {
+      await lattice.init();
+    } catch (err) {
+      throw fail('wasm', err);
+    }
+    wasmReady = true;
+    throwIfAborted(token);
     chat.progress.totalBytes = plan.reduce((n, p) => n + (p.file ? p.file.size : p.meta.gzBytes), 0);
     chat.progress.totalPoints = plan.reduce((n, p) => n + p.meta.points, 0);
 
-    // 5) index each corpus into its own collection
+    // 6) index each corpus into its own collection
     const loaded = [];
     for (const p of plan) {
       const header = p.file ? await loadFromFile(token, p) : await loadFromNetwork(token, p);
@@ -353,5 +396,5 @@ export function createLoader({ chat, corpora, upsertBatch, ports }) {
     return header;
   }
 
-  return { ensureReady, abortLoad };
+  return { ensureReady, abortLoad, accept };
 }

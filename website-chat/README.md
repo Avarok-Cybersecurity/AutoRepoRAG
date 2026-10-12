@@ -62,8 +62,16 @@ fail to load with an error naming both.
 
 ## Behaviour worth knowing
 
-- **Nothing downloads until the modal opens.** The manifest (`meta.json`) is
-  fetched first; a corpus already in OPFS for that commit is read locally.
+- **Nothing downloads until the modal opens, and nothing large until the
+  visitor says so.** The manifests (`meta.json`) are fetched first; a corpus
+  already in OPFS for that commit is read locally. When any corpus is not
+  cached, the dialog first lists what is missing (each corpus by id, plus the
+  search engine when it still has to be fetched) with the total size, and
+  waits for "download <size>"; "not now" closes it and keeps nothing. A
+  fully cached open starts without asking; a partly cached one asks only for
+  the rest. This is fixed behaviour, not configuration. The engine's size
+  comes from the warm-up cache (0) or a `HEAD` of `wasm.binUrl`; when the
+  server sends no `Content-Length` it is left out of the total.
 - **OPFS layout:** `<keyPrefix>~<id>@<commit>.jsonl` plus a `.meta.json`
   sidecar. Older commits of the same corpus are pruned; other prefixes and
   other corpora are never touched.

@@ -18,6 +18,7 @@ import {
   READY_LINE,
   cacheFile,
   cacheMeta,
+  acceptDownload,
   openChat,
   opfsFiles,
   routeCorpus,
@@ -128,6 +129,7 @@ test('closing mid-download aborts cleanly and leaves no partial corpus', async (
   try {
     await page.goto('/');
     const dialog = await openChat(page);
+    await acceptDownload(page);
     await expect(statusText(page)).toContainText('downloading corpus');
     await page.keyboard.press('Escape');
     await expect(dialog).toBeHidden();
@@ -156,6 +158,7 @@ test('corpus 404 shows the corpus-unavailable card and retry recovers', async ({
   await context.route(CODE.gzUrl, (route) => route.fulfill({ status: 404, headers: JSON_HEADERS, body: 'not found' }));
   await page.goto('/');
   await openChat(page);
+  await acceptDownload(page);
 
   const card = page.locator('.cc-error[role="alert"]');
   await expect(card).toBeVisible({ timeout: 20_000 });
@@ -174,6 +177,7 @@ test('a corpus whose gzip is corrupt shows the unpack card and caches nothing', 
   await context.route(CODE.gzUrl, (route) => route.fulfill({ status: 200, headers: GZ_HEADERS, body: corrupt }));
   await page.goto('/');
   await openChat(page);
+  await acceptDownload(page);
   const card = page.locator('.cc-error[role="alert"]');
   await expect(card).toBeVisible({ timeout: 20_000 });
   await expect(card.locator('.cc-error-tag')).toHaveText(/unpack failed|download failed/);

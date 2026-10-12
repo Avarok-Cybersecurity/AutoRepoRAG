@@ -7,8 +7,9 @@
   // (state/session.svelte.js, state/conversation.svelte.js), which outlives
   // this component: closing the dialog unmounts it and loses nothing. This
   // component never fetches.
-  import { tick } from 'svelte';
+  import { tick, untrack } from 'svelte';
   import ChatMessage from './ChatMessage.svelte';
+  import ConsentPanel from './ConsentPanel.svelte';
   import ErrorCard from './ErrorCard.svelte';
   import KeyRow from './KeyRow.svelte';
   import LatticeIcon from './LatticeIcon.svelte';
@@ -32,6 +33,8 @@
   const loading = $derived(LOADING_STATUSES.includes(chat.status) || chat.status === 'idle');
   const ready = $derived(chat.status === 'ready');
   const loadError = $derived(chat.status === 'error' ? chat.error : null);
+  // A first open waits here, with what is missing, until "download" is pressed.
+  const consent = $derived(chat.status === 'consent' ? chat.consent : null);
   const canAsk = $derived(conversation.canAsk());
   const pill = $derived(statusText(chat, copy, convo.asking));
   const announce = $derived(announceText(chat, copy, convo.asking));
@@ -61,11 +64,13 @@
   // Scroll lock + initial focus + focus return, and kick the corpus load.
   // ensureReady is idempotent and reports failures through chat.status/error.
   // While open, focus that lands outside the dialog is brought back in.
+  // ensureReady() reads chat.status; untracked, so a status change does not
+  // re-run this effect (which would pull focus back to the dialog each time).
   $effect(() => {
     const prev = document.activeElement;
     document.body.style.overflow = 'hidden';
     dialogEl?.focus();
-    session.ensureReady();
+    untrack(() => session.ensureReady());
     const contain = (e) => {
       if (dialogEl && e.target instanceof Node && !dialogEl.contains(e.target)) dialogEl.focus();
     };
@@ -101,9 +106,17 @@
   });
 
   function close() {
-    // Cancel-safe: closing mid load aborts the fetch and cleans partial cache.
-    if (LOADING_STATUSES.includes(chat.status)) session.abortLoad();
+    // Cancel-safe: closing mid load aborts the fetch and cleans partial cache;
+    // closing at the consent step withdraws nothing, since nothing started.
+    if (LOADING_STATUSES.includes(chat.status) || chat.status === 'consent') session.abortLoad();
     onclose();
+  }
+
+  // The consent panel is replaced by the loader; keep focus in the dialog.
+  async function acceptDownload() {
+    session.acceptDownload();
+    await tick();
+    dialogEl?.focus();
   }
 
   function focusables() {
@@ -237,6 +250,8 @@
           onretry={retryLoad}
         />
       </div>
+    {:else if consent}
+      <ConsentPanel {consent} {copy} onaccept={acceptDownload} ondecline={close} />
     {:else if loading}
       <LoaderPanel {chat} {copy} />
     {:else}
@@ -311,7 +326,7 @@
         <button type="button" class="cc-clear" onclick={clearConversation}>{copy.conversation.clear}</button>
       {/if}
       <span class="cc-hint" aria-live="polite">
-        {#if !ready && !loadError}{copy.input.hintLoading}{:else if chat.keyState === 'missing'}{copy.input.hintNoKey}{/if}
+        {#if !ready && !loadError && !consent}{copy.input.hintLoading}{:else if chat.keyState === 'missing'}{copy.input.hintNoKey}{/if}
       </span>
       <span class="cc-fineprint">{copy.input.fine}</span>
     </div>

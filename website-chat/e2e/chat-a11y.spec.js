@@ -8,18 +8,11 @@
 // =============================================================================
 
 import { test, expect } from '@playwright/test';
-import AxeBuilder from '@axe-core/playwright';
+import { seriousViolations } from './fixtures/axe.js';
 import { CORS_HEADERS } from './fixtures/openrouter.js';
 import { CODE, GZ, isMobile, openAnswered, openChat, routeCorpus, waitReady, withKey } from './fixtures/chat-helpers.js';
 import { startSlowServer } from './fixtures/slow-server.mjs';
 
-const TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa', 'best-practice'];
-
-/** Serious and critical axe findings inside the dialog, as "rule: target" lines. */
-async function seriousViolations(page) {
-  const { violations } = await new AxeBuilder({ page }).include('.cc').withTags(TAGS).analyze();
-  return violations.filter((v) => v.impact === 'serious' || v.impact === 'critical').flatMap((v) => v.nodes.map((n) => `${v.id}: ${n.target.join(' ')}`));
-}
 
 // An answer with a reasoning trace and a code line far wider than a phone.
 const WIDE_CODE = ['The verifier keeps the longest accepted prefix [1].\n\n', '```rust\n', `let kept = draft.iter().zip(verified).take_while(|(d, v)| v.argmax() == **d).count(); // ${'x'.repeat(80)}\n`, '```\n'];
@@ -117,7 +110,7 @@ test('the status announcer says each stage once, not every progress tick', async
     expect(pill.some((t) => /downloading corpus \d+\.\d of \d+\.\d MB/.test(t))).toBe(true);
     // ... but what is announced carries none of them and stays short.
     expect(announced.filter((t) => /\d+\.\d of \d+\.\d MB|\d+ of \d+/.test(t))).toEqual([]);
-    expect(announced.length).toBeLessThanOrEqual(10);
+    expect(announced.length).toBeLessThanOrEqual(12);
     // The ready line itself is announced, once.
     expect(announced.filter((t) => /^ready · /.test(t))).toHaveLength(1);
     await expect(page.locator('.cc-status')).not.toHaveAttribute('aria-live', /.*/);
