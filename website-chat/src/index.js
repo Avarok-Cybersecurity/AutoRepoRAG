@@ -34,6 +34,7 @@ import {
   opfsDirectory,
   prefetchWasmOnIdle,
   sleep,
+  wasmDownloadBytes,
 } from './adapters/browser.js';
 import { createCorpusNet } from './adapters/corpus.js';
 import { createLattice } from './adapters/lattice.js';
@@ -51,6 +52,9 @@ export { ConfigError } from './config/validate.js';
 const PHONE_QUERY = '(max-width: 860px)';
 
 const sessions = new Map();
+
+/** The Cache Storage name the warm-up prefetch keeps the wasm binary in. */
+const wasmCacheName = (cfg) => `${cfg.storage.keyPrefix}lattice-wasm`;
 
 /** What makes two configs share one loaded session. */
 function sessionKey(cfg) {
@@ -70,6 +74,7 @@ function sessionFor(cfg) {
       keys: createKeyStore(cfg.storage.keyPrefix, window.localStorage),
       clock,
       idleYield,
+      wasmBytes: () => wasmDownloadBytes(cfg.wasm.binUrl, wasmCacheName(cfg)),
     });
     sessions.set(key, session);
   }
@@ -91,7 +96,7 @@ export function warmRepoChat(config) {
   const cfg = validateConfig(config);
   requireBrowser('warmRepoChat');
   ensureStylesheet(cfg.assets.cssHref).catch(() => {});
-  prefetchWasmOnIdle(cfg.wasm.binUrl, `${cfg.storage.keyPrefix}lattice-wasm`);
+  prefetchWasmOnIdle(cfg.wasm.binUrl, wasmCacheName(cfg));
 }
 
 /**

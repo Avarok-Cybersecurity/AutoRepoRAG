@@ -7,7 +7,7 @@
 import { fill } from './template.js';
 
 export const LOADING_STATUSES = Object.freeze(['wasm-init', 'manifest', 'loading-cached', 'downloading', 'caching', 'indexing']);
-const STAGE_ORDER = ['wasm-init', 'manifest', 'corpus', 'indexing'];
+const STAGE_ORDER = ['manifest', 'wasm-init', 'corpus', 'indexing'];
 
 export const mb = (bytes) => (bytes / 1048576).toFixed(1);
 
@@ -45,6 +45,8 @@ export function statusText(chat, copy, asking) {
  * numbers. The pill ticks every 0.1 MB and every indexed batch, and a live
  * region reading each tick buries everything else; this changes once per
  * stage (and the ready line, which has no running count, reads in full).
+ * While the first download waits for consent it names the step only: the
+ * focused "download <size>" button already says the size, once.
  */
 export function announceText(chat, copy, asking) {
   if (asking || chat.status === 'ready') return statusText(chat, copy, asking);
@@ -53,6 +55,7 @@ export function announceText(chat, copy, asking) {
 
 export function statusTone(chat, asking) {
   if (chat.status === 'error') return 'error';
+  if (chat.status === 'consent') return 'idle';
   if (chat.status === 'ready') return asking ? 'working' : 'ready';
   return chat.status === 'idle' ? 'idle' : 'working';
 }

@@ -185,6 +185,83 @@
   border: 0;
 }
 
+/* ---- the first open's download question ----------------------------------- */
+.cc-consent-lead {
+  font-family: var(--arr-font-sans);
+  font-size: 0.86rem;
+  line-height: 1.55;
+  color: var(--arr-text2);
+  margin-top: 0.5rem;
+  max-width: 56ch;
+}
+.cc-consent-list {
+  list-style: none;
+  margin: 0.9rem 0 0;
+  padding: 0;
+  display: grid;
+  gap: 0.3rem;
+  font-size: 0.78rem;
+}
+.cc-consent-corpus,
+.cc-consent-engine {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  max-width: 28rem;
+  padding-bottom: 0.25rem;
+  border-bottom: 1px dotted var(--arr-border);
+}
+.cc-consent-name {
+  color: var(--arr-text);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.cc-consent-size {
+  color: var(--arr-text2);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+/* "download" leads; "not now" sits at the far end of the row. */
+.cc-consent-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  margin-top: 1.2rem;
+  max-width: 28rem;
+}
+.cc-consent-accept {
+  padding: 0.55rem 1.1rem;
+  cursor: pointer;
+  font-family: var(--arr-font-mono);
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--arr-on-accent);
+  background: var(--arr-accent);
+  border: 1px solid var(--arr-accent);
+  border-radius: 8px;
+}
+.cc-consent-accept:hover {
+  background: var(--arr-accent-deep);
+}
+.cc-consent-decline {
+  min-height: 24px;
+  background: none;
+  border: 0;
+  padding: 0.15rem 0;
+  cursor: pointer;
+  font-family: var(--arr-font-mono);
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: var(--arr-text2);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.cc-consent-decline:hover {
+  color: var(--arr-accent);
+}
+
 /* ---- loading panel (the professional loader) ------------------------------ */
 .cc-panel {
   padding: 1.5rem;

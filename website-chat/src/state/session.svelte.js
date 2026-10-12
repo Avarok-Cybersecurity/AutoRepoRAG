@@ -15,14 +15,15 @@ import { createLoader } from './loader.js';
 
 /**
  * @param {object} config  a validated openRepoChat config
- * @param {object} ports   { openrouter, lattice, cache, net, keys, clock, idleYield }
+ * @param {object} ports   { openrouter, lattice, cache, net, keys, clock, idleYield, wasmBytes }
  */
 export function createSession(config, ports) {
   const { keys, clock } = ports;
   const defaultChatModel = config.provider.chatModel;
 
   const chat = $state({
-    status: 'idle', // 'idle'|'wasm-init'|'manifest'|'loading-cached'|'downloading'|'caching'|'indexing'|'ready'|'error'
+    status: 'idle', // 'idle'|'manifest'|'consent'|'wasm-init'|'loading-cached'|'downloading'|'caching'|'indexing'|'ready'|'error'
+    consent: null, // while status is 'consent': { corpora: [{ id, bytes }], wasmBytes, totalBytes } (core/consent.js)
     progress: { loadedBytes: 0, totalBytes: 0, indexed: 0, totalPoints: 0 },
     corpora: [], // [{ id, collection, commit, repo, files, chunks, dim, generatedAt }] once ready
     embedding: null, // { model, dim } shared by every corpus, once ready
@@ -205,6 +206,7 @@ export function createSession(config, ports) {
     defaultChatModel,
     ensureReady: loader.ensureReady,
     abortLoad: loader.abortLoad,
+    acceptDownload: loader.accept,
     setKey,
     forgetKey,
     undoForgetKey,

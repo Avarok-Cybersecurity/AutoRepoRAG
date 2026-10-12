@@ -78,7 +78,19 @@ export async function openChat(page) {
 
 export const statusText = (page) => page.locator('.cc-status-text');
 
+/** Press "download" on the first open's consent step. */
+export async function acceptDownload(page) {
+  await page.locator('.cc-consent-accept').click();
+}
+
+/**
+ * Wait for 'ready'. A first open asks before it downloads anything large; the
+ * suites that are not about that step accept it here.
+ */
 export async function waitReady(page) {
+  const accept = page.locator('.cc-consent-accept');
+  await expect(accept.or(page.locator('.cc-status-text', { hasText: 'ready ·' }))).toBeVisible({ timeout: 30_000 });
+  if (await accept.isVisible()) await accept.click();
   await expect(statusText(page)).toContainText('ready ·', { timeout: 30_000 });
 }
 
