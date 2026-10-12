@@ -110,6 +110,7 @@ describe('download consent', () => {
       ],
       wasmBytes: WASM_BYTES,
       totalBytes: CODE.meta.gz_bytes + DOCS.meta.gz_bytes + WASM_BYTES,
+      storedBytes: CODE.meta.bytes + DOCS.meta.bytes,
     });
 
     r.loader.accept();

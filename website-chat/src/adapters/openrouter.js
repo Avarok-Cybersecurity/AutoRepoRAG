@@ -34,6 +34,24 @@ export class OpenRouterUnreachable extends OpenRouterError {
   }
 }
 
+/**
+ * OpenRouter or the model provider answered with a server error (an HTTP 5xx,
+ * or a 5xx code in an error body or stream chunk). Transient, but not a rate
+ * limit and not the visitor's connection, so the UI gives it its own card.
+ */
+export class OpenRouterServiceError extends OpenRouterError {
+  constructor(message) {
+    super(message, true);
+    this.name = 'OpenRouterServiceError';
+    this.service = true;
+  }
+}
+
+/** A failure carrying HTTP-style `code`: a 5xx is the service, anything else a plain OpenRouterError. */
+function codedError(message, code, transient) {
+  return code >= 500 ? new OpenRouterServiceError(message) : new OpenRouterError(message, transient);
+}
+
 // OpenRouter returns 429 for two very different situations. A saturated
 // provider clears in seconds, so it is worth retrying. A per-day free-model
 // allowance does not clear until its reset stamp, so retrying only burns time
@@ -85,7 +103,7 @@ async function parseResponse(response, what) {
     const quota = response.status === 429 ? dailyQuota(body?.error, response) : null;
     if (quota) throw quotaError(what, body.error.message ?? 'daily limit reached', quota);
 
-    throw new OpenRouterError(`${what} failed: ${response.status} - ${raw}`, response.status === 429 || response.status >= 500);
+    throw codedError(`${what} failed: ${response.status} - ${raw}`, response.status, response.status === 429);
   }
 
   let data;
@@ -101,7 +119,7 @@ async function parseResponse(response, what) {
     const message = maybeError.message ?? 'unknown error';
     const quota = dailyQuota(maybeError, response);
     if (quota) throw quotaError(what, message, quota);
-    throw new OpenRouterError(`${what} failed${code ? ` (${code})` : ''}: ${message}`, code === 429 || code >= 500 || TRANSIENT_TEXT.test(message));
+    throw codedError(`${what} failed${code ? ` (${code})` : ''}: ${message}`, code, code === 429 || TRANSIENT_TEXT.test(message));
   }
 
   return data;
@@ -168,10 +186,7 @@ async function readSseStream(bodyStream, emit) {
           const message = chunk.error.message ?? 'unknown error';
           const quota = dailyQuota(chunk.error, null);
           if (quota) throw quotaError('Chat request', message, quota);
-          throw new OpenRouterError(
-            `Chat request failed: ${message}`,
-            chunk.error.code === 429 || (chunk.error.code ?? 0) >= 500 || TRANSIENT_TEXT.test(message)
-          );
+          throw codedError(`Chat request failed: ${message}`, chunk.error.code, chunk.error.code === 429 || TRANSIENT_TEXT.test(message));
         }
 
         const delta = chunk.choices?.[0]?.delta;

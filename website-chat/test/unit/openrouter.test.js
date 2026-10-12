@@ -7,7 +7,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { createOpenRouter, OpenRouterError, OpenRouterUnreachable } from '../../src/adapters/openrouter.js';
+import { createOpenRouter, OpenRouterError, OpenRouterServiceError, OpenRouterUnreachable } from '../../src/adapters/openrouter.js';
 
 const PROVIDER = { apiUrl: 'https://or.test/api/v1', appTitle: 'T', referer: 'https://site.test', maxAttempts: 3, retryBaseMs: 700 };
 
@@ -150,6 +150,28 @@ describe('retry policy', () => {
     const ce = await caught(c.or.chat([{ role: 'user', content: 'q' }], 'sys', 'k', { onDelta: () => {}, model: 'm' }));
     assert.ok(ce instanceof OpenRouterUnreachable);
     assert.equal(c.calls.length, 3);
+  });
+
+  // A 5xx (or an error body / stream chunk carrying a 5xx code) is the
+  // service failing, not a rate limit: still worth a retry, but its own card.
+  it('a 5xx is a retried service error; a 429 is not one', async () => {
+    const five = harness([jsonResponse('{"error":{"message":"Internal Server Error","code":500}}', { ok: false, status: 500 })]);
+    const e = await caught(five.or.getEmbeddings(['q'], 'k', 'm'));
+    assert.ok(e instanceof OpenRouterServiceError);
+    assert.equal(e.service, true);
+    assert.equal(e.transient, true);
+    assert.equal(five.calls.length, 3);
+
+    const body = harness([jsonResponse({ error: { code: 502, message: 'Upstream error from provider' } })]);
+    assert.ok((await caught(body.or.getEmbeddings(['q'], 'k', 'm'))) instanceof OpenRouterServiceError);
+
+    const stream = harness([sseResponse([`data: ${JSON.stringify({ error: { code: 503, message: 'Service Unavailable' } })}\n\n`])]);
+    assert.ok((await caught(stream.or.chat([{ role: 'user', content: 'q' }], 's', 'k', { onDelta: () => {}, model: 'm' }))) instanceof OpenRouterServiceError);
+
+    const rate = harness([jsonResponse('{"error":{"message":"Rate limit exceeded","code":429}}', { ok: false, status: 429 })]);
+    const r = await caught(rate.or.getEmbeddings(['q'], 'k', 'm'));
+    assert.equal(r instanceof OpenRouterServiceError, false);
+    assert.equal(r.transient, true);
   });
 
   it('a 401 is not transient', async () => {

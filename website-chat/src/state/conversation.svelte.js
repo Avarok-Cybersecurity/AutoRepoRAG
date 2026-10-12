@@ -11,7 +11,7 @@
 
 // The kinds that have their own fault card; any other fault prints the
 // generic one (with the engine's own diagnostic for a corpus mismatch).
-const CARD_KINDS = ['rate', 'quota', 'key', 'network'];
+const CARD_KINDS = ['rate', 'quota', 'key', 'network', 'service'];
 
 /**
  * @param {{ chat: object, ask: (q: string, history: object[]) => Promise<object>, setChatModel: (m: string) => void }} session

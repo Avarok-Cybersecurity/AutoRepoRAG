@@ -287,7 +287,7 @@ scripts, theme values are applied through CSSOM) and open it with one call.
 Import it lazily so nothing loads until the visitor asks:
 
 ```js
-const BASE = '/repo-chat/2.2.0/';
+const BASE = '/repo-chat/2.2.1/';
 let lib;
 const load = () => (lib ??= import(`${BASE}repo-chat.js`));
 

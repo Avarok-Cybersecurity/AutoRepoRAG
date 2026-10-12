@@ -83,6 +83,7 @@ export const COPY_EN = deepFreeze({
     title: 'download the search index?',
     lead: 'The first visit downloads the index into this browser, once. Later visits read it from there and start instantly.',
     engine: 'search engine',
+    total: '{download} to download, about {stored} kept in this browser',
     accept: 'download {size}',
     decline: 'not now',
   },
@@ -175,6 +176,11 @@ export const COPY_EN = deepFreeze({
       reset: 'The free pool refills at',
       resetIn: '{h} h {m} min from now',
       paid: 'switch to the paid model and spend my own credits',
+      retry: 'ask again',
+    },
+    service: {
+      tag: 'service error',
+      body: 'OpenRouter or the model provider hit a server error on its side. Ask again in a moment; if it keeps happening, the provider is down for now.',
       retry: 'ask again',
     },
     network: {

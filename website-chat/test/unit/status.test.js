@@ -22,8 +22,8 @@ describe('statusText', () => {
   });
 
   it('download and indexing progress, and the asking phase', () => {
-    const p = progress({ loadedBytes: 1048576, totalBytes: 3 * 1048576, indexed: 5, totalPoints: 20 });
-    assert.equal(statusText({ status: 'downloading', corpora: [], progress: p }, COPY_EN, false), 'downloading corpus 1.0 of 3.0 MB');
+    const p = progress({ loadedBytes: 1_000_000, totalBytes: 134_217_728, indexed: 5, totalPoints: 20 });
+    assert.equal(statusText({ status: 'downloading', corpora: [], progress: p }, COPY_EN, false), 'downloading corpus 1.0 of 134.2 MB');
     assert.equal(statusText({ status: 'indexing', corpora: [], progress: p }, COPY_EN, false), 'indexing 5 of 20');
     assert.equal(statusText({ status: 'ready', corpora: [], msgPhase: 'reranking', progress: p }, COPY_EN, true), 'reranking matches');
   });

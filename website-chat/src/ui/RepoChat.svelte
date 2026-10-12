@@ -14,6 +14,7 @@
   import KeyRow from './KeyRow.svelte';
   import LatticeIcon from './LatticeIcon.svelte';
   import LoaderPanel from './LoaderPanel.svelte';
+  import { trapTab } from './focus-trap.js';
   import { resetText } from '../core/reset-time.js';
   import { LOADING_STATUSES, announceText, shortCommit, statusText, statusTone } from '../core/status.js';
   import { fill } from '../core/template.js';
@@ -119,36 +120,16 @@
     dialogEl?.focus();
   }
 
-  function focusables() {
-    return [
-      ...dialogEl.querySelectorAll('a[href], button:not([disabled]), input:not([disabled]), summary, [tabindex]:not([tabindex="-1"])'),
-    ].filter((el) => el.offsetParent !== null);
-  }
-
   // The trap listens on the window: once focus has fallen to <body> (a
   // control it sat on was disabled or removed), keys no longer pass through
-  // the dialog, and Tab would walk the page behind it.
+  // the dialog, and Tab would walk the page behind it. It moves focus itself
+  // in every engine (ui/focus-trap.js), Option/Alt+Tab included.
   function onWindowKeydown(e) {
     if (e.key === 'Escape') {
       close();
       return;
     }
-    if (e.key !== 'Tab' || !dialogEl) return;
-    const els = focusables();
-    if (els.length === 0) return;
-    const first = els[0];
-    const last = els[els.length - 1];
-    const active = document.activeElement;
-    if (!dialogEl.contains(active)) {
-      e.preventDefault();
-      (e.shiftKey ? last : first).focus();
-    } else if (e.shiftKey && (active === first || active === dialogEl)) {
-      e.preventDefault();
-      last.focus();
-    } else if (!e.shiftKey && active === last) {
-      e.preventDefault();
-      first.focus();
-    }
+    if (dialogEl) trapTab(e, dialogEl);
   }
 
   // The control that started an action is about to be disabled or removed

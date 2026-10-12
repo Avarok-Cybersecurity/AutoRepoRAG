@@ -5,8 +5,11 @@
 //   action emitted (run `node ../scripts/emit-website-chat.mjs` first; CI
 //   does). Never reused: a server left running from an earlier build would
 //   test stale bytes and pass.
-// - Two projects: desktop chromium and a 390x844 phone (the modal becomes a
-//   full-bleed sheet at <=860px).
+// - Projects: desktop chromium and a 390x844 phone (the modal becomes a
+//   full-bleed sheet at <=860px) run every spec. Desktop WebKit runs the
+//   focus-trap spec, where its keyboard model differs (no focus on a clicked
+//   button, Option+Tab). Headless WebKit's OPFS fails here with an
+//   UnknownError, so the cache-dependent suites stay on Chromium.
 // - No live network: corpora and OpenRouter are answered by routes.
 // =============================================================================
 
@@ -40,5 +43,6 @@ export default defineConfig({
       name: 'mobile',
       use: { ...devices['Desktop Chrome'], viewport: { width: 390, height: 844 }, hasTouch: true },
     },
+    { name: 'webkit', use: { ...devices['Desktop Safari'] }, testMatch: /chat-focus-trap\.spec\.js$/ },
   ],
 });
