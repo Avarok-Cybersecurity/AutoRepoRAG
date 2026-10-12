@@ -8,13 +8,17 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 
 import { classifyAskError, corpusFaultKind, manifestFaultKind } from '../../src/core/ask-errors.js';
-import { OpenRouterError, OpenRouterUnreachable } from '../../src/adapters/openrouter.js';
+import { OpenRouterError, OpenRouterServiceError, OpenRouterUnreachable } from '../../src/adapters/openrouter.js';
 
 const kind = (err) => classifyAskError(err).kind;
 
 describe('classifyAskError', () => {
   it('a request that never reached OpenRouter is the connection', () => {
     assert.equal(kind(new OpenRouterUnreachable(new TypeError('Failed to fetch'))), 'network');
+  });
+
+  it('a server error at OpenRouter or the provider is a service error, not a rate limit or the connection', () => {
+    assert.equal(kind(new OpenRouterServiceError('Chat request failed: 500 - Internal Server Error')), 'service');
   });
 
   it('only a transient refusal is a rate limit', () => {

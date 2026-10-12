@@ -1,6 +1,6 @@
 {
   "name": "repo-chat",
-  "version": "2.2.0",
+  "version": "2.2.1",
   "description": "The \"Talk to the Repo\" website chat: in-browser LatticeDB retrieval over AutoRepoRAG corpora, answers via OpenRouter.",
   "license": "Apache-2.0",
   "private": true,

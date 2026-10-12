@@ -6,20 +6,63 @@
 // per (corpus id, commit) at the OPFS root, plus a sidecar meta.json written
 // after the corpus commits, so the corpus can be served offline.
 //
-// Crash safety: createWritable() writes to a browser-managed swap file that is
-// only committed on close(), so an interrupted write never leaves a partial
-// corpus behind — abort()/discard() (or a tab crash) simply drops the swap.
+// Atomic commit: a download is written to "<name>.jsonl.part" and moved to
+// the corpus name only by finalize(), after the caller has parsed the whole
+// stream, so a failed or interrupted download never sits under the name the
+// cache serves. discard() removes the partial; pruneStale() sweeps any left
+// over (a crashed tab, a removal that failed).
+//
+// Chromium releases a writable's lock asynchronously: right after abort() or
+// close() resolves, removeEntry()/move() on that file can still fail with
+// NoModificationAllowedError (seen 8 times in 60 runs on Linux). That one
+// error is retried with a short backoff; any other failure, or one that
+// outlasts the retries, is thrown as a CacheCleanupError naming the file.
+// Nothing here swallows a removal error.
 // =============================================================================
 
-import { corpusFileName, metaFileName, parseCorpusFileName, parseMetaFileName } from '../core/cache-names.js';
+import { corpusFileName, metaFileName, parseCorpusFileName, parseMetaFileName, parsePartialFileName, partialFileName } from '../core/cache-names.js';
+
+// Backoff between attempts while a released lock settles (~0.8 s in all).
+const LOCK_SETTLE_DELAYS_MS = [10, 25, 50, 100, 200, 400];
+
+/** A cache file that could not be removed or committed. */
+export class CacheCleanupError extends Error {
+  constructor(message, cause) {
+    super(`${message}: ${cause?.name ?? 'Error'}: ${cause?.message ?? cause}`, { cause });
+    this.name = 'CacheCleanupError';
+  }
+}
 
 /**
  * @param {string} keyPrefix  config.storage.keyPrefix
- * @param {{getDirectory: null | (() => Promise<FileSystemDirectoryHandle>)}} io
- *   null when the browser has no OPFS (some private-browsing modes); every
- *   call then degrades to "no cache".
+ * @param {{getDirectory: null | (() => Promise<FileSystemDirectoryHandle>), sleep: (ms: number) => Promise<void>}} io
+ *   getDirectory is null when the browser has no OPFS (some private-browsing
+ *   modes); every call then degrades to "no cache". sleep paces the retries.
  */
 export function createOpfsCache(keyPrefix, io) {
+  /** Run `op`, retrying only the lock-release lag; throws a CacheCleanupError otherwise. */
+  async function settled(what, op) {
+    for (let attempt = 0; ; attempt++) {
+      try {
+        return await op();
+      } catch (err) {
+        if (err?.name !== 'NoModificationAllowedError' || attempt >= LOCK_SETTLE_DELAYS_MS.length) throw new CacheCleanupError(what, err);
+        await io.sleep(LOCK_SETTLE_DELAYS_MS[attempt]);
+      }
+    }
+  }
+
+  /** Remove `name`; one already gone counts as removed. */
+  function removeFile(dir, name) {
+    return settled(`could not remove ${name}`, async () => {
+      try {
+        await dir.removeEntry(name);
+      } catch (err) {
+        if (err?.name !== 'NotFoundError') throw err;
+      }
+    });
+  }
+
   async function root() {
     if (!io.getDirectory) return null;
     try {
@@ -47,40 +90,53 @@ export function createOpfsCache(keyPrefix, io) {
   }
 
   /**
-   * Streaming writer for the corpus (id, sha). Returns null when OPFS is
-   * unavailable (caller degrades to no-cache streaming). The file only
-   * becomes visible to getCachedCorpus() after finalize(); discard() drops
-   * everything.
+   * Streaming writer for the corpus (id, sha), writing to its partial name.
+   * Returns null when OPFS is unavailable or will not open a writable (the
+   * caller degrades to no-cache streaming). finalize() closes the partial
+   * and moves it to the corpus name, the only point at which
+   * getCachedCorpus() can see it; discard() removes the partial. Both throw
+   * a CacheCleanupError when the file system will not do it.
    */
   async function createCorpusWriter(id, sha) {
     const dir = await root();
     if (!dir) return null;
-    const name = corpusFileName(keyPrefix, id, sha);
+    const partial = partialFileName(keyPrefix, id, sha);
+    const target = corpusFileName(keyPrefix, id, sha);
+    let handle;
     let writable;
     try {
-      const handle = await dir.getFileHandle(name, { create: true });
+      handle = await dir.getFileHandle(partial, { create: true });
       writable = await handle.createWritable({ keepExistingData: false });
     } catch {
+      // No usable OPFS writable: stream without caching. create:true may
+      // already have made the partial, so remove it (a failure is thrown).
+      if (handle) await removeFile(dir, partial);
       return null;
     }
-    let open = true;
+    let state = 'open'; // 'open' | 'closed' (bytes written, not yet moved) | 'done'
     return {
       async write(chunk) {
-        if (!open) return;
+        if (state !== 'open') return;
         await writable.write(chunk);
       },
       async finalize() {
-        if (!open) return;
-        open = false;
+        if (state !== 'open') return;
         await writable.close();
+        state = 'closed';
+        if (typeof handle.move !== 'function') throw new CacheCleanupError(`could not commit ${partial}`, new Error('this browser cannot move OPFS files'));
+        // A stale file under the corpus name (a size mismatch) gives way.
+        await removeFile(dir, target);
+        await settled(`could not commit ${partial}`, () => handle.move(target));
+        state = 'done';
       },
       async discard() {
-        if (!open) return;
-        open = false;
-        await writable.abort().catch(() => undefined);
-        // Remove any pre-existing file the create:true call may have created
-        // empty, so a later cache probe cannot see a zero-byte corpus.
-        await dir.removeEntry(name).catch(() => undefined);
+        if (state === 'done') return;
+        if (state === 'open') {
+          state = 'closed';
+          await writable.abort();
+        }
+        await removeFile(dir, partial);
+        state = 'done';
       },
     };
   }
@@ -99,18 +155,22 @@ export function createOpfsCache(keyPrefix, io) {
     }
   }
 
-  /** Every cache entry of corpus `id`: [{ name, sha, kind: 'corpus'|'meta', lastModified, handle }]. */
+  /** Every cache entry of corpus `id`: [{ name, sha, kind: 'corpus'|'meta'|'partial', lastModified, file }]. */
   async function entries(dir, id) {
     const out = [];
+    const kinds = [
+      ['corpus', parseCorpusFileName],
+      ['meta', parseMetaFileName],
+      ['partial', parsePartialFileName],
+    ];
     try {
       for await (const [name, handle] of dir) {
         if (handle.kind !== 'file') continue;
-        const corpusSha = parseCorpusFileName(keyPrefix, id, name);
-        const metaSha = corpusSha ? null : parseMetaFileName(keyPrefix, id, name);
-        if (!corpusSha && !metaSha) continue;
+        const match = kinds.map(([kind, parse]) => [kind, parse(keyPrefix, id, name)]).find(([, sha]) => sha);
+        if (!match) continue;
         try {
           const file = await handle.getFile();
-          out.push({ name, sha: corpusSha ?? metaSha, kind: corpusSha ? 'corpus' : 'meta', lastModified: file.lastModified, file });
+          out.push({ name, sha: match[1], kind: match[0], lastModified: file.lastModified, file });
         } catch {
           // Unreadable entry: skip rather than break the listing.
         }
@@ -143,7 +203,11 @@ export function createOpfsCache(keyPrefix, io) {
   }
 
   /**
-   * Delete every cached file of corpus `id` except those for `keepSha`.
+   * Delete every cached file of corpus `id` except the corpus and meta for
+   * `keepSha`, and every partial download of it (a download in progress is
+   * never pruned: callers prune only after their own download committed).
+   * Every removal is attempted; the ones that fail are thrown together as one
+   * CacheCleanupError naming them.
    *
    * Refuses a falsy or non-string sha. The failure mode if one got through is
    * not "prunes the wrong file", it is "deletes ALL of them": no cached name
@@ -155,10 +219,16 @@ export function createOpfsCache(keyPrefix, io) {
     if (typeof keepSha !== 'string' || keepSha === '') return;
     const dir = await root();
     if (!dir) return;
+    const failed = [];
     for (const entry of await entries(dir, id)) {
-      if (entry.sha === keepSha) continue;
-      await dir.removeEntry(entry.name).catch(() => undefined);
+      if (entry.sha === keepSha && entry.kind !== 'partial') continue;
+      try {
+        await removeFile(dir, entry.name);
+      } catch (err) {
+        failed.push(err);
+      }
     }
+    if (failed.length > 0) throw new CacheCleanupError(`could not prune ${failed.length} file(s)`, new Error(failed.map((e) => e.message).join('; ')));
   }
 
   return { getCachedCorpus, createCorpusWriter, writeMeta, newestOffline, pruneStale };

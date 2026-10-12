@@ -9,14 +9,16 @@
  * A spent daily allowance is not a momentary rate limit: it has a known reset
  * and its own remedy, so it must never wear the "try again in a few seconds"
  * copy. A request that never reached OpenRouter is the visitor's connection,
- * and only a refusal the adapter marked transient is a rate limit; anything
- * else is a plain hiccup. Returns { kind, resetAt } where kind is one of
- * 'quota' | 'network' | 'key' | 'corpus' | 'rate' | 'generic'.
+ * a server error (5xx) at OpenRouter or the provider is the service, and only
+ * another refusal the adapter marked transient is a rate limit; anything else
+ * is a plain hiccup. Returns { kind, resetAt } where kind is one of
+ * 'quota' | 'network' | 'service' | 'key' | 'corpus' | 'rate' | 'generic'.
  */
 export function classifyAskError(err) {
   const msg = String(err?.message ?? err);
   if (err?.quota) return { kind: 'quota', resetAt: err.resetAt ?? null };
   if (err?.network === true) return { kind: 'network', resetAt: null };
+  if (err?.service === true) return { kind: 'service', resetAt: null };
   if (/\b401\b|\b403\b|invalid.{0,20}key|no auth/i.test(msg)) return { kind: 'key', resetAt: null };
   if (/dimensions but this corpus/.test(msg)) return { kind: 'corpus', resetAt: null };
   if (err?.transient === true) return { kind: 'rate', resetAt: null };

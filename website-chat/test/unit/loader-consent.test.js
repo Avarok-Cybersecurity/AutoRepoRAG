@@ -29,7 +29,7 @@ const CODE = corpusFixture('code');
 const DOCS = corpusFixture('docs');
 const WASM_BYTES = 760_000;
 
-function rig({ corpora, cached = [], wasmBytes = WASM_BYTES, failFirstGz = false }) {
+function rig({ corpora, cached = [], wasmBytes = WASM_BYTES, failFirstGz = false, gzOverride = null, writer = null }) {
   const fetched = [];
   const statuses = [];
   const byUrl = new Map(corpora.flatMap((c) => [[c.metaUrl, () => new Response(JSON.stringify(c.meta))], [c.gzUrl, () => new Response(c.gz)]]));
@@ -40,6 +40,7 @@ function rig({ corpora, cached = [], wasmBytes = WASM_BYTES, failFirstGz = false
         failFirstGz = false;
         return new Response('busy', { status: 503 });
       }
+      if (gzOverride && url.endsWith('.gz')) return new Response(gzOverride);
       return byUrl.get(url)();
     },
   });
@@ -49,7 +50,7 @@ function rig({ corpora, cached = [], wasmBytes = WASM_BYTES, failFirstGz = false
       const c = cachedSet.get(id);
       return c && c.meta.commit_sha === sha ? { size: c.jsonl.length, stream: () => new Response(c.jsonl).body } : null;
     },
-    createCorpusWriter: async () => null,
+    createCorpusWriter: async () => writer,
     writeMeta: async () => undefined,
     newestOffline: async () => null,
     pruneStale: async () => undefined,
@@ -63,6 +64,7 @@ function rig({ corpora, cached = [], wasmBytes = WASM_BYTES, failFirstGz = false
     upsert: () => undefined,
   };
   let probes = 0;
+  const faults = [];
   const chatTarget = { status: 'idle', progress: { loadedBytes: 0, totalBytes: 0, indexed: 0, totalPoints: 0 }, corpora: [], embedding: null, offline: false, error: null, consent: null };
   const chat = new Proxy(chatTarget, {
     set(t, k, v) {
@@ -84,9 +86,10 @@ function rig({ corpora, cached = [], wasmBytes = WASM_BYTES, failFirstGz = false
         probes++;
         return wasmBytes;
       },
+      reportCacheFault: (err) => faults.push(err),
     },
   });
-  return { loader, chat, fetched, statuses, inits: () => inits, probes: () => probes };
+  return { loader, chat, fetched, statuses, faults, inits: () => inits, probes: () => probes };
 }
 
 const until = async (pred) => {
@@ -110,6 +113,7 @@ describe('download consent', () => {
       ],
       wasmBytes: WASM_BYTES,
       totalBytes: CODE.meta.gz_bytes + DOCS.meta.gz_bytes + WASM_BYTES,
+      storedBytes: CODE.meta.bytes + DOCS.meta.bytes,
     });
 
     r.loader.accept();
@@ -179,5 +183,33 @@ describe('download consent', () => {
     await r.loader.ensureReady();
     assert.equal(r.chat.status, 'ready');
     assert.equal(r.statuses.filter((s) => s === 'consent').length, 1, r.statuses.join(' > '));
+  });
+});
+
+// A failed download's cleanup error must not vanish: the load still fails with
+// its own fault card, and the cleanup error goes to the reporter port.
+describe('cleanup after a failed download', () => {
+  it('a corrupt stream discards the partial; a discard that fails is reported, not swallowed', async () => {
+    const corrupt = Buffer.concat([CODE.gz.subarray(0, 40), Buffer.alloc(200, 0x5a)]);
+    const cleanup = Object.assign(new Error('could not remove arr~code@x.jsonl.part'), { name: 'CacheCleanupError' });
+    const calls = [];
+    const writer = {
+      write: async () => calls.push('write'),
+      finalize: async () => calls.push('finalize'),
+      discard: async () => {
+        calls.push('discard');
+        throw cleanup;
+      },
+    };
+    const r = rig({ corpora: [CODE], gzOverride: corrupt, writer });
+    const done = r.loader.ensureReady();
+    await until(() => r.chat.status === 'consent');
+    r.loader.accept();
+    await done;
+    assert.equal(r.chat.status, 'error');
+    // The browser's DecompressionStream names gzip in its message ('decompress'); Node's zlib does not ('corpus').
+    assert.ok(['decompress', 'corpus'].includes(r.chat.error.kind), r.chat.error.kind);
+    assert.deepEqual(calls, ['discard']);
+    assert.deepEqual(r.faults, [cleanup]);
   });
 });

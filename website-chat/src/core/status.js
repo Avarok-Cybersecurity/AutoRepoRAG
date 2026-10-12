@@ -9,7 +9,8 @@ import { fill } from './template.js';
 export const LOADING_STATUSES = Object.freeze(['wasm-init', 'manifest', 'loading-cached', 'downloading', 'caching', 'indexing']);
 const STAGE_ORDER = ['manifest', 'wasm-init', 'corpus', 'indexing'];
 
-export const mb = (bytes) => (bytes / 1048576).toFixed(1);
+// Decimal SI megabytes (10^6 bytes), as downloads and sites report sizes.
+export const mb = (bytes) => (bytes / 1_000_000).toFixed(1);
 
 export const shortCommit = (sha) => String(sha).slice(0, 7);
 

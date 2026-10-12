@@ -7,6 +7,7 @@
 // =============================================================================
 
 import { test, expect } from '@playwright/test';
+import { seriousViolations } from './fixtures/axe.js';
 import { CORS_HEADERS, OR_EMBEDDINGS, OR_RERANK, embeddingsHandler, rerankHandler } from './fixtures/openrouter.js';
 import { CODE, META, acceptDownload, askQuestion, openChat, routeAnswer, routeCorpus, statusText, waitReady, withKey } from './fixtures/chat-helpers.js';
 
@@ -31,6 +32,27 @@ test('a question that cannot reach OpenRouter says so, not "rate limited", and a
   await card.locator('.cc-error-retry').click();
   await expect(page.locator('.cm-card .cm-body')).toContainText('kv_pool.rs', { timeout: 20_000 });
   await expect(errorCard(page)).toHaveCount(0);
+});
+
+test('an OpenRouter 5xx is a service error, not a rate limit or the connection', async ({ page, context }) => {
+  await routeCorpus(context);
+  await context.route(OR_EMBEDDINGS, embeddingsHandler({ dim: META.dim }));
+  await context.route(OR_RERANK, rerankHandler());
+  await context.route('https://openrouter.ai/api/v1/chat/completions', async (route) => {
+    if (route.request().method() === 'OPTIONS') return route.fulfill({ status: 204, headers: CORS_HEADERS });
+    await route.fulfill({ status: 500, headers: { ...CORS_HEADERS, 'content-type': 'application/json' }, body: '{"error":{"message":"Internal Server Error","code":500}}' });
+  });
+  await withKey(page);
+  await page.goto('/');
+  await openChat(page);
+  await waitReady(page);
+
+  await askQuestion(page, 'where is the kv pool?');
+  const card = errorCard(page);
+  await expect(card.locator('.cc-error-tag')).toHaveText('service error', { timeout: 20_000 });
+  await expect(card.locator('.cc-error-body')).not.toContainText('catching their breath');
+  await expect(card.locator('.cc-error-body')).not.toContainText('connection');
+  expect(await seriousViolations(page)).toEqual([]);
 });
 
 test('a non-transient OpenRouter refusal is not dressed up as a rate limit', async ({ page, context }) => {

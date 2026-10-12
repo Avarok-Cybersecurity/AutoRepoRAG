@@ -66,15 +66,22 @@ fail to load with an error naming both.
   visitor says so.** The manifests (`meta.json`) are fetched first; a corpus
   already in OPFS for that commit is read locally. When any corpus is not
   cached, the dialog first lists what is missing (each corpus by id, plus the
-  search engine when it still has to be fetched) with the total size, and
-  waits for "download <size>"; "not now" closes it and keeps nothing. A
+  search engine when it still has to be fetched) with the total download and
+  about how much the browser then keeps (the decompressed corpora), and waits
+  for "download <size>"; "not now" closes it and keeps nothing. Focus lands on
+  the question itself, so the size is read before the action, which is the
+  next Tab. Sizes are decimal SI (1 MB = 10^6 bytes) everywhere. A
   fully cached open starts without asking; a partly cached one asks only for
   the rest. This is fixed behaviour, not configuration. The engine's size
   comes from the warm-up cache (0) or a `HEAD` of `wasm.binUrl`; when the
   server sends no `Content-Length` it is left out of the total.
 - **OPFS layout:** `<keyPrefix>~<id>@<commit>.jsonl` plus a `.meta.json`
-  sidecar. Older commits of the same corpus are pruned; other prefixes and
-  other corpora are never touched.
+  sidecar. A download is written to `….jsonl.part` and moved to the `.jsonl`
+  name only once the whole stream has parsed, so a failed download never sits
+  under the name the cache serves; its partial is removed, and a removal that
+  fails is reported on the console, never swallowed. Older commits and stray
+  partials of the same corpus are pruned; other prefixes and other corpora are
+  never touched.
 - **Offline:** when a manifest is unreachable or invalid, the newest cached
   copy of that corpus is served and the status says `cached · offline`.
 - **Theme:** the root element carries the `--arr-*` properties (set through
@@ -91,10 +98,12 @@ fail to load with an error naming both.
   back and forget actions sit a full line above "connect".
 - **Focus stays in the dialog.** A keyboard Ask keeps focus on the input; a
   pointer Ask moves it to the conversation (so a phone keyboard does not jump
-  up over the answer); Tab from a focus that fell to the page comes back in.
+  up over the answer); Tab, Shift+Tab and WebKit's Option+Tab are handled by
+  the dialog itself from any starting point, so focus never walks out.
   Screen readers hear each loading stage once, not every progress tick.
 - **Faults name the culprit:** "no connection" when OpenRouter could not be
-  reached, "rate limited" only for a transient refusal, "corpus unavailable"
+  reached, "service error" for a 5xx at OpenRouter or the model provider,
+  "rate limited" only for another transient refusal, "corpus unavailable"
   when the server answered but the corpus is not published, and a daily-limit
   reset with its time zone and the time left.
 

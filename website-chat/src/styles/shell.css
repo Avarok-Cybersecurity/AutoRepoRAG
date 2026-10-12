@@ -221,6 +221,15 @@
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
 }
+.cc-consent-total {
+  margin-top: 0.7rem;
+  font-size: 0.78rem;
+  color: var(--arr-text2);
+}
+/* Focus lands on the panel; the ring sits inside it. */
+.cc-consent:focus-visible {
+  outline-offset: -3px;
+}
 /* "download" leads; "not now" sits at the far end of the row. */
 .cc-consent-actions {
   display: flex;

@@ -22,8 +22,13 @@ test('a first open asks before any corpus download, with the size and the corpus
   await openChat(page);
 
   await expect(panel(page)).toBeVisible();
+  // Focus lands on the question (announced with its sizes), and the action is one Tab away.
+  await expect(panel(page)).toBeFocused();
+  await page.keyboard.press('Tab');
   await expect(accept(page)).toBeFocused();
   await expect(accept(page)).toHaveText(/^download \d+\.\d (KB|MB)$/);
+  // What stays on the device is stated too: the decompressed corpus (meta bytes), decimal units.
+  await expect(panel(page).locator('.cc-consent-total')).toContainText('14.9 KB kept in this browser');
   await expect(panel(page).locator('.cc-consent-corpus .cc-consent-name')).toHaveText(['code']);
   await expect(panel(page).locator('.cc-consent-corpus .cc-consent-size')).toHaveText([SIZE]);
 
@@ -99,10 +104,19 @@ test('the consent step is axe-clean, says the size once, keeps its actions apart
   await routeCorpus(context);
   await page.goto('/');
   await openChat(page);
-  await expect(accept(page)).toBeFocused();
+  await expect(panel(page)).toBeFocused();
 
   expect(await seriousViolations(page)).toEqual([]);
-  // The size is spoken through the focused button's name; no live region repeats it.
+  // The focused region is named by its question and described by the sizes,
+  // so the size is read before the action; no live region repeats it.
+  const described = await panel(page).evaluate((el) =>
+    (el.getAttribute('aria-describedby') ?? '')
+      .split(/\s+/)
+      .map((id) => document.getElementById(id)?.textContent ?? '')
+      .join(' ')
+  );
+  expect(described).toMatch(/\d+\.\d (KB|MB) to download/);
+  await expect(panel(page)).toHaveAttribute('aria-labelledby', /\S/);
   const live = await page.locator('.cc [aria-live], .cc [role="status"], .cc [role="alert"]').allTextContents();
   expect(live.filter((t) => /\d (KB|MB)/.test(t))).toEqual([]);
 

@@ -394,10 +394,10 @@ jobs:
       - name: Emit the bundle the browser suite serves
         run: node ../scripts/emit-website-chat.mjs "$CORPUS_LATTICE_VERSION" e2e/.site/repo-chat "$RUNNER_TEMP/lattice-wasm"
 
-      - name: Install Chromium for Playwright
-        run: npx playwright install --with-deps chromium
+      - name: Install Chromium and WebKit for Playwright
+        run: npx playwright install --with-deps chromium webkit
 
-      - name: Browser suite (desktop chromium + 390x844 phone)
+      - name: Browser suite (desktop chromium + 390x844 phone + WebKit focus trap)
         run: npx playwright test
 
       - name: Keep the Playwright traces on failure

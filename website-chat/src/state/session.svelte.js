@@ -15,7 +15,7 @@ import { createLoader } from './loader.js';
 
 /**
  * @param {object} config  a validated openRepoChat config
- * @param {object} ports   { openrouter, lattice, cache, net, keys, clock, idleYield, wasmBytes }
+ * @param {object} ports   { openrouter, lattice, cache, net, keys, clock, idleYield, wasmBytes, reportCacheFault }
  */
 export function createSession(config, ports) {
   const { keys, clock } = ports;
@@ -28,7 +28,7 @@ export function createSession(config, ports) {
     corpora: [], // [{ id, collection, commit, repo, files, chunks, dim, generatedAt }] once ready
     embedding: null, // { model, dim } shared by every corpus, once ready
     offline: false, // serving a cached corpus because its manifest fetch failed
-    error: null, // { kind: 'wasm'|'manifest'|'unavailable'|'corpus'|'decompress'|'config'|'network'|'rate'|'quota'|'key'|'generic', message, resetAt? }
+    error: null, // { kind: 'wasm'|'manifest'|'unavailable'|'corpus'|'decompress'|'config'|'network'|'service'|'rate'|'quota'|'key'|'generic', message, resetAt? }
     keyState: keys.getKey() ? 'set' : 'missing',
     keyForgotten: false, // forgetKey() ran and undoForgetKey() can still bring the key back
     chatModel: keys.getChatModel() || defaultChatModel, // answer model, overridable by the visitor
@@ -109,7 +109,8 @@ export function createSession(config, ports) {
    * retrieving -> reranking -> thinking -> writing. Resolves
    * { answer, sources, reasoning, reasoningMs } (see core/rag.js). Rejects on
    * failure after recording a chat.error of kind 'key' (missing/rejected
-   * key), 'quota', 'corpus', 'network' (OpenRouter unreachable), 'rate'
+   * key), 'quota', 'corpus', 'network' (OpenRouter unreachable), 'service'
+   * (a 5xx at OpenRouter or the provider), 'rate'
    * (transient upstream saturation) or 'generic'.
    */
   async function ask(question, history) {
@@ -183,7 +184,7 @@ export function createSession(config, ports) {
         },
         onDelta,
       });
-      if (['network', 'rate', 'quota', 'key', 'generic'].includes(chat.error?.kind)) chat.error = null;
+      if (['network', 'service', 'rate', 'quota', 'key', 'generic'].includes(chat.error?.kind)) chat.error = null;
       const reasoningMs = chat.stream?.reasoningMs || (thinkStart ? clock.now() - thinkStart : 0);
       return { ...result, reasoning: reasoningAll, reasoningMs };
     } catch (err) {

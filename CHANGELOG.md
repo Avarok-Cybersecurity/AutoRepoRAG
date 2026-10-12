@@ -7,6 +7,52 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.2.1] - 2026-10-11
+
+Website chat fixes from the third UX review round of its metrale.ai
+integration. The config contract is unchanged.
+
+### Fixed
+- **The focus trap holds in WebKit.** WebKit does not focus a clicked button,
+  so after a pointer Ask, focus sat on the dialog container, and the first
+  Option+Tab walked out of the dialog. The trap now moves focus itself on
+  Tab, Shift+Tab and their Option/Alt forms, from any start: a control, the
+  container, a region inside it, or a focus that fell to the page
+  (`ui/focus-trap.js`).
+- **An OpenRouter 5xx is a "service error"**, not "rate limited". This covers
+  an HTTP 5xx, or a 5xx code in an error body or stream chunk. It is distinct
+  from a 429 rate limit and from an unreachable OpenRouter ("no connection"),
+  and it is still retried.
+- **The consent question is read before its action.** Focus lands on the
+  consent panel, which is named by its question and described by the sizes;
+  "download <size>" is the next Tab.
+- **Sizes are decimal SI.** 1 KB is 10^3 bytes and 1 MB is 10^6 bytes, as
+  downloads and sites report them: 134,217,728 bytes reads "134.2 MB", no
+  longer "128.0 MB". This applies to the consent panel, the loader and the
+  download progress.
+- **The consent panel states what the browser keeps** ("… to download, about
+  … kept in this browser"), from each missing corpus's decompressed `bytes`.
+- **A failed download no longer leaves a file in the browser.** This was the
+  cause of the flaky corrupt-gzip test.
+  - Root cause: Chromium releases a writable's lock asynchronously. The
+    `removeEntry` that `discard()` ran right after `abort()` failed with
+    `NoModificationAllowedError` (8 of 60 runs on Linux). The error was
+    swallowed, so the empty file `create:true` had made stayed under the
+    corpus's cache name.
+  - Downloads are now written to `<name>.jsonl.part` and moved to the cache
+    name only after the whole stream has parsed (atomic commit).
+  - Removal and the commit move retry that one error with a short backoff.
+    Any other failure is thrown as a `CacheCleanupError` and reported through
+    a new loader port (`console.error`) instead of being swallowed. The same
+    applies to pruning old commits and a writer that cannot be set up.
+  - A successful load also sweeps the corpus's leftover `.part` files.
+
+### Added
+- `COPY_EN` keys `errors.service.{tag,body,retry}` and `consent.total`
+  (`{download}` and `{stored}`).
+- Browser suite: a desktop WebKit project that runs the focus-trap spec. CI
+  now installs WebKit next to Chromium.
+
 ## [2.2.0] - 2026-10-11
 
 ### Added
