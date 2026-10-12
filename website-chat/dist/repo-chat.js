@@ -2826,17 +2826,53 @@ function la(e, t, n) {
 	return `${e}~${t}@${n}.meta.json`;
 }
 function ua(e, t, n) {
+	return `${ca(e, t, n)}.part`;
+}
+function da(e, t, n) {
 	let r = RegExp(`^${sa(`${e}~${t}@`)}([0-9a-f]{7,64})\\.jsonl$`).exec(n);
 	return r ? r[1] : null;
 }
-function da(e, t, n) {
+function fa(e, t, n) {
 	let r = RegExp(`^${sa(`${e}~${t}@`)}([0-9a-f]{7,64})\\.meta\\.json$`).exec(n);
+	return r ? r[1] : null;
+}
+function pa(e, t, n) {
+	let r = RegExp(`^${sa(`${e}~${t}@`)}([0-9a-f]{7,64})\\.jsonl\\.part$`).exec(n);
 	return r ? r[1] : null;
 }
 //#endregion
 //#region src/adapters/opfs.js
-function fa(e, t) {
-	async function n() {
+var ma = [
+	10,
+	25,
+	50,
+	100,
+	200,
+	400
+], ha = class extends Error {
+	constructor(e, t) {
+		super(`${e}: ${t?.name ?? "Error"}: ${t?.message ?? t}`, { cause: t }), this.name = "CacheCleanupError";
+	}
+};
+function ga(e, t) {
+	async function n(e, n) {
+		for (let r = 0;; r++) try {
+			return await n();
+		} catch (n) {
+			if (n?.name !== "NoModificationAllowedError" || r >= ma.length) throw new ha(e, n);
+			await t.sleep(ma[r]);
+		}
+	}
+	function r(e, t) {
+		return n(`could not remove ${t}`, async () => {
+			try {
+				await e.removeEntry(t);
+			} catch (e) {
+				if (e?.name !== "NotFoundError") throw e;
+			}
+		});
+	}
+	async function i() {
 		if (!t.getDirectory) return null;
 		try {
 			return await t.getDirectory();
@@ -2844,57 +2880,64 @@ function fa(e, t) {
 			return null;
 		}
 	}
-	async function r(t, r, i) {
-		let a = await n();
+	async function a(t, n, r) {
+		let a = await i();
 		if (!a) return null;
 		try {
-			let n = await (await a.getFileHandle(ca(e, t, r))).getFile();
-			return i !== null && n.size !== i ? null : n;
+			let i = await (await a.getFileHandle(ca(e, t, n))).getFile();
+			return r !== null && i.size !== r ? null : i;
 		} catch {
 			return null;
 		}
 	}
-	async function i(t, r) {
-		let i = await n();
-		if (!i) return null;
-		let a = ca(e, t, r), o;
+	async function o(t, a) {
+		let o = await i();
+		if (!o) return null;
+		let s = ua(e, t, a), c = ca(e, t, a), l, u;
 		try {
-			o = await (await i.getFileHandle(a, { create: !0 })).createWritable({ keepExistingData: !1 });
+			l = await o.getFileHandle(s, { create: !0 }), u = await l.createWritable({ keepExistingData: !1 });
 		} catch {
-			return null;
+			return l && await r(o, s), null;
 		}
-		let s = !0;
+		let d = "open";
 		return {
 			async write(e) {
-				s && await o.write(e);
+				d === "open" && await u.write(e);
 			},
 			async finalize() {
-				s && (s = !1, await o.close());
+				if (d === "open") {
+					if (await u.close(), d = "closed", typeof l.move != "function") throw new ha(`could not commit ${s}`, /* @__PURE__ */ Error("this browser cannot move OPFS files"));
+					await r(o, c), await n(`could not commit ${s}`, () => l.move(c)), d = "done";
+				}
 			},
 			async discard() {
-				s && (s = !1, await o.abort().catch(() => void 0), await i.removeEntry(a).catch(() => void 0));
+				d !== "done" && (d === "open" && (d = "closed", await u.abort()), await r(o, s), d = "done");
 			}
 		};
 	}
-	async function a(t, r, i) {
-		let a = await n();
+	async function s(t, n, r) {
+		let a = await i();
 		if (a) try {
-			let n = await (await a.getFileHandle(la(e, t, r), { create: !0 })).createWritable({ keepExistingData: !1 });
-			await n.write(JSON.stringify(i)), await n.close();
+			let i = await (await a.getFileHandle(la(e, t, n), { create: !0 })).createWritable({ keepExistingData: !1 });
+			await i.write(JSON.stringify(r)), await i.close();
 		} catch {}
 	}
-	async function o(t, n) {
-		let r = [];
+	async function c(t, n) {
+		let r = [], i = [
+			["corpus", da],
+			["meta", fa],
+			["partial", pa]
+		];
 		try {
-			for await (let [i, a] of t) {
-				if (a.kind !== "file") continue;
-				let t = ua(e, n, i), o = t ? null : da(e, n, i);
-				if (t || o) try {
-					let e = await a.getFile();
+			for await (let [a, o] of t) {
+				if (o.kind !== "file") continue;
+				let t = i.map(([t, r]) => [t, r(e, n, a)]).find(([, e]) => e);
+				if (t) try {
+					let e = await o.getFile();
 					r.push({
-						name: i,
-						sha: t ?? o,
-						kind: t ? "corpus" : "meta",
+						name: a,
+						sha: t[1],
+						kind: t[0],
 						lastModified: e.lastModified,
 						file: e
 					});
@@ -2905,35 +2948,42 @@ function fa(e, t) {
 		}
 		return r;
 	}
-	async function s(e) {
-		let t = await n();
+	async function l(e) {
+		let t = await i();
 		if (!t) return null;
-		let r = await o(t, e), i = new Map(r.filter((e) => e.kind === "meta").map((e) => [e.sha, e.file])), a = r.filter((e) => e.kind === "corpus" && i.has(e.sha)).sort((e, t) => t.lastModified - e.lastModified);
+		let n = await c(t, e), r = new Map(n.filter((e) => e.kind === "meta").map((e) => [e.sha, e.file])), a = n.filter((e) => e.kind === "corpus" && r.has(e.sha)).sort((e, t) => t.lastModified - e.lastModified);
 		for (let e of a) try {
 			return {
 				sha: e.sha,
 				file: e.file,
-				rawMeta: JSON.parse(await i.get(e.sha).text())
+				rawMeta: JSON.parse(await r.get(e.sha).text())
 			};
 		} catch {}
 		return null;
 	}
-	async function c(e, t) {
+	async function u(e, t) {
 		if (typeof t != "string" || t === "") return;
-		let r = await n();
-		if (r) for (let n of await o(r, e)) n.sha !== t && await r.removeEntry(n.name).catch(() => void 0);
+		let n = await i();
+		if (!n) return;
+		let a = [];
+		for (let i of await c(n, e)) if (i.sha !== t || i.kind === "partial") try {
+			await r(n, i.name);
+		} catch (e) {
+			a.push(e);
+		}
+		if (a.length > 0) throw new ha(`could not prune ${a.length} file(s)`, Error(a.map((e) => e.message).join("; ")));
 	}
 	return {
-		getCachedCorpus: r,
-		createCorpusWriter: i,
-		writeMeta: a,
-		newestOffline: s,
-		pruneStale: c
+		getCachedCorpus: a,
+		createCorpusWriter: o,
+		writeMeta: s,
+		newestOffline: l,
+		pruneStale: u
 	};
 }
 //#endregion
 //#region src/adapters/storage.js
-function pa(e, t) {
+function _a(e, t) {
 	let n = `${e}openrouter-key`, r = `${e}openrouter-chat-model`;
 	return {
 		keyName: n,
@@ -2948,7 +2998,7 @@ function pa(e, t) {
 }
 //#endregion
 //#region src/core/ask-errors.js
-function ma(e) {
+function va(e) {
 	let t = String(e?.message ?? e);
 	return e?.quota ? {
 		kind: "quota",
@@ -2973,36 +3023,36 @@ function ma(e) {
 		resetAt: null
 	};
 }
-function ha(e) {
+function ya(e) {
 	return /gzip|decompress|inflate|corrupt/i.test(String(e?.message)) ? "decompress" : "corpus";
 }
-function ga(e) {
+function ba(e) {
 	return e?.network === !0 ? "manifest" : "unavailable";
 }
-function _a(e) {
+function xa(e) {
 	return Number.isInteger(e?.status) ? "unavailable" : "corpus";
 }
 //#endregion
 //#region src/core/prompt.js
-function va(e) {
+function Sa(e) {
 	return Math.max(0, Math.min(100, (1 - e) * 100));
 }
-function ya(e, t, n, r, i) {
+function Ca(e, t, n, r, i) {
 	return `https://github.com/${e}/blob/${t}/${n}#L${r}-L${i}`;
 }
-function ba(e, { repo: t, path: n, startLine: r, endLine: i, language: a, text: o }) {
+function wa(e, { repo: t, path: n, startLine: r, endLine: i, language: a, text: o }) {
 	return `[${e}] ${t} ${n} lines ${r}–${i}\n\`\`\`${a || ""}\n${o}\n\`\`\``;
 }
-function xa(e) {
+function Ta(e) {
 	return e.map((e) => `GitHub repository ${e.repo}, commit ${e.commit}`).join("; ");
 }
-function Sa(e, t, n) {
-	return `You are the code assistant for the ${e} codebase (${xa(t)}). Answer questions about this codebase using ONLY the numbered code context below.\n\nRules:\n- Cite the context blocks you draw from inline with bracketed numbers, e.g. [1] or [2].\n- If the context does not contain what is needed to answer, say plainly that the retrieved code does not cover it. Never invent file names, functions, or behavior.\n- Be concise and technical. Prefer short code excerpts over prose when they answer better.\n\nContext:\n${n}`;
+function Ea(e, t, n) {
+	return `You are the code assistant for the ${e} codebase (${Ta(t)}). Answer questions about this codebase using ONLY the numbered code context below.\n\nRules:\n- Cite the context blocks you draw from inline with bracketed numbers, e.g. [1] or [2].\n- If the context does not contain what is needed to answer, say plainly that the retrieved code does not cover it. Never invent file names, functions, or behavior.\n- Be concise and technical. Prefer short code excerpts over prose when they answer better.\n\nContext:\n${n}`;
 }
-var Ca = "No relevant code was found in the corpus for this question.";
+var Da = "No relevant code was found in the corpus for this question.";
 //#endregion
 //#region src/core/rag.js
-function wa(e, t) {
+function Oa(e, t) {
 	return e.flatMap(({ corpus: e, hits: t }) => t.map((t) => ({
 		corpus: e,
 		id: Number(t.id),
@@ -3010,10 +3060,10 @@ function wa(e, t) {
 		payload: t.payload ?? {}
 	})).filter((e) => typeof e.payload.text == "string")).sort((e, t) => e.score - t.score).slice(0, t);
 }
-function Ta(e, t, n) {
+function ka(e, t, n) {
 	return e.slice(0, n).filter(({ index: e }) => Number.isInteger(e) && e >= 0 && e < t.length).map(({ index: e }) => t[e]);
 }
-function Ea(e, t) {
+function Aa(e, t) {
 	let n = e.payload, r = Number(n.start_line), i = Number(n.end_line);
 	return {
 		n: t,
@@ -3023,33 +3073,33 @@ function Ea(e, t) {
 		startLine: r,
 		endLine: i,
 		score: e.score,
-		relevancePct: va(e.score),
-		url: ya(e.corpus.repo, e.corpus.commit, n.path, r, i)
+		relevancePct: Sa(e.score),
+		url: Ca(e.corpus.repo, e.corpus.commit, n.path, r, i)
 	};
 }
-async function Da(e, t, n) {
+async function ja(e, t, n) {
 	let { openrouter: r, lattice: i, corpora: a, embedding: o, retrieval: s, productName: c, rerankModel: l, chatModel: u, apiKey: d, onPhase: f, onDelta: p } = n;
 	f("retrieving");
 	let m = await r.getEmbedding(e, d, o.model);
 	if (!Array.isArray(m) || m.length !== o.dim) throw Error(`The embedding model returned ${m?.length ?? 0} dimensions but this corpus was built with ${o.dim}. The site's embedding model and the published corpus are out of sync — the corpus needs a rebuild against the current model.`);
-	let h = s.topK * s.rerankMultiplier, g = wa(a.map((e) => ({
+	let h = s.topK * s.rerankMultiplier, g = Oa(a.map((e) => ({
 		corpus: e,
 		hits: i.search(e.collection, m, h)
 	})), h), _;
-	g.length > 1 ? (f("reranking"), _ = Ta(await r.rerank(e, g.map((e) => e.payload.text), d, s.topK, l), g, s.topK)) : _ = g.slice(0, s.topK);
-	let v = _.map((e, t) => Ea(e, t + 1)), y = _.length > 0 ? _.map((e, t) => ba(t + 1, {
+	g.length > 1 ? (f("reranking"), _ = ka(await r.rerank(e, g.map((e) => e.payload.text), d, s.topK, l), g, s.topK)) : _ = g.slice(0, s.topK);
+	let v = _.map((e, t) => Aa(e, t + 1)), y = _.length > 0 ? _.map((e, t) => wa(t + 1, {
 		repo: e.corpus.repo,
 		path: e.payload.path,
 		startLine: Number(e.payload.start_line),
 		endLine: Number(e.payload.end_line),
 		language: e.payload.language,
 		text: e.payload.text
-	})).join("\n\n") : Ca;
+	})).join("\n\n") : Da;
 	return f("thinking"), {
 		answer: await r.chat([...t, {
 			role: "user",
 			content: e
-		}], Sa(c, a, y), d, {
+		}], Ea(c, a, y), d, {
 			onDelta: p,
 			model: u
 		}),
@@ -3058,14 +3108,14 @@ async function Da(e, t, n) {
 }
 //#endregion
 //#region src/state/conversation.svelte.js
-var Oa = [
+var Ma = [
 	"rate",
 	"quota",
 	"key",
 	"network",
 	"service"
 ];
-function ka(e) {
+function Na(e) {
 	let { chat: t } = e, n = Xt({
 		messages: [],
 		nextId: 0,
@@ -3093,7 +3143,7 @@ function ka(e) {
 		} catch {
 			let e = t.error?.kind;
 			n.askError = {
-				kind: Oa.includes(e) ? e : "generic",
+				kind: Ma.includes(e) ? e : "generic",
 				resetAt: e === "quota" ? t.error?.resetAt ?? null : null,
 				detail: e === "corpus" ? t.error?.message : null
 			};
@@ -3146,7 +3196,7 @@ function ka(e) {
 }
 //#endregion
 //#region src/core/jsonl.js
-function Aa(e, t) {
+function Pa(e, t) {
 	let n;
 	try {
 		n = JSON.parse(e);
@@ -3158,7 +3208,7 @@ function Aa(e, t) {
 	if (t !== null && n.dim !== t) throw Error(`corpus header says ${n.dim} dimensions but the manifest says ${t} — the published corpus and manifest disagree`);
 	return n;
 }
-function ja(e) {
+function Fa(e) {
 	let t = JSON.parse(e);
 	return t?.t === "point" ? {
 		id: t.id,
@@ -3166,7 +3216,7 @@ function ja(e) {
 		payload: t.payload
 	} : null;
 }
-function Ma(e) {
+function Ia(e) {
 	let t = "";
 	return {
 		async push(n) {
@@ -3185,7 +3235,7 @@ function Ma(e) {
 }
 //#endregion
 //#region src/core/template.js
-function Na(e, t) {
+function La(e, t) {
 	return e.replace(/\{(\w+)\}/g, (n, r) => {
 		if (!Object.hasOwn(t, r)) throw Error(`copy template ${JSON.stringify(e)} names {${r}} but no value was given`);
 		return String(t[r]);
@@ -3193,7 +3243,7 @@ function Na(e, t) {
 }
 //#endregion
 //#region src/core/consent.js
-function Pa(e, t) {
+function Ra(e, t) {
 	let n = e.filter((e) => !e.file);
 	if (n.length === 0) return null;
 	let r = n.map((e) => ({
@@ -3207,25 +3257,25 @@ function Pa(e, t) {
 		storedBytes: n.reduce((e, t) => e + t.meta.bytes, 0)
 	};
 }
-function Fa(e, t) {
-	return e < 999950 ? Na(t.size.kb, { n: (e / 1e3).toFixed(1) }) : Na(t.size.mb, { n: (e / 1e6).toFixed(1) });
+function za(e, t) {
+	return e < 999950 ? La(t.size.kb, { n: (e / 1e3).toFixed(1) }) : La(t.size.mb, { n: (e / 1e6).toFixed(1) });
 }
 //#endregion
 //#region src/core/manifest.js
-var Ia = /^[0-9a-f]{7,64}$/, La = /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/, Ra = (e) => Number.isSafeInteger(e) && e >= 0;
-function za(e, t) {
+var Ba = /^[0-9a-f]{7,64}$/, Va = /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/, Ha = (e) => Number.isSafeInteger(e) && e >= 0;
+function Ua(e, t) {
 	let n = (e) => /* @__PURE__ */ Error(`corpus "${t}" manifest: ${e}`);
 	if (typeof e != "object" || !e || Array.isArray(e)) throw n("is not a JSON object");
-	if (typeof e.commit_sha != "string" || !Ia.test(e.commit_sha)) throw n("commit_sha must be a hex commit string");
+	if (typeof e.commit_sha != "string" || !Ba.test(e.commit_sha)) throw n("commit_sha must be a hex commit string");
 	if (!Number.isSafeInteger(e.dim) || e.dim < 1) throw n("dim must be a positive integer");
 	if (typeof e.model != "string" || e.model.trim() === "") throw n("model must name the embedding model");
-	if (typeof e.repo != "string" || !La.test(e.repo)) throw n("repo must be \"owner/name\"");
+	if (typeof e.repo != "string" || !Va.test(e.repo)) throw n("repo must be \"owner/name\"");
 	for (let t of [
 		"points",
 		"files",
 		"bytes",
 		"gz_bytes"
-	]) if (!Ra(e[t])) throw n(`${t} must be a non-negative integer`);
+	]) if (!Ha(e[t])) throw n(`${t} must be a non-negative integer`);
 	if (typeof e.generated_at != "string") throw n("generated_at must be a string");
 	return {
 		commitSha: e.commit_sha,
@@ -3239,7 +3289,7 @@ function za(e, t) {
 		generatedAt: e.generated_at
 	};
 }
-function Ba(e) {
+function Wa(e) {
 	if (e.length === 0) throw Error("no corpora to load");
 	let [t, ...n] = e;
 	for (let e of n) {
@@ -3253,88 +3303,88 @@ function Ba(e) {
 }
 //#endregion
 //#region src/state/loader.js
-var Va = class extends Error {
+var Ga = class extends Error {
 	constructor() {
 		super("load aborted"), this.name = "AbortError";
 	}
-}, Ha = class extends Error {
+}, Ka = class extends Error {
 	constructor() {
 		super("load failed"), this.name = "FailedError";
 	}
 };
-function Ua({ chat: e, corpora: t, upsertBatch: n, ports: r }) {
-	let { lattice: i, cache: a, net: o, idleYield: s, wasmBytes: c } = r, l = null, u = null, d = null, f = null, p = !1, m = null, h = !1, g = (e) => {
-		if (e.aborted) throw new Va();
+function qa({ chat: e, corpora: t, upsertBatch: n, ports: r }) {
+	let { lattice: i, cache: a, net: o, idleYield: s, wasmBytes: c, reportCacheFault: l } = r, u = null, d = null, f = null, p = null, m = !1, h = null, g = !1, _ = (e) => {
+		if (e.aborted) throw new Ga();
 	};
-	function _() {
+	function v() {
 		e.progress.loadedBytes = 0, e.progress.totalBytes = 0, e.progress.indexed = 0, e.progress.totalPoints = 0;
 	}
-	function v(t, n) {
+	function y(t, n) {
 		return e.status = "error", e.error = {
 			kind: t,
 			message: n?.message ? String(n.message) : String(n)
-		}, new Ha();
+		}, new Ka();
 	}
-	async function y() {
-		let e = d;
-		d = null, e && await e.discard().catch(() => void 0);
-	}
-	function b() {
-		if (e.status === "ready") return Promise.resolve();
-		if (l) return l;
-		let t = { aborted: !1 };
-		return f = t, l = te(t).catch((n) => {
-			t.aborted || n?.name === "AbortError" || n instanceof Ha || e.error || v("corpus", n);
-		}).finally(() => {
-			e.status !== "ready" && (l = null), f === t && (f = null), u = null, d = null;
-		}), l;
+	async function b() {
+		let e = f;
+		f = null, e && await e.discard().catch(l);
 	}
 	function x() {
-		if (e.status === "ready" || e.status === "idle") return;
-		f && (f.aborted = !0), p = !1, m?.reject(new Va()), m = null, e.consent = null, u?.abort();
-		let t = d;
-		d = null, t && t.discard().catch(() => void 0), l = null, e.error = null, e.offline = !1, _(), e.status = "idle";
+		if (e.status === "ready") return Promise.resolve();
+		if (u) return u;
+		let t = { aborted: !1 };
+		return p = t, u = C(t).catch((n) => {
+			t.aborted || n?.name === "AbortError" || n instanceof Ka || e.error || y("corpus", n);
+		}).finally(() => {
+			e.status !== "ready" && (u = null), p === t && (p = null), d = null, f = null;
+		}), u;
 	}
 	function S() {
-		m &&= (p = !0, e.consent = null, m.resolve(), null);
+		if (e.status === "ready" || e.status === "idle") return;
+		p && (p.aborted = !0), m = !1, h?.reject(new Ga()), h = null, e.consent = null, d?.abort();
+		let t = f;
+		f = null, t && t.discard().catch(l), u = null, e.error = null, e.offline = !1, v(), e.status = "idle";
 	}
-	function ee(t) {
+	function ee() {
+		h &&= (m = !0, e.consent = null, h.resolve(), null);
+	}
+	function te(t) {
 		return e.consent = t, e.status = "consent", new Promise((e, t) => {
-			m = {
+			h = {
 				resolve: e,
 				reject: t
 			};
 		});
 	}
-	async function te(n) {
-		e.error = null, e.offline = !1, _(), e.status = "manifest";
+	async function C(n) {
+		e.error = null, e.offline = !1, v(), e.status = "manifest";
 		let r = [];
-		for (let e of t) r.push(await C(n, e));
+		for (let e of t) r.push(await w(n, e));
 		let o;
 		try {
-			o = Ba(r.map((e) => ({
+			o = Wa(r.map((e) => ({
 				id: e.corpus.id,
 				meta: e.meta
 			})));
 		} catch (e) {
-			throw v("config", e);
+			throw y("config", e);
 		}
-		for (let e of r) e.file ||= await a.getCachedCorpus(e.corpus.id, e.meta.commitSha, e.meta.bytes), g(n);
-		if (!p && r.some((e) => !e.file)) {
-			let e = h ? 0 : await c();
-			g(n), await ee(Pa(r, e)), g(n);
+		for (let e of r) e.file ||= await a.getCachedCorpus(e.corpus.id, e.meta.commitSha, e.meta.bytes), _(n);
+		if (!m && r.some((e) => !e.file)) {
+			let e = g ? 0 : await c();
+			_(n), await te(Ra(r, e)), _(n);
 		}
 		e.status = "wasm-init";
 		try {
 			await i.init();
 		} catch (e) {
-			throw v("wasm", e);
+			throw y("wasm", e);
 		}
-		h = !0, g(n), e.progress.totalBytes = r.reduce((e, t) => e + (t.file ? t.file.size : t.meta.gzBytes), 0), e.progress.totalPoints = r.reduce((e, t) => e + t.meta.points, 0);
+		g = !0, _(n), e.progress.totalBytes = r.reduce((e, t) => e + (t.file ? t.file.size : t.meta.gzBytes), 0), e.progress.totalPoints = r.reduce((e, t) => e + t.meta.points, 0);
 		let s = [];
 		for (let e of r) {
-			let t = e.file ? await w(n, e) : await ne(n, e);
-			g(n), s.push({
+			let t = e.file ? await ne(n, e) : await re(n, e);
+			_(n), s.push({
 				id: e.corpus.id,
 				collection: e.corpus.id,
 				commit: e.meta.commitSha,
@@ -3347,26 +3397,26 @@ function Ua({ chat: e, corpora: t, upsertBatch: n, ports: r }) {
 		}
 		e.corpora = s, e.embedding = o, e.status = "ready";
 	}
-	async function C(t, n) {
+	async function w(t, n) {
 		let r;
 		try {
 			return r = await o.fetchMeta(n.metaUrl), {
 				corpus: n,
 				raw: r,
-				meta: za(r, n.id),
+				meta: Ua(r, n.id),
 				file: null
 			};
 		} catch (r) {
-			g(t);
+			_(t);
 			let i = await a.newestOffline(n.id);
-			if (g(t), !i) throw v(ga(r), r);
+			if (_(t), !i) throw y(ba(r), r);
 			let o;
 			try {
-				o = za(i.rawMeta, n.id);
+				o = Ua(i.rawMeta, n.id);
 			} catch {
-				throw v(ga(r), r);
+				throw y(ba(r), r);
 			}
-			if (o.commitSha !== i.sha) throw v(ga(r), r);
+			if (o.commitSha !== i.sha) throw y(ba(r), r);
 			return e.offline = !0, {
 				corpus: n,
 				raw: i.rawMeta,
@@ -3375,88 +3425,88 @@ function Ua({ chat: e, corpora: t, upsertBatch: n, ports: r }) {
 			};
 		}
 	}
-	async function w(t, n) {
-		return e.status = "loading-cached", re(t, n.file.stream(), {
+	async function ne(t, n) {
+		return e.status = "loading-cached", ie(t, n.file.stream(), {
 			collection: n.corpus.id,
 			expectedDim: n.meta.dim,
 			tee: null,
 			countBytes: !0,
 			onDrained: async () => {
-				await a.writeMeta(n.corpus.id, n.meta.commitSha, n.raw), await a.pruneStale(n.corpus.id, n.meta.commitSha);
+				await a.writeMeta(n.corpus.id, n.meta.commitSha, n.raw), await a.pruneStale(n.corpus.id, n.meta.commitSha).catch(l);
 			}
 		});
 	}
-	async function ne(t, n) {
+	async function re(t, n) {
 		let { id: r } = n.corpus, i = n.meta.commitSha;
-		e.status = "downloading", u = new AbortController();
+		e.status = "downloading", d = new AbortController();
 		let s;
 		try {
-			s = await o.openCorpus(n.corpus.gzUrl, u.signal);
+			s = await o.openCorpus(n.corpus.gzUrl, d.signal);
 		} catch (e) {
-			throw g(t), e?.name === "AbortError" ? e : v(_a(e), e);
+			throw _(t), e?.name === "AbortError" ? e : y(xa(e), e);
 		}
 		s.contentLength !== null && (e.progress.totalBytes += s.contentLength - n.meta.gzBytes);
 		let c = s.body.pipeThrough(new TransformStream({ transform(t, n) {
 			e.progress.loadedBytes += t.byteLength, n.enqueue(t);
-		} })), l = o.gunzip(c);
-		if (l === null) throw v("decompress", /* @__PURE__ */ Error("this browser lacks DecompressionStream (gzip) support"));
-		if (d = await a.createCorpusWriter(r, i), t.aborted) throw await y(), new Va();
-		let f = async () => {
+		} })), u = o.gunzip(c);
+		if (u === null) throw y("decompress", /* @__PURE__ */ Error("this browser lacks DecompressionStream (gzip) support"));
+		if (f = await a.createCorpusWriter(r, i).catch((e) => (l(e), null)), t.aborted) throw await b(), new Ga();
+		let p = async () => {
 			e.status = "caching";
-			let t = d;
-			if (d = null, t) try {
+			let t = f;
+			if (f = null, t) try {
 				await t.finalize(), await a.writeMeta(r, i, n.raw);
-			} catch {
-				await t.discard().catch(() => void 0);
+			} catch (e) {
+				l(e), await t.discard().catch(l);
 			}
-			await a.pruneStale(r, i);
+			await a.pruneStale(r, i).catch(l);
 		};
 		try {
-			return await re(t, l, {
+			return await ie(t, u, {
 				collection: r,
 				expectedDim: n.meta.dim,
-				tee: d,
+				tee: f,
 				countBytes: !1,
-				onDrained: f
+				onDrained: p
 			});
 		} catch (e) {
-			throw await y(), t.aborted || e?.name === "AbortError" ? e : v(ha(e), e);
+			throw await b(), t.aborted || e?.name === "AbortError" ? e : y(ya(e), e);
 		}
 	}
-	async function re(t, r, { collection: a, expectedDim: o, tee: c, countBytes: l, onDrained: u }) {
+	async function ie(t, r, { collection: a, expectedDim: o, tee: c, countBytes: l, onDrained: u }) {
 		let d = r.getReader(), f = new TextDecoder(), p = null, m = [], h = async () => {
-			m.length !== 0 && (i.upsert(a, m), e.progress.indexed += m.length, m = [], await s(), g(t));
-		}, _ = Ma(async (e) => {
+			m.length !== 0 && (i.upsert(a, m), e.progress.indexed += m.length, m = [], await s(), _(t));
+		}, g = Ia(async (e) => {
 			if (!p) {
-				p = Aa(e, o), i.createCollection(a, p.dim);
+				p = Pa(e, o), i.createCollection(a, p.dim);
 				return;
 			}
-			let t = ja(e);
+			let t = Fa(e);
 			t && m.push(t), m.length >= n && await h();
 		});
 		try {
 			for (;;) {
-				g(t);
+				_(t);
 				let { done: n, value: r } = await d.read();
 				if (n) break;
-				c && await c.write(r), l && (e.progress.loadedBytes += r.byteLength), await _.push(f.decode(r, { stream: !0 }));
+				c && await c.write(r), l && (e.progress.loadedBytes += r.byteLength), await g.push(f.decode(r, { stream: !0 }));
 			}
-			await _.push(f.decode()), await _.end();
+			await g.push(f.decode()), await g.end();
 		} finally {
 			d.releaseLock?.();
 		}
 		if (!p) throw Error("corpus stream ended before a header line");
-		return g(t), await u(), g(t), e.status = "indexing", await h(), p;
+		return _(t), await u(), _(t), e.status = "indexing", await h(), p;
 	}
 	return {
-		ensureReady: b,
-		abortLoad: x,
-		accept: S
+		ensureReady: x,
+		abortLoad: S,
+		accept: ee
 	};
 }
 //#endregion
 //#region src/state/session.svelte.js
-function Wa(e, t) {
+function Ja(e, t) {
 	let { keys: n, clock: r } = t, i = e.provider.chatModel, a = Xt({
 		status: "idle",
 		consent: null,
@@ -3475,7 +3525,7 @@ function Wa(e, t) {
 		chatModel: n.getChatModel() || i,
 		msgPhase: null,
 		stream: null
-	}), o = Ua({
+	}), o = qa({
 		chat: a,
 		corpora: e.corpora,
 		upsertBatch: e.retrieval.upsertBatch,
@@ -3527,7 +3577,7 @@ function Wa(e, t) {
 			e && (f ||= r.now(), c += e, l += e, h()), t && (a.msgPhase !== "writing" && (a.msgPhase = "writing", f && a.stream && a.stream.reasoningMs === 0 && (a.stream.reasoningMs = r.now() - f)), u += t, h());
 		};
 		try {
-			let n = await Da(i, o, {
+			let n = await ja(i, o, {
 				openrouter: t.openrouter,
 				lattice: t.lattice,
 				corpora: a.corpora,
@@ -3557,7 +3607,7 @@ function Wa(e, t) {
 				reasoningMs: l
 			};
 		} catch (e) {
-			let { kind: t, resetAt: n } = ma(e);
+			let { kind: t, resetAt: n } = va(e);
 			throw p(t, e, t === "quota" ? { resetAt: n } : {}), e;
 		} finally {
 			d && r.cancelFrame(d), a.msgPhase = null, a.stream = null;
@@ -3565,7 +3615,7 @@ function Wa(e, t) {
 	}
 	return {
 		chat: a,
-		conversation: ka({
+		conversation: Na({
 			chat: a,
 			ask: m,
 			setChatModel: s
@@ -3587,27 +3637,27 @@ function Wa(e, t) {
 typeof window < "u" && ((window.__svelte ??= {}).v ??= /* @__PURE__ */ new Set()).add("5");
 //#endregion
 //#region src/core/markdown.js
-function Ga(e) {
+function Ya(e) {
 	return e.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 }
-function Ka(e) {
+function Xa(e) {
 	let t = e;
 	return t = t.replace(/\[([^\]]+)\]\((https?:\/\/[^)\s*[\]]+)\)/g, "<a href=\"$2\" rel=\"noopener nofollow\" target=\"_blank\">$1</a>"), t = t.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>"), t = t.replace(/\[(\d{1,3})\](?!\()/g, "<sup class=\"cc-cite\">[$1]</sup>"), t;
 }
-function qa(e) {
-	return Ga(e).split(/(`[^`\n]+`)/).map((e) => e.length > 2 && e.startsWith("`") && e.endsWith("`") ? `<code>${e.slice(1, -1)}</code>` : Ka(e)).join("");
+function Za(e) {
+	return Ya(e).split(/(`[^`\n]+`)/).map((e) => e.length > 2 && e.startsWith("`") && e.endsWith("`") ? `<code>${e.slice(1, -1)}</code>` : Xa(e)).join("");
 }
-function Ja(e, t) {
-	let n = t ? /^\s*\d+[.)]\s+/ : /^\s*[-*]\s+/, r = e.map((e) => `<li>${qa(e.replace(n, ""))}</li>`).join("");
+function Qa(e, t) {
+	let n = t ? /^\s*\d+[.)]\s+/ : /^\s*[-*]\s+/, r = e.map((e) => `<li>${Za(e.replace(n, ""))}</li>`).join("");
 	return t ? `<ol>${r}</ol>` : `<ul>${r}</ul>`;
 }
-function Ya(e, t) {
+function $a(e, t) {
 	if (typeof t != "string" || t.trim() === "") throw Error("renderMarkdown: codeLabel must be a non-empty string");
 	if (typeof e != "string" || e.length === 0) return "";
-	let n = `<pre class="cc-fence" tabindex="0" role="region" aria-label="${Ga(t)}">`, r = e.replace(/\r\n?/g, "\n").split("\n"), i = [], a = [], o = () => {
+	let n = `<pre class="cc-fence" tabindex="0" role="region" aria-label="${Ya(t)}">`, r = e.replace(/\r\n?/g, "\n").split("\n"), i = [], a = [], o = () => {
 		if (a.length === 0) return;
 		let e = a.every((e) => /^\s*[-*]\s+/.test(e)), t = a.every((e) => /^\s*\d+[.)]\s+/.test(e));
-		e ? i.push(Ja(a, !1)) : t ? i.push(Ja(a, !0)) : i.push(`<p>${a.map(qa).join("<br>")}</p>`), a = [];
+		e ? i.push(Qa(a, !1)) : t ? i.push(Qa(a, !0)) : i.push(`<p>${a.map(Za).join("<br>")}</p>`), a = [];
 	};
 	for (let e = 0; e < r.length; e++) {
 		let t = r[e], s = t.match(/^```([\w+-]*)\s*$/);
@@ -3616,28 +3666,28 @@ function Ya(e, t) {
 			let t = s[1], a = [];
 			for (e++; e < r.length && !/^```\s*$/.test(r[e]);) a.push(r[e]), e++;
 			let c = t ? ` class="language-${t}"` : "";
-			i.push(`${n}<code${c}>${Ga(a.join("\n"))}</code></pre>`);
+			i.push(`${n}<code${c}>${Ya(a.join("\n"))}</code></pre>`);
 		} else t.trim() === "" ? o() : a.push(t);
 	}
 	return o(), i.join("");
 }
 //#endregion
 //#region src/ui/ChatMessage.svelte
-var Xa = /* @__PURE__ */ J("<p class=\"cm-user\"><span class=\"cm-prompt\" aria-hidden=\"true\">❯</span> </p>"), Za = /* @__PURE__ */ J("<span class=\"cm-count\"> </span>"), Qa = /* @__PURE__ */ J("<button type=\"button\" class=\"cm-think-toggle\"><span class=\"cm-think-time\"> </span> <span class=\"cm-think-sep\" aria-hidden=\"true\">·</span> <span class=\"cm-think-act\"> </span></button>"), $a = /* @__PURE__ */ J("<span class=\"cm-think-label\"> </span>"), eo = /* @__PURE__ */ J("<div class=\"cm-think\"><!> <div class=\"cm-think-clip\"><p class=\"cm-think-text\"> </p></div></div>"), to = /* @__PURE__ */ J("<div class=\"cm-body\"></div>"), no = /* @__PURE__ */ J("<span class=\"cm-src-corpus\"> </span>"), ro = /* @__PURE__ */ J("<a class=\"cm-src\" target=\"_blank\" rel=\"noopener\"><span class=\"cm-src-n\"> </span> <!> <span class=\"cm-src-path\"> </span> <span class=\"cm-src-lines\"> </span> <span class=\"cm-src-pct\"> </span></a>"), io = /* @__PURE__ */ J("<details class=\"cm-sources\"><summary> </summary> <!></details>"), ao = /* @__PURE__ */ J("<article class=\"cm-card cm-print\"><header class=\"cm-head\"><span class=\"cm-title\"> </span> <!></header> <!> <!> <!></article>");
-function oo(e, t) {
+var eo = /* @__PURE__ */ J("<p class=\"cm-user\"><span class=\"cm-prompt\" aria-hidden=\"true\">❯</span> </p>"), to = /* @__PURE__ */ J("<span class=\"cm-count\"> </span>"), no = /* @__PURE__ */ J("<button type=\"button\" class=\"cm-think-toggle\"><span class=\"cm-think-time\"> </span> <span class=\"cm-think-sep\" aria-hidden=\"true\">·</span> <span class=\"cm-think-act\"> </span></button>"), ro = /* @__PURE__ */ J("<span class=\"cm-think-label\"> </span>"), io = /* @__PURE__ */ J("<div class=\"cm-think\"><!> <div class=\"cm-think-clip\"><p class=\"cm-think-text\"> </p></div></div>"), ao = /* @__PURE__ */ J("<div class=\"cm-body\"></div>"), oo = /* @__PURE__ */ J("<span class=\"cm-src-corpus\"> </span>"), so = /* @__PURE__ */ J("<a class=\"cm-src\" target=\"_blank\" rel=\"noopener\"><span class=\"cm-src-n\"> </span> <!> <span class=\"cm-src-path\"> </span> <span class=\"cm-src-lines\"> </span> <span class=\"cm-src-pct\"> </span></a>"), co = /* @__PURE__ */ J("<details class=\"cm-sources\"><summary> </summary> <!></details>"), lo = /* @__PURE__ */ J("<article class=\"cm-card cm-print\"><header class=\"cm-head\"><span class=\"cm-title\"> </span> <!></header> <!> <!> <!></article>");
+function uo(e, t) {
 	Ve(t, !0);
 	let n = /* @__PURE__ */ M(() => t.live ? t.live.reasoningText : t.message?.reasoning ?? ""), r = /* @__PURE__ */ M(() => t.live ? t.live.answerText : t.message?.text ?? ""), i = /* @__PURE__ */ M(() => t.live ? t.live.reasoningMs : t.message?.reasoningMs ?? 0), a = /* @__PURE__ */ M(() => (G(i) / 1e3).toFixed(1)), o = /* @__PURE__ */ M(() => G(r).length > 0), s = /* @__PURE__ */ P(null), c = /* @__PURE__ */ M(() => G(s) ?? !G(o)), l = /* @__PURE__ */ P(null);
 	mn(() => {
 		G(n), t.live && G(l) && (G(l).scrollTop = G(l).scrollHeight);
 	});
 	var u = xr(), d = rn(u), f = (e) => {
-		var n = Xa(), r = z(R(n), 1, !0);
+		var n = eo(), r = z(R(n), 1, !0);
 		k(n), B(() => X(r, t.message.text)), Y(e, n);
 	}, p = (e) => {
-		var i = ao(), u = R(i), d = R(u), f = R(d, !0);
+		var i = lo(), u = R(i), d = R(u), f = R(d, !0);
 		k(d);
 		var p = z(d, 2), m = (e) => {
-			var n = Za(), r = R(n);
+			var n = to(), r = R(n);
 			k(n), B(() => X(r, `${t.message.sources.length ?? ""}
           ${(t.message.sources.length === 1 ? t.copy.sourcesOne : t.copy.sourcesMany) ?? ""}`)), Y(e, n);
 		};
@@ -3645,15 +3695,15 @@ function oo(e, t) {
 			t.message?.sources?.length && e(m);
 		}), k(u);
 		var h = z(u, 2), g = (e) => {
-			var r = eo(), i = R(r), u = (e) => {
-				var n = Qa(), r = R(n), i = R(r);
+			var r = io(), i = R(r), u = (e) => {
+				var n = no(), r = R(n), i = R(r);
 				k(r);
 				var o = z(r, 4), l = R(o, !0);
 				k(o), k(n), B(() => {
 					Q(n, "aria-expanded", G(c)), X(i, `${t.copy.trace.reasonedPrefix ?? ""} ${G(a) ?? ""}s`), X(l, G(c) ? t.copy.trace.hide : t.copy.trace.show);
 				}), K("click", n, () => F(s, !G(c))), Y(e, n);
 			}, d = (e) => {
-				var n = $a(), r = R(n, !0);
+				var n = ro(), r = R(n, !0);
 				k(n), B(() => X(r, t.copy.trace.label)), Y(e, n);
 			};
 			Z(i, (e) => {
@@ -3668,19 +3718,19 @@ function oo(e, t) {
 			G(n) && e(g);
 		});
 		var _ = z(h, 2), v = (e) => {
-			var n = to();
-			zr(n, () => Ya(G(r), t.copy.codeLabel), !0), k(n), Y(e, n);
+			var n = ao();
+			zr(n, () => $a(G(r), t.copy.codeLabel), !0), k(n), Y(e, n);
 		};
 		Z(_, (e) => {
 			(G(r) || !t.live) && e(v);
 		});
 		var y = z(_, 2), b = (e) => {
-			var n = io(), r = R(n), i = R(r, !0);
+			var n = co(), r = R(n), i = R(r, !0);
 			k(r), Nr(z(r, 2), 17, () => t.message.sources, (e) => e.n, (e, n) => {
-				var r = ro(), i = R(r), a = R(i);
+				var r = so(), i = R(r), a = R(i);
 				k(i);
 				var o = z(i, 2), s = (e) => {
-					var t = no(), r = R(t, !0);
+					var t = oo(), r = R(t, !0);
 					k(t), B(() => X(r, G(n).corpusId)), Y(e, t);
 				};
 				Z(o, (e) => {
@@ -3711,34 +3761,34 @@ function oo(e, t) {
 fr(["click"]);
 //#endregion
 //#region src/ui/ConsentPanel.svelte
-var so = /* @__PURE__ */ J("<li class=\"cc-consent-corpus\"><span class=\"cc-consent-name\"> </span><span class=\"cc-consent-size\"> </span></li>"), co = /* @__PURE__ */ J("<li class=\"cc-consent-engine\"><span class=\"cc-consent-name\"> </span><span class=\"cc-consent-size\"> </span></li>"), lo = /* @__PURE__ */ J("<div class=\"cc-panel cc-consent\" role=\"group\" tabindex=\"-1\"><p class=\"cc-load-title\"> </p> <p class=\"cc-consent-lead\"> </p> <ul class=\"cc-consent-list\"><!> <!></ul> <p class=\"cc-consent-total\"> </p> <div class=\"cc-consent-actions\"><button type=\"button\" class=\"cc-consent-accept\"> </button> <button type=\"button\" class=\"cc-consent-decline\"> </button></div></div>");
-function uo(e, t) {
+var fo = /* @__PURE__ */ J("<li class=\"cc-consent-corpus\"><span class=\"cc-consent-name\"> </span><span class=\"cc-consent-size\"> </span></li>"), po = /* @__PURE__ */ J("<li class=\"cc-consent-engine\"><span class=\"cc-consent-name\"> </span><span class=\"cc-consent-size\"> </span></li>"), mo = /* @__PURE__ */ J("<div class=\"cc-panel cc-consent\" role=\"group\" tabindex=\"-1\"><p class=\"cc-load-title\"> </p> <p class=\"cc-consent-lead\"> </p> <ul class=\"cc-consent-list\"><!> <!></ul> <p class=\"cc-consent-total\"> </p> <div class=\"cc-consent-actions\"><button type=\"button\" class=\"cc-consent-accept\"> </button> <button type=\"button\" class=\"cc-consent-decline\"> </button></div></div>");
+function ho(e, t) {
 	let n = Sr();
 	Ve(t, !0);
-	let r = /* @__PURE__ */ P(null), i = /* @__PURE__ */ M(() => Fa(t.consent.totalBytes, t.copy)), a = /* @__PURE__ */ M(() => Fa(t.consent.storedBytes, t.copy));
+	let r = /* @__PURE__ */ P(null), i = /* @__PURE__ */ M(() => za(t.consent.totalBytes, t.copy)), a = /* @__PURE__ */ M(() => za(t.consent.storedBytes, t.copy));
 	mn(() => {
 		G(r)?.focus();
 	});
-	var o = lo(), s = R(o), c = R(s, !0);
+	var o = mo(), s = R(o), c = R(s, !0);
 	k(s);
 	var l = z(s, 2), u = R(l, !0);
 	k(l);
 	var d = z(l, 2), f = R(d);
 	Nr(f, 17, () => t.consent.corpora, (e) => e.id, (e, n) => {
-		var r = so(), i = R(r), a = R(i, !0);
+		var r = fo(), i = R(r), a = R(i, !0);
 		k(i);
 		var o = z(i), s = R(o, !0);
 		k(o), k(r), B((e) => {
 			X(a, G(n).id), X(s, e);
-		}, [() => Fa(G(n).bytes, t.copy)]), Y(e, r);
+		}, [() => za(G(n).bytes, t.copy)]), Y(e, r);
 	});
 	var p = z(f, 2), m = (e) => {
-		var n = co(), r = R(n), i = R(r, !0);
+		var n = po(), r = R(n), i = R(r, !0);
 		k(r);
 		var a = z(r), o = R(a, !0);
 		k(a), k(n), B((e) => {
 			X(i, t.copy.consent.engine), X(o, e);
-		}, [() => Fa(t.consent.wasmBytes, t.copy)]), Y(e, n);
+		}, [() => za(t.consent.wasmBytes, t.copy)]), Y(e, n);
 	};
 	Z(p, (e) => {
 		t.consent.wasmBytes && e(m);
@@ -3750,10 +3800,10 @@ function uo(e, t) {
 	var b = z(v, 2), x = R(b, !0);
 	k(b), k(_), k(o), ai(o, (e) => F(r, e), () => G(r)), B((e, r) => {
 		Q(o, "aria-labelledby", `${n}-title`), Q(o, "aria-describedby", `${n}-total`), Q(o, "data-total-bytes", t.consent.totalBytes), Q(s, "id", `${n}-title`), X(c, t.copy.consent.title), X(u, t.copy.consent.lead), Q(h, "id", `${n}-total`), X(g, e), X(y, r), X(x, t.copy.consent.decline);
-	}, [() => Na(t.copy.consent.total, {
+	}, [() => La(t.copy.consent.total, {
 		download: G(i),
 		stored: G(a)
-	}), () => Na(t.copy.consent.accept, { size: G(i) })]), K("click", v, function(...e) {
+	}), () => La(t.copy.consent.accept, { size: G(i) })]), K("click", v, function(...e) {
 		t.onaccept?.apply(this, e);
 	}), K("click", b, function(...e) {
 		t.ondecline?.apply(this, e);
@@ -3762,22 +3812,22 @@ function uo(e, t) {
 fr(["click"]);
 //#endregion
 //#region src/ui/ErrorCard.svelte
-var fo = /* @__PURE__ */ J("<p class=\"cc-error-reset\"> </p>"), po = /* @__PURE__ */ J("<button type=\"button\" class=\"cc-error-paid\"> </button>"), mo = /* @__PURE__ */ J("<div class=\"cc-error\" role=\"alert\"><span class=\"cc-error-tag\"> </span> <p class=\"cc-error-body\"> </p> <!> <div class=\"cc-error-actions\"><!> <button type=\"button\" class=\"cc-error-retry\"> </button></div></div>");
-function ho(e, t) {
+var go = /* @__PURE__ */ J("<p class=\"cc-error-reset\"> </p>"), _o = /* @__PURE__ */ J("<button type=\"button\" class=\"cc-error-paid\"> </button>"), vo = /* @__PURE__ */ J("<div class=\"cc-error\" role=\"alert\"><span class=\"cc-error-tag\"> </span> <p class=\"cc-error-body\"> </p> <!> <div class=\"cc-error-actions\"><!> <button type=\"button\" class=\"cc-error-retry\"> </button></div></div>");
+function yo(e, t) {
 	Ve(t, !0);
-	var n = mo(), r = R(n), i = R(r, !0);
+	var n = vo(), r = R(n), i = R(r, !0);
 	k(r);
 	var a = z(r, 2), o = R(a, !0);
 	k(a);
 	var s = z(a, 2), c = (e) => {
-		var n = fo(), r = R(n, !0);
+		var n = go(), r = R(n, !0);
 		k(n), B(() => X(r, t.resetText)), Y(e, n);
 	};
 	Z(s, (e) => {
 		t.resetText && e(c);
 	});
 	var l = z(s, 2), u = R(l), d = (e) => {
-		var n = po(), r = R(n, !0);
+		var n = _o(), r = R(n, !0);
 		k(n), B(() => X(r, t.paidLabel)), K("click", n, function(...e) {
 			t.onpaid?.apply(this, e);
 		}), Y(e, n);
@@ -3795,8 +3845,8 @@ function ho(e, t) {
 fr(["click"]);
 //#endregion
 //#region src/ui/KeyRow.svelte
-var go = /* @__PURE__ */ J("<span class=\"cc-key-back\"><button type=\"button\" class=\"cc-key-keep\"> </button> <button type=\"button\" class=\"cc-key-forget\"> </button></span>"), _o = /* @__PURE__ */ J("<p class=\"cc-key-forgotten\" role=\"status\"> <button type=\"button\" class=\"cc-key-undo\"> </button></p>"), vo = /* @__PURE__ */ J(" <a class=\"cc-link\" target=\"_blank\" rel=\"noopener\"> </a>", 1), yo = /* @__PURE__ */ J("<div class=\"cc-key\"><div class=\"cc-key-top\"><span class=\"cc-key-tag\"> </span> <!></div> <!> <p class=\"cc-key-lead\"><!></p> <form class=\"cc-key-form\"><input class=\"cc-key-input\" autocomplete=\"off\" spellcheck=\"false\"/> <button type=\"button\" class=\"cc-key-toggle\"> </button> <button type=\"submit\" class=\"cc-key-save\"> </button></form></div>"), bo = /* @__PURE__ */ J("<button type=\"button\" class=\"cc-model-reset\"> </button>"), xo = /* @__PURE__ */ J("<div class=\"cc-keyrow\"><span class=\"cc-connected\"><span class=\"cc-connected-dot\" aria-hidden=\"true\"></span> </span> <span class=\"cc-keyrow-note\"> </span> <button type=\"button\" class=\"cc-keyrow-swap\"> </button> <span class=\"cc-model\"><span class=\"cc-model-label\"> </span> <span class=\"cc-model-id\"> </span> <!></span></div>");
-function So(e, t) {
+var bo = /* @__PURE__ */ J("<span class=\"cc-key-back\"><button type=\"button\" class=\"cc-key-keep\"> </button> <button type=\"button\" class=\"cc-key-forget\"> </button></span>"), xo = /* @__PURE__ */ J("<p class=\"cc-key-forgotten\" role=\"status\"> <button type=\"button\" class=\"cc-key-undo\"> </button></p>"), So = /* @__PURE__ */ J(" <a class=\"cc-link\" target=\"_blank\" rel=\"noopener\"> </a>", 1), Co = /* @__PURE__ */ J("<div class=\"cc-key\"><div class=\"cc-key-top\"><span class=\"cc-key-tag\"> </span> <!></div> <!> <p class=\"cc-key-lead\"><!></p> <form class=\"cc-key-form\"><input class=\"cc-key-input\" autocomplete=\"off\" spellcheck=\"false\"/> <button type=\"button\" class=\"cc-key-toggle\"> </button> <button type=\"submit\" class=\"cc-key-save\"> </button></form></div>"), wo = /* @__PURE__ */ J("<button type=\"button\" class=\"cc-model-reset\"> </button>"), To = /* @__PURE__ */ J("<div class=\"cc-keyrow\"><span class=\"cc-connected\"><span class=\"cc-connected-dot\" aria-hidden=\"true\"></span> </span> <span class=\"cc-keyrow-note\"> </span> <button type=\"button\" class=\"cc-keyrow-swap\"> </button> <span class=\"cc-model\"><span class=\"cc-model-label\"> </span> <span class=\"cc-model-id\"> </span> <!></span></div>");
+function Eo(e, t) {
 	Ve(t, !0);
 	let n = oi(t, "convo", 7), r = oi(t, "swapping", 15), i = /* @__PURE__ */ M(() => t.session.chat), a = /* @__PURE__ */ P(!1), o = /* @__PURE__ */ P(null), s = /* @__PURE__ */ P(null), c = /* @__PURE__ */ P(null), l = /* @__PURE__ */ M(() => G(i).chatModel === t.session.defaultChatModel), u = /* @__PURE__ */ M(() => r() && G(i).keyState === "set"), d = /* @__PURE__ */ M(() => G(i).keyState === "missing" || G(u));
 	mn(() => {
@@ -3817,10 +3867,10 @@ function So(e, t) {
 		t.session.undoForgetKey(), await tr(), G(s)?.focus();
 	}
 	var g = xr(), _ = rn(g), v = (e) => {
-		var r = yo(), s = R(r), l = R(s), d = R(l, !0);
+		var r = Co(), s = R(r), l = R(s), d = R(l, !0);
 		k(l);
 		var g = z(l, 2), _ = (e) => {
-			var n = go(), r = R(n), i = R(r, !0);
+			var n = bo(), r = R(n), i = R(r, !0);
 			k(r);
 			var a = z(r, 2), o = R(a, !0);
 			k(a), k(n), B(() => {
@@ -3831,7 +3881,7 @@ function So(e, t) {
 			G(u) && e(_);
 		}), k(s);
 		var v = z(s, 2), y = (e) => {
-			var n = _o(), r = R(n), i = z(r), a = R(i, !0);
+			var n = xo(), r = R(n), i = z(r), a = R(i, !0);
 			k(i), ai(i, (e) => F(c, e), () => G(c)), k(n), B(() => {
 				X(r, `${t.copy.key.forgotten ?? ""} `), X(a, t.copy.key.undo);
 			}), K("click", i, h), Y(e, n);
@@ -3843,7 +3893,7 @@ function So(e, t) {
 			var n = br();
 			B(() => X(n, t.copy.key.swapLead)), Y(e, n);
 		}, ee = (e) => {
-			var n = vo(), r = rn(n), i = z(r), a = R(i, !0);
+			var n = So(), r = rn(n), i = z(r), a = R(i, !0);
 			k(i), B(() => {
 				X(r, `${t.copy.key.lead ?? ""} `), Q(i, "href", t.copy.key.url), X(a, t.copy.key.linkText);
 			}), Y(e, n);
@@ -3860,7 +3910,7 @@ function So(e, t) {
 			Q(r, "data-mode", G(u) ? "swap" : "new"), X(d, G(u) ? t.copy.key.swapTag : t.copy.key.tag), Q(C, "type", G(a) ? "text" : "password"), Q(C, "placeholder", t.copy.key.placeholder), Q(C, "aria-label", t.copy.key.inputLabel), Q(w, "aria-pressed", G(a)), X(ne, G(a) ? t.copy.key.conceal : t.copy.key.reveal), re.disabled = e, X(ie, t.copy.key.save);
 		}, [() => !n().keyDraft.trim()]), dr("submit", te, f), ti(C, () => n().keyDraft, (e) => n().keyDraft = e), K("click", w, () => F(a, !G(a))), Y(e, r);
 	}, y = (e) => {
-		var n = xo(), a = R(n), o = z(R(a), 1, !0);
+		var n = To(), a = R(n), o = z(R(a), 1, !0);
 		k(a);
 		var c = z(a, 2), u = R(c, !0);
 		k(c);
@@ -3871,7 +3921,7 @@ function So(e, t) {
 		var g = z(m, 2), _ = R(g, !0);
 		k(g);
 		var v = z(g, 2), y = (e) => {
-			var n = bo(), r = R(n, !0);
+			var n = wo(), r = R(n, !0);
 			k(n), B(() => X(r, t.copy.model.reset)), K("click", n, () => t.session.resetChatModel()), Y(e, n);
 		};
 		Z(v, (e) => {
@@ -3887,95 +3937,95 @@ function So(e, t) {
 fr(["click"]);
 //#endregion
 //#region src/ui/LatticeIcon.svelte
-var Co = /* @__PURE__ */ yr("<svg class=\"cc-icon\" viewBox=\"0 0 24 24\" fill=\"none\" aria-hidden=\"true\" focusable=\"false\"><path d=\"M4.5 7.5 12 4M4.5 7.5 12 12M4.5 7.5 12 20M4.5 16.5 12 4M4.5 16.5 12 12M4.5 16.5 12 20M12 4 19.5 7.5M12 12 19.5 7.5M12 20 19.5 7.5M12 4 19.5 16.5M12 12 19.5 16.5M12 20 19.5 16.5\" stroke=\"currentColor\" stroke-width=\"1.2\" stroke-linecap=\"round\" opacity=\"0.6\"></path><g fill=\"currentColor\"><circle cx=\"4.5\" cy=\"7.5\" r=\"2\"></circle><circle cx=\"4.5\" cy=\"16.5\" r=\"2\"></circle><circle cx=\"12\" cy=\"4\" r=\"2\"></circle><circle cx=\"12\" cy=\"12\" r=\"2\"></circle><circle cx=\"12\" cy=\"20\" r=\"2\"></circle><circle cx=\"19.5\" cy=\"7.5\" r=\"2\"></circle><circle cx=\"19.5\" cy=\"16.5\" r=\"2\"></circle></g></svg>");
-function wo(e, t) {
-	var n = Co();
+var Do = /* @__PURE__ */ yr("<svg class=\"cc-icon\" viewBox=\"0 0 24 24\" fill=\"none\" aria-hidden=\"true\" focusable=\"false\"><path d=\"M4.5 7.5 12 4M4.5 7.5 12 12M4.5 7.5 12 20M4.5 16.5 12 4M4.5 16.5 12 12M4.5 16.5 12 20M12 4 19.5 7.5M12 12 19.5 7.5M12 20 19.5 7.5M12 4 19.5 16.5M12 12 19.5 16.5M12 20 19.5 16.5\" stroke=\"currentColor\" stroke-width=\"1.2\" stroke-linecap=\"round\" opacity=\"0.6\"></path><g fill=\"currentColor\"><circle cx=\"4.5\" cy=\"7.5\" r=\"2\"></circle><circle cx=\"4.5\" cy=\"16.5\" r=\"2\"></circle><circle cx=\"12\" cy=\"4\" r=\"2\"></circle><circle cx=\"12\" cy=\"12\" r=\"2\"></circle><circle cx=\"12\" cy=\"20\" r=\"2\"></circle><circle cx=\"19.5\" cy=\"7.5\" r=\"2\"></circle><circle cx=\"19.5\" cy=\"16.5\" r=\"2\"></circle></g></svg>");
+function Oo(e, t) {
+	var n = Do();
 	B(() => {
 		Q(n, "width", t.size), Q(n, "height", t.size);
 	}), Y(e, n);
 }
 //#endregion
 //#region src/core/status.js
-var To = Object.freeze([
+var ko = Object.freeze([
 	"wasm-init",
 	"manifest",
 	"loading-cached",
 	"downloading",
 	"caching",
 	"indexing"
-]), Eo = [
+]), Ao = [
 	"manifest",
 	"wasm-init",
 	"corpus",
 	"indexing"
-], Do = (e) => (e / 1e6).toFixed(1), Oo = (e) => String(e).slice(0, 7);
-function ko(e, t) {
-	return Na(e.progress.bytes, {
-		loaded: Do(t.loadedBytes),
-		total: Do(t.totalBytes)
+], jo = (e) => (e / 1e6).toFixed(1), Mo = (e) => String(e).slice(0, 7);
+function No(e, t) {
+	return La(e.progress.bytes, {
+		loaded: jo(t.loadedBytes),
+		total: jo(t.totalBytes)
 	});
 }
-function Ao(e, t) {
-	return Na(e.progress.count, {
+function Po(e, t) {
+	return La(e.progress.count, {
 		done: t.indexed,
 		total: t.totalPoints
 	});
 }
-function jo(e, t, n) {
+function Fo(e, t, n) {
 	if (n) return t.phase[e.msgPhase] ?? t.phase.writing;
 	if (e.status === "ready" && e.corpora.length > 0) {
-		let n = e.corpora.reduce((e, t) => e + t.chunks, 0), r = e.corpora.length === 1 ? Oo(e.corpora[0].commit) : Na(t.pill.corpora, { n: e.corpora.length }), i = [
+		let n = e.corpora.reduce((e, t) => e + t.chunks, 0), r = e.corpora.length === 1 ? Mo(e.corpora[0].commit) : La(t.pill.corpora, { n: e.corpora.length }), i = [
 			t.status.ready,
 			r,
-			Na(t.pill.chunks, { n }),
-			Na(t.pill.dim, { n: e.corpora[0].dim })
+			La(t.pill.chunks, { n }),
+			La(t.pill.dim, { n: e.corpora[0].dim })
 		];
 		return e.offline && i.push(t.offlineBadge), i.join(" · ");
 	}
-	return e.status === "downloading" && e.progress.totalBytes > 0 ? `${t.status.downloading} ${ko(t, e.progress)}` : e.status === "indexing" && e.progress.totalPoints > 0 ? `${t.status.indexing} ${Ao(t, e.progress)}` : t.status[e.status] ?? e.status;
+	return e.status === "downloading" && e.progress.totalBytes > 0 ? `${t.status.downloading} ${No(t, e.progress)}` : e.status === "indexing" && e.progress.totalPoints > 0 ? `${t.status.indexing} ${Po(t, e.progress)}` : t.status[e.status] ?? e.status;
 }
-function Mo(e, t, n) {
-	return n || e.status === "ready" ? jo(e, t, n) : t.status[e.status] ?? e.status;
+function Io(e, t, n) {
+	return n || e.status === "ready" ? Fo(e, t, n) : t.status[e.status] ?? e.status;
 }
-function No(e, t) {
+function Lo(e, t) {
 	return e.status === "error" ? "error" : e.status === "consent" ? "idle" : e.status === "ready" ? t ? "working" : "ready" : e.status === "idle" ? "idle" : "working";
 }
-function Po(e, t) {
+function Ro(e, t) {
 	let n = e.progress;
-	return e.status === "downloading" || e.status === "caching" ? n.totalBytes > 0 ? ko(t, n) : "" : (e.status === "indexing" || e.status === "loading-cached") && n.totalPoints > 0 ? Ao(t, n) : "";
+	return e.status === "downloading" || e.status === "caching" ? n.totalBytes > 0 ? No(t, n) : "" : (e.status === "indexing" || e.status === "loading-cached") && n.totalPoints > 0 ? Po(t, n) : "";
 }
-function Fo(e, t) {
+function zo(e, t) {
 	let n = [
 		"loading-cached",
 		"downloading",
 		"caching"
-	].includes(e.status) ? "corpus" : e.status, r = Eo.indexOf(n);
-	return Eo.map((n, i) => ({
+	].includes(e.status) ? "corpus" : e.status, r = Ao.indexOf(n);
+	return Ao.map((n, i) => ({
 		id: n,
 		label: t.loader.stages[n],
 		state: r === -1 ? "pending" : i < r ? "done" : i === r ? "active" : "pending",
-		detail: i === r ? Po(e, t) : ""
+		detail: i === r ? Ro(e, t) : ""
 	}));
 }
-function Io(e) {
+function Bo(e) {
 	let t = e.progress;
 	return (e.status === "downloading" || e.status === "caching") && t.totalBytes > 0 ? Math.min(100, t.loadedBytes / t.totalBytes * 100) : (e.status === "indexing" || e.status === "loading-cached") && t.totalPoints > 0 ? Math.min(100, t.indexed / t.totalPoints * 100) : null;
 }
 //#endregion
 //#region src/ui/LoaderPanel.svelte
-var Lo = /* @__PURE__ */ J("<div><dt> </dt> <dd> </dd></div>"), Ro = /* @__PURE__ */ J("<dl class=\"cc-load-meta\"><div><dt> </dt> <dd> </dd></div> <!></dl>"), zo = /* @__PURE__ */ J("<span class=\"cc-stage-detail\"> </span>"), Bo = /* @__PURE__ */ J("<li class=\"cc-stage\"><span class=\"cc-stage-glyph\" aria-hidden=\"true\"> </span> <span class=\"cc-stage-label\"> </span> <!></li>"), Vo = /* @__PURE__ */ J("<p class=\"cc-offline\"> </p>"), Ho = /* @__PURE__ */ J("<div class=\"cc-panel cc-load\" aria-busy=\"true\"><p class=\"cc-load-title\"> </p> <!> <ol class=\"cc-stages\"></ol> <div class=\"cc-bar\" role=\"progressbar\" aria-valuemin=\"0\" aria-valuemax=\"100\"><div></div></div> <!> <p class=\"cc-fine\"> </p></div>");
-function Uo(e, t) {
+var Vo = /* @__PURE__ */ J("<div><dt> </dt> <dd> </dd></div>"), Ho = /* @__PURE__ */ J("<dl class=\"cc-load-meta\"><div><dt> </dt> <dd> </dd></div> <!></dl>"), Uo = /* @__PURE__ */ J("<span class=\"cc-stage-detail\"> </span>"), Wo = /* @__PURE__ */ J("<li class=\"cc-stage\"><span class=\"cc-stage-glyph\" aria-hidden=\"true\"> </span> <span class=\"cc-stage-label\"> </span> <!></li>"), Go = /* @__PURE__ */ J("<p class=\"cc-offline\"> </p>"), Ko = /* @__PURE__ */ J("<div class=\"cc-panel cc-load\" aria-busy=\"true\"><p class=\"cc-load-title\"> </p> <!> <ol class=\"cc-stages\"></ol> <div class=\"cc-bar\" role=\"progressbar\" aria-valuemin=\"0\" aria-valuemax=\"100\"><div></div></div> <!> <p class=\"cc-fine\"> </p></div>");
+function qo(e, t) {
 	Ve(t, !0);
-	let n = /* @__PURE__ */ M(() => Fo(t.chat, t.copy)), r = /* @__PURE__ */ M(() => Io(t.chat));
-	var i = Ho(), a = R(i), o = R(a, !0);
+	let n = /* @__PURE__ */ M(() => zo(t.chat, t.copy)), r = /* @__PURE__ */ M(() => Bo(t.chat));
+	var i = Ko(), a = R(i), o = R(a, !0);
 	k(a);
 	var s = z(a, 2), c = (e) => {
-		var n = Ro(), r = R(n), i = R(r), a = R(i, !0);
+		var n = Ho(), r = R(n), i = R(r), a = R(i, !0);
 		k(i);
 		var o = z(i, 2), s = R(o, !0);
 		k(o), k(r);
 		var c = z(r, 2), l = (e) => {
-			var n = Lo(), r = R(n), i = R(r, !0);
+			var n = Vo(), r = R(n), i = R(r, !0);
 			k(r);
 			var a = z(r, 2), o = R(a, !0);
 			k(a), k(n), B(() => {
@@ -3986,19 +4036,19 @@ function Uo(e, t) {
 			t.chat.progress.totalPoints > 0 && e(l);
 		}), k(n), B((e) => {
 			X(a, t.copy.loader.sizeLabel), X(s, e);
-		}, [() => Na(t.copy.progress.size, { total: Do(t.chat.progress.totalBytes) })]), Y(e, n);
+		}, [() => La(t.copy.progress.size, { total: jo(t.chat.progress.totalBytes) })]), Y(e, n);
 	};
 	Z(s, (e) => {
 		t.chat.progress.totalBytes > 0 && e(c);
 	});
 	var l = z(s, 2);
 	Nr(l, 21, () => G(n), (e) => e.id, (e, t) => {
-		var n = Bo(), r = R(n), i = R(r, !0);
+		var n = Wo(), r = R(n), i = R(r, !0);
 		k(r);
 		var a = z(r, 2), o = R(a, !0);
 		k(a);
 		var s = z(a, 2), c = (e) => {
-			var n = zo(), r = R(n, !0);
+			var n = Uo(), r = R(n, !0);
 			k(n), B(() => X(r, G(t).detail)), Y(e, n);
 		};
 		Z(s, (e) => {
@@ -4011,7 +4061,7 @@ function Uo(e, t) {
 	let f, p;
 	k(u);
 	var m = z(u, 2), h = (e) => {
-		var n = Vo(), r = R(n, !0);
+		var n = Go(), r = R(n, !0);
 		k(n), B(() => X(r, t.copy.offlineBadge)), Y(e, n);
 	};
 	Z(m, (e) => {
@@ -4024,20 +4074,20 @@ function Uo(e, t) {
 }
 //#endregion
 //#region src/ui/focus-trap.js
-var Wo = "a[href], button:not([disabled]), input:not([disabled]), summary, [tabindex]:not([tabindex=\"-1\"])";
-function Go(e) {
-	return [...e.querySelectorAll(Wo)].filter((e) => e.offsetParent !== null);
+var Jo = "a[href], button:not([disabled]), input:not([disabled]), summary, [tabindex]:not([tabindex=\"-1\"])";
+function Yo(e) {
+	return [...e.querySelectorAll(Jo)].filter((e) => e.offsetParent !== null);
 }
-function Ko(e, t) {
+function Xo(e, t) {
 	if (e.key !== "Tab" || e.ctrlKey || e.metaKey) return !1;
-	let n = Go(t);
+	let n = Yo(t);
 	if (n.length === 0) return !1;
 	let r = document.activeElement, i = (e) => !!(r && r !== e && r.compareDocumentPosition(e) & Node.DOCUMENT_POSITION_FOLLOWING), a = (e) => !!(r && r !== e && e.compareDocumentPosition(r) & Node.DOCUMENT_POSITION_FOLLOWING && !e.contains(r)), o = r && t.contains(r), s;
 	return e.shiftKey ? (s = o ? n.findLast(a) : void 0, s ??= n[n.length - 1]) : (s = o ? n.find(i) : void 0, s ??= n[0]), e.preventDefault(), s.focus(), !0;
 }
 //#endregion
 //#region src/core/reset-time.js
-function qo(e, t, n, { locale: r, timeZone: i }) {
+function Zo(e, t, n, { locale: r, timeZone: i }) {
 	let a = new Date(e).toLocaleTimeString(r, {
 		hour: "numeric",
 		minute: "2-digit",
@@ -4045,7 +4095,7 @@ function qo(e, t, n, { locale: r, timeZone: i }) {
 		timeZone: i
 	}), o = Math.ceil((e - t) / 6e4);
 	if (o <= 0) return `${n.errors.quota.reset} ${a}.`;
-	let s = Na(n.errors.quota.resetIn, {
+	let s = La(n.errors.quota.resetIn, {
 		h: Math.floor(o / 60),
 		m: o % 60
 	});
@@ -4053,10 +4103,10 @@ function qo(e, t, n, { locale: r, timeZone: i }) {
 }
 //#endregion
 //#region src/ui/RepoChat.svelte
-var Jo = /* @__PURE__ */ J("<div class=\"cc-motif\" aria-hidden=\"true\"></div>"), Yo = /* @__PURE__ */ J("<div class=\"cc-panel\"><!></div>"), Xo = /* @__PURE__ */ J("<p class=\"cc-offline\"> </p>"), Zo = /* @__PURE__ */ J("<p class=\"cc-cleared\" role=\"status\"> <button type=\"button\" class=\"cc-undo\"> </button></p>"), Qo = /* @__PURE__ */ J("<p class=\"cc-boot-line\"> </p>"), $o = /* @__PURE__ */ J("<p class=\"cc-boot-line cc-boot-corpus\"> </p>"), es = /* @__PURE__ */ J("<button type=\"button\" class=\"cc-chip\"> </button>"), ts = /* @__PURE__ */ J("<!> <p class=\"cc-sub\"> </p> <div class=\"cc-boot\"><!> <!></div> <div class=\"cc-chips\"></div>", 1), ns = /* @__PURE__ */ J("<p class=\"cc-pending\"><span class=\"cc-status-dot\" aria-hidden=\"true\"></span> <span class=\"cc-pending-bar cc-shimmer\" aria-hidden=\"true\"></span></p>"), rs = /* @__PURE__ */ J("<div class=\"cc-log\" role=\"log\" aria-live=\"polite\" tabindex=\"-1\"><!> <!> <!> <!> <!></div>"), is = /* @__PURE__ */ J("<button type=\"button\" class=\"cc-clear\"> </button>"), as = /* @__PURE__ */ J("<div class=\"cc-backdrop\" role=\"presentation\"><div class=\"cc\" role=\"dialog\" aria-modal=\"true\" tabindex=\"-1\"><!> <header class=\"cc-head\"><div class=\"cc-head-titles\"><span class=\"cc-slabel\"><!> </span> <h2 class=\"cc-title\"> </h2></div> <p class=\"cc-status\"><span class=\"cc-status-dot\" aria-hidden=\"true\"></span> <span class=\"cc-status-text\"> </span></p> <p class=\"cc-sr\" role=\"status\"> </p> <button type=\"button\" class=\"cc-close\">✕</button></header> <!> <!> <form class=\"cc-input-row\"><span class=\"cc-prompt\" aria-hidden=\"true\">❯</span> <input class=\"cc-input\" autocomplete=\"off\" spellcheck=\"false\"/> <button type=\"submit\" class=\"cc-ask\"> </button></form> <div class=\"cc-foot\"><!> <span class=\"cc-hint\" aria-live=\"polite\"><!></span> <span class=\"cc-fineprint\"> </span></div></div></div>");
-function os(e, t) {
+var Qo = /* @__PURE__ */ J("<div class=\"cc-motif\" aria-hidden=\"true\"></div>"), $o = /* @__PURE__ */ J("<div class=\"cc-panel\"><!></div>"), es = /* @__PURE__ */ J("<p class=\"cc-offline\"> </p>"), ts = /* @__PURE__ */ J("<p class=\"cc-cleared\" role=\"status\"> <button type=\"button\" class=\"cc-undo\"> </button></p>"), ns = /* @__PURE__ */ J("<p class=\"cc-boot-line\"> </p>"), rs = /* @__PURE__ */ J("<p class=\"cc-boot-line cc-boot-corpus\"> </p>"), is = /* @__PURE__ */ J("<button type=\"button\" class=\"cc-chip\"> </button>"), as = /* @__PURE__ */ J("<!> <p class=\"cc-sub\"> </p> <div class=\"cc-boot\"><!> <!></div> <div class=\"cc-chips\"></div>", 1), os = /* @__PURE__ */ J("<p class=\"cc-pending\"><span class=\"cc-status-dot\" aria-hidden=\"true\"></span> <span class=\"cc-pending-bar cc-shimmer\" aria-hidden=\"true\"></span></p>"), ss = /* @__PURE__ */ J("<div class=\"cc-log\" role=\"log\" aria-live=\"polite\" tabindex=\"-1\"><!> <!> <!> <!> <!></div>"), cs = /* @__PURE__ */ J("<button type=\"button\" class=\"cc-clear\"> </button>"), ls = /* @__PURE__ */ J("<div class=\"cc-backdrop\" role=\"presentation\"><div class=\"cc\" role=\"dialog\" aria-modal=\"true\" tabindex=\"-1\"><!> <header class=\"cc-head\"><div class=\"cc-head-titles\"><span class=\"cc-slabel\"><!> </span> <h2 class=\"cc-title\"> </h2></div> <p class=\"cc-status\"><span class=\"cc-status-dot\" aria-hidden=\"true\"></span> <span class=\"cc-status-text\"> </span></p> <p class=\"cc-sr\" role=\"status\"> </p> <button type=\"button\" class=\"cc-close\">✕</button></header> <!> <!> <form class=\"cc-input-row\"><span class=\"cc-prompt\" aria-hidden=\"true\">❯</span> <input class=\"cc-input\" autocomplete=\"off\" spellcheck=\"false\"/> <button type=\"submit\" class=\"cc-ask\"> </button></form> <div class=\"cc-foot\"><!> <span class=\"cc-hint\" aria-live=\"polite\"><!></span> <span class=\"cc-fineprint\"> </span></div></div></div>");
+function us(e, t) {
 	Ve(t, !0);
-	let n = /* @__PURE__ */ M(() => t.session.chat), r = /* @__PURE__ */ M(() => t.session.conversation), i = /* @__PURE__ */ M(() => G(r).convo), a = /* @__PURE__ */ P(null), o = /* @__PURE__ */ P(null), s = /* @__PURE__ */ P(null), c = /* @__PURE__ */ P(!1), l = /* @__PURE__ */ M(() => To.includes(G(n).status) || G(n).status === "idle"), u = /* @__PURE__ */ M(() => G(n).status === "ready"), d = /* @__PURE__ */ M(() => G(n).status === "error" ? G(n).error : null), f = /* @__PURE__ */ M(() => G(n).status === "consent" ? G(n).consent : null), p = /* @__PURE__ */ M(() => G(r).canAsk()), m = /* @__PURE__ */ M(() => jo(G(n), t.copy, G(i).asking)), h = /* @__PURE__ */ M(() => Mo(G(n), t.copy, G(i).asking)), g = /* @__PURE__ */ M(() => No(G(n), G(i).asking)), _ = /* @__PURE__ */ M(() => G(i).askError), v = /* @__PURE__ */ M(() => G(_)?.kind === "quota" && G(_).resetAt ? qo(G(_).resetAt, t.session.epochMs(), t.copy, {
+	let n = /* @__PURE__ */ M(() => t.session.chat), r = /* @__PURE__ */ M(() => t.session.conversation), i = /* @__PURE__ */ M(() => G(r).convo), a = /* @__PURE__ */ P(null), o = /* @__PURE__ */ P(null), s = /* @__PURE__ */ P(null), c = /* @__PURE__ */ P(!1), l = /* @__PURE__ */ M(() => ko.includes(G(n).status) || G(n).status === "idle"), u = /* @__PURE__ */ M(() => G(n).status === "ready"), d = /* @__PURE__ */ M(() => G(n).status === "error" ? G(n).error : null), f = /* @__PURE__ */ M(() => G(n).status === "consent" ? G(n).consent : null), p = /* @__PURE__ */ M(() => G(r).canAsk()), m = /* @__PURE__ */ M(() => Fo(G(n), t.copy, G(i).asking)), h = /* @__PURE__ */ M(() => Io(G(n), t.copy, G(i).asking)), g = /* @__PURE__ */ M(() => Lo(G(n), G(i).asking)), _ = /* @__PURE__ */ M(() => G(i).askError), v = /* @__PURE__ */ M(() => G(_)?.kind === "quota" && G(_).resetAt ? Zo(G(_).resetAt, t.session.epochMs(), t.copy, {
 		locale: [],
 		timeZone: void 0
 	}) : ""), y = /* @__PURE__ */ M(() => G(n).chatModel.endsWith(":free") ? G(n).chatModel.slice(0, -5) : ""), b = /* @__PURE__ */ M(() => G(i).asking && G(n).stream && (G(n).stream.reasoningText || G(n).stream.answerText) ? G(n).stream : null), x = /* @__PURE__ */ M(() => G(b) ? [...G(i).messages, {
@@ -4082,13 +4132,13 @@ function os(e, t) {
 		}) : G(s).scrollTop = G(s).scrollHeight);
 	});
 	function ee() {
-		(To.includes(G(n).status) || G(n).status === "consent") && t.session.abortLoad(), t.onclose();
+		(ko.includes(G(n).status) || G(n).status === "consent") && t.session.abortLoad(), t.onclose();
 	}
 	async function te() {
 		t.session.acceptDownload(), await tr(), G(a)?.focus();
 	}
 	function C(e) {
-		e.key === "Escape" ? ee() : G(a) && Ko(e, G(a));
+		e.key === "Escape" ? ee() : G(a) && Xo(e, G(a));
 	}
 	async function w(e) {
 		await tr(), e?.detail === 0 ? G(o)?.focus() : G(s)?.focus({ preventScroll: !0 });
@@ -4117,17 +4167,17 @@ function os(e, t) {
 	async function le() {
 		t.session.ensureReady(), await tr(), G(a)?.focus();
 	}
-	var ue = as();
+	var ue = ls();
 	dr("keydown", Zt, C);
 	var de = R(ue), fe = R(de), pe = (e) => {
-		var n = Jo();
+		var n = Qo();
 		zr(n, () => t.brand.motifSvg, !0), k(n), Y(e, n);
 	};
 	Z(fe, (e) => {
 		t.brand.motifSvg && e(pe);
 	});
 	var me = z(fe, 2), he = R(me), ge = R(he), _e = R(ge);
-	wo(_e, { size: 14 });
+	Oo(_e, { size: 14 });
 	var ve = z(_e, 1, !0);
 	k(ge);
 	var ye = z(ge, 2), be = R(ye, !0);
@@ -4139,10 +4189,10 @@ function os(e, t) {
 	var T = z(we, 2);
 	k(me);
 	var Ee = z(me, 2), De = (e) => {
-		var t = Yo(), n = R(t);
+		var t = $o(), n = R(t);
 		{
 			let e = /* @__PURE__ */ M(() => G(d).kind === "config" ? G(d).message : null);
-			ho(n, {
+			yo(n, {
 				get entry() {
 					return G(S);
 				},
@@ -4157,7 +4207,7 @@ function os(e, t) {
 		}
 		k(t), Y(e, t);
 	}, Oe = (e) => {
-		uo(e, {
+		ho(e, {
 			get consent() {
 				return G(f);
 			},
@@ -4168,7 +4218,7 @@ function os(e, t) {
 			ondecline: ee
 		});
 	}, ke = (e) => {
-		Uo(e, {
+		qo(e, {
 			get chat() {
 				return G(n);
 			},
@@ -4177,16 +4227,16 @@ function os(e, t) {
 			}
 		});
 	}, Ae = (e) => {
-		var r = rs(), a = R(r), o = (e) => {
-			var n = Xo(), r = R(n, !0);
+		var r = ss(), a = R(r), o = (e) => {
+			var n = es(), r = R(n, !0);
 			k(n), B(() => X(r, t.copy.offlineBadge)), Y(e, n);
 		};
 		Z(a, (e) => {
 			G(n).offline && e(o);
 		});
 		var c = z(a, 2), l = (e) => {
-			var r = ts(), a = rn(r), o = (e) => {
-				var n = Zo(), r = R(n), i = z(r), a = R(i, !0);
+			var r = as(), a = rn(r), o = (e) => {
+				var n = ts(), r = R(n), i = z(r), a = R(i, !0);
 				k(i), k(n), B(() => {
 					X(r, `${t.copy.conversation.cleared ?? ""} `), X(a, t.copy.conversation.undo);
 				}), K("click", i, ce), Y(e, n);
@@ -4198,20 +4248,20 @@ function os(e, t) {
 			k(s);
 			var l = z(s, 2), u = R(l);
 			Nr(u, 17, () => t.copy.boot, kr, (e, t) => {
-				var n = Qo(), r = R(n, !0);
+				var n = ns(), r = R(n, !0);
 				k(n), B(() => X(r, G(t))), Y(e, n);
 			}), Nr(z(u, 2), 17, () => G(n).corpora, (e) => e.id, (e, n) => {
-				var r = $o(), i = R(r, !0);
-				k(r), B((e) => X(i, e), [() => Na(t.copy.corpusLine, {
+				var r = rs(), i = R(r, !0);
+				k(r), B((e) => X(i, e), [() => La(t.copy.corpusLine, {
 					id: G(n).id,
 					chunks: G(n).chunks,
 					files: G(n).files,
-					commit: Oo(G(n).commit)
+					commit: Mo(G(n).commit)
 				})]), Y(e, r);
 			}), k(l);
 			var d = z(l, 2);
 			Nr(d, 21, () => t.copy.starters, kr, (e, t) => {
-				var n = es(), r = R(n, !0);
+				var n = is(), r = R(n, !0);
 				k(n), B(() => X(r, G(t))), K("click", n, (e) => ie(G(t), e)), Y(e, n);
 			}), k(d), B(() => X(c, t.copy.sub)), Y(e, r);
 		};
@@ -4222,7 +4272,7 @@ function os(e, t) {
 		Nr(u, 17, () => G(x), (e) => e.id, (e, r) => {
 			{
 				let i = /* @__PURE__ */ M(() => G(r).live ? null : G(r)), a = /* @__PURE__ */ M(() => G(r).live ?? null), o = /* @__PURE__ */ M(() => G(n).corpora.length > 1);
-				oo(e, {
+				uo(e, {
 					get message() {
 						return G(i);
 					},
@@ -4242,7 +4292,7 @@ function os(e, t) {
 			}
 		});
 		var d = z(u, 2), f = (e) => {
-			var r = ns(), i = z(R(r));
+			var r = os(), i = z(R(r));
 			Pe(), k(r), B(() => X(i, ` ${t.copy.phase[G(n).msgPhase] ?? t.copy.phase.writing ?? ""} `)), Y(e, r);
 		};
 		Z(d, (e) => {
@@ -4251,7 +4301,7 @@ function os(e, t) {
 		var p = z(d, 2), m = (e) => {
 			{
 				let n = /* @__PURE__ */ M(() => G(_).kind === "quota" && G(y) ? t.copy.errors.quota.paid : "");
-				ho(e, {
+				yo(e, {
 					get entry() {
 						return t.copy.errors[G(_).kind];
 					},
@@ -4279,7 +4329,7 @@ function os(e, t) {
 		G(d) ? e(De) : G(f) ? e(Oe, 1) : G(l) ? e(ke, 2) : e(Ae, -1);
 	});
 	var je = z(Ee, 2);
-	So(je, {
+	Eo(je, {
 		get session() {
 			return t.session;
 		},
@@ -4302,7 +4352,7 @@ function os(e, t) {
 	var D = z(Me, 2), O = R(D, !0);
 	k(D), k(E);
 	var Ne = z(E, 2), Fe = R(Ne), Ie = (e) => {
-		var n = is(), r = R(n, !0);
+		var n = cs(), r = R(n, !0);
 		k(n), B(() => X(r, t.copy.conversation.clear)), K("click", n, se), Y(e, n);
 	};
 	Z(Fe, (e) => {
@@ -4326,8 +4376,8 @@ function os(e, t) {
 fr(["click"]);
 //#endregion
 //#region src/index.js
-var ss = "(max-width: 860px)", cs = /* @__PURE__ */ new Map(), ls = (e) => `${e.storage.keyPrefix}lattice-wasm`;
-function us(e) {
+var ds = "(max-width: 860px)", fs = /* @__PURE__ */ new Map(), ps = (e) => `${e.storage.keyPrefix}lattice-wasm`;
+function ms(e) {
 	return JSON.stringify([
 		e.corpora,
 		e.wasm,
@@ -4337,39 +4387,43 @@ function us(e) {
 		e.brand.productName
 	]);
 }
-function ds(e) {
-	let t = us(e), n = cs.get(t);
+function hs(e) {
+	let t = ms(e), n = fs.get(t);
 	if (!n) {
 		let r = {
 			fetch: Li,
 			sleep: Pi
 		};
-		n = Wa(e, {
+		n = Ja(e, {
 			openrouter: oa(e.provider, r),
 			lattice: Ji(e.wasm, {
 				importModule: Ri,
 				fetch: Li
 			}),
-			cache: fa(e.storage.keyPrefix, { getDirectory: zi() }),
+			cache: ga(e.storage.keyPrefix, {
+				getDirectory: zi(),
+				sleep: Pi
+			}),
 			net: Ki({ fetch: Li }),
-			keys: pa(e.storage.keyPrefix, window.localStorage),
+			keys: _a(e.storage.keyPrefix, window.localStorage),
 			clock: Fi,
 			idleYield: Ni,
-			wasmBytes: () => Hi(e.wasm.binUrl, ls(e))
-		}), cs.set(t, n);
+			wasmBytes: () => Hi(e.wasm.binUrl, ps(e)),
+			reportCacheFault: (e) => console.error(`repo-chat: browser cache: ${e?.message ?? e}`, e)
+		}), fs.set(t, n);
 	}
 	return n;
 }
-function fs(e) {
+function gs(e) {
 	if (typeof window > "u" || typeof document > "u") throw Error(`${e} runs in a browser only`);
 }
-function ps(e) {
+function _s(e) {
 	let t = Mi(e);
-	fs("warmRepoChat"), Bi(t.assets.cssHref).catch(() => {}), Wi(t.wasm.binUrl, ls(t));
+	gs("warmRepoChat"), Bi(t.assets.cssHref).catch(() => {}), Wi(t.wasm.binUrl, ps(t));
 }
-function ms(e) {
+function vs(e) {
 	let t = Mi(e);
-	fs("openRepoChat");
+	gs("openRepoChat");
 	let n = document.createElement("div");
 	n.className = "arr-root";
 	for (let [e, r] of di(t.theme)) n.style.setProperty(e, r);
@@ -4384,17 +4438,17 @@ function ms(e) {
 	function c() {
 		s || (s = !0, l.abortLoad(), a && Dr(a), n.remove(), o || r.reject(/* @__PURE__ */ Error("the chat was closed before its corpora were ready")), t.onClose?.());
 	}
-	let l = ds(t);
+	let l = hs(t);
 	return t.mount.appendChild(n), Bi(t.assets.cssHref).catch((e) => {
 		console.error(e);
 	}).then(() => {
-		s || (a = Cr(os, {
+		s || (a = Cr(us, {
 			target: n,
 			props: {
 				session: l,
 				copy: t.copy,
 				brand: t.brand,
-				sourcesOpen: !Ii(ss),
+				sourcesOpen: !Ii(ds),
 				reducedMotion: () => Ii("(prefers-reduced-motion: reduce)"),
 				onclose: c,
 				onready: () => {
@@ -4408,4 +4462,4 @@ function ms(e) {
 	};
 }
 //#endregion
-export { ci as COPY_EN, fi as ConfigError, ms as openRepoChat, ps as warmRepoChat };
+export { ci as COPY_EN, fi as ConfigError, vs as openRepoChat, _s as warmRepoChat };

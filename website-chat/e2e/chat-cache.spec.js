@@ -181,5 +181,7 @@ test('a corpus whose gzip is corrupt shows the unpack card and caches nothing', 
   const card = page.locator('.cc-error[role="alert"]');
   await expect(card).toBeVisible({ timeout: 20_000 });
   await expect(card.locator('.cc-error-tag')).toHaveText(/unpack failed|download failed/);
-  await expect.poll(() => opfsFiles(page)).toEqual([]);
+  // The card shows only after cleanup, so the invariant holds at once, not
+  // eventually: no corpus file and no partial download.
+  expect(await opfsFiles(page)).toEqual([]);
 });

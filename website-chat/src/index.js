@@ -69,12 +69,14 @@ function sessionFor(cfg) {
     session = createSession(cfg, {
       openrouter: createOpenRouter(cfg.provider, io),
       lattice: createLattice(cfg.wasm, { importModule, fetch: fetchNow }),
-      cache: createOpfsCache(cfg.storage.keyPrefix, { getDirectory: opfsDirectory() }),
+      cache: createOpfsCache(cfg.storage.keyPrefix, { getDirectory: opfsDirectory(), sleep }),
       net: createCorpusNet({ fetch: fetchNow }),
       keys: createKeyStore(cfg.storage.keyPrefix, window.localStorage),
       clock,
       idleYield,
       wasmBytes: () => wasmDownloadBytes(cfg.wasm.binUrl, wasmCacheName(cfg)),
+      // Cache commit/cleanup failures never decide a load; they go here.
+      reportCacheFault: (err) => console.error(`repo-chat: browser cache: ${err?.message ?? err}`, err),
     });
     sessions.set(key, session);
   }

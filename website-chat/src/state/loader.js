@@ -43,11 +43,14 @@ class FailedError extends Error {
  * @param {object} deps.chat       the session's $state object
  * @param {Array<{id: string, gzUrl: string, metaUrl: string}>} deps.corpora
  * @param {number} deps.upsertBatch
- * @param {object} deps.ports      { lattice, cache, net, idleYield, wasmBytes }
+ * @param {object} deps.ports      { lattice, cache, net, idleYield, wasmBytes, reportCacheFault }
  *   wasmBytes(): bytes the engine still has to fetch (0 when cached, null when unknown)
+ *   reportCacheFault(err): where a cache commit/cleanup failure goes. Such a
+ *   failure never decides the load (the corpus is indexed, or the load has
+ *   already failed with its own fault), but it is never swallowed either.
  */
 export function createLoader({ chat, corpora, upsertBatch, ports }) {
-  const { lattice, cache, net, idleYield, wasmBytes } = ports;
+  const { lattice, cache, net, idleYield, wasmBytes, reportCacheFault } = ports;
 
   let loadPromise = null; // in-flight ensureReady(); cleared on error/abort
   let controller = null; // AbortController for the current corpus download
@@ -77,7 +80,7 @@ export function createLoader({ chat, corpora, upsertBatch, ports }) {
   async function dropWriter() {
     const w = writer;
     writer = null;
-    if (w) await w.discard().catch(() => undefined);
+    if (w) await w.discard().catch(reportCacheFault);
   }
 
   /**
@@ -118,7 +121,7 @@ export function createLoader({ chat, corpora, upsertBatch, ports }) {
     controller?.abort();
     const w = writer;
     writer = null;
-    if (w) w.discard().catch(() => undefined);
+    if (w) w.discard().catch(reportCacheFault);
     loadPromise = null;
     chat.error = null;
     chat.offline = false;
@@ -247,7 +250,7 @@ export function createLoader({ chat, corpora, upsertBatch, ports }) {
       countBytes: true,
       onDrained: async () => {
         await cache.writeMeta(p.corpus.id, p.meta.commitSha, p.raw);
-        await cache.pruneStale(p.corpus.id, p.meta.commitSha);
+        await cache.pruneStale(p.corpus.id, p.meta.commitSha).catch(reportCacheFault);
       },
     });
   }
@@ -289,7 +292,11 @@ export function createLoader({ chat, corpora, upsertBatch, ports }) {
 
     // OPFS writer for the decompressed corpus; null when OPFS is unavailable
     // (private browsing) — we then stream without caching.
-    writer = await cache.createCorpusWriter(id, sha);
+    // A writer that cannot be set up leaves this load uncached, and says why.
+    writer = await cache.createCorpusWriter(id, sha).catch((err) => {
+      reportCacheFault(err);
+      return null;
+    });
     if (token.aborted) {
       // abortLoad() ran while the writer was being created (it saw writer ===
       // null and had nothing to discard) — discard here or the create:true
@@ -298,9 +305,11 @@ export function createLoader({ chat, corpora, upsertBatch, ports }) {
       throw new AbortedError();
     }
 
-    // Runs once the byte stream is fully drained (all bytes teed), BEFORE the
-    // trailing 'indexing' flush — preserving the state order
-    // downloading -> caching -> indexing.
+    // Runs once the byte stream is fully drained (all bytes teed, the gzip
+    // stream ended cleanly and every line parsed), BEFORE the trailing
+    // 'indexing' flush — preserving the state order
+    // downloading -> caching -> indexing. Only here is the partial download
+    // committed to its cache name.
     const commitCache = async () => {
       chat.status = 'caching';
       const w = writer;
@@ -309,12 +318,13 @@ export function createLoader({ chat, corpora, upsertBatch, ports }) {
         try {
           await w.finalize();
           await cache.writeMeta(id, sha, p.raw);
-        } catch {
-          // Cache write failure is non-fatal — the corpus is already indexed.
-          await w.discard().catch(() => undefined);
+        } catch (err) {
+          // Non-fatal — the corpus is already indexed — but reported.
+          reportCacheFault(err);
+          await w.discard().catch(reportCacheFault);
         }
       }
-      await cache.pruneStale(id, sha);
+      await cache.pruneStale(id, sha).catch(reportCacheFault);
     };
 
     try {

@@ -15,7 +15,7 @@ import { createLoader } from './loader.js';
 
 /**
  * @param {object} config  a validated openRepoChat config
- * @param {object} ports   { openrouter, lattice, cache, net, keys, clock, idleYield, wasmBytes }
+ * @param {object} ports   { openrouter, lattice, cache, net, keys, clock, idleYield, wasmBytes, reportCacheFault }
  */
 export function createSession(config, ports) {
   const { keys, clock } = ports;

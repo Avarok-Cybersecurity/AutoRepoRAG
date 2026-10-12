@@ -76,8 +76,12 @@ fail to load with an error naming both.
   comes from the warm-up cache (0) or a `HEAD` of `wasm.binUrl`; when the
   server sends no `Content-Length` it is left out of the total.
 - **OPFS layout:** `<keyPrefix>~<id>@<commit>.jsonl` plus a `.meta.json`
-  sidecar. Older commits of the same corpus are pruned; other prefixes and
-  other corpora are never touched.
+  sidecar. A download is written to `….jsonl.part` and moved to the `.jsonl`
+  name only once the whole stream has parsed, so a failed download never sits
+  under the name the cache serves; its partial is removed, and a removal that
+  fails is reported on the console, never swallowed. Older commits and stray
+  partials of the same corpus are pruned; other prefixes and other corpora are
+  never touched.
 - **Offline:** when a manifest is unreachable or invalid, the newest cached
   copy of that corpus is served and the status says `cached · offline`.
 - **Theme:** the root element carries the `--arr-*` properties (set through

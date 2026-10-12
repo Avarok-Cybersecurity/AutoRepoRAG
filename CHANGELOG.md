@@ -32,6 +32,20 @@ integration. The config contract is unchanged.
   download progress.
 - **The consent panel states what the browser keeps** ("… to download, about
   … kept in this browser"), from each missing corpus's decompressed `bytes`.
+- **A failed download no longer leaves a file in the browser.** This was the
+  cause of the flaky corrupt-gzip test.
+  - Root cause: Chromium releases a writable's lock asynchronously. The
+    `removeEntry` that `discard()` ran right after `abort()` failed with
+    `NoModificationAllowedError` (8 of 60 runs on Linux). The error was
+    swallowed, so the empty file `create:true` had made stayed under the
+    corpus's cache name.
+  - Downloads are now written to `<name>.jsonl.part` and moved to the cache
+    name only after the whole stream has parsed (atomic commit).
+  - Removal and the commit move retry that one error with a short backoff.
+    Any other failure is thrown as a `CacheCleanupError` and reported through
+    a new loader port (`console.error`) instead of being swallowed. The same
+    applies to pruning old commits and a writer that cannot be set up.
+  - A successful load also sweeps the corpus's leftover `.part` files.
 
 ### Added
 - `COPY_EN` keys `errors.service.{tag,body,retry}` and `consent.total`
