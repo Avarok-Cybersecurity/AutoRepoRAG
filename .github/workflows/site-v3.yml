@@ -10,8 +10,8 @@ permissions:
   contents: read
 
 env:
-  # v3 needs lattice-db >= v0.5.0; its assets are pinned in src/pins.mjs.
-  CORPUS_V3_LATTICE_VERSION: v0.5.0
+  # v3 needs lattice-db >= v0.5.1; its assets are pinned in src/pins.mjs.
+  CORPUS_V3_LATTICE_VERSION: v0.5.1
 
 jobs:
   site:

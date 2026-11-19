@@ -6,7 +6,7 @@
 // floating "latest" is refused in v3 because two runs could then build on
 // different servers.
 
-export const MIN_V3_LATTICE = 'v0.5.0';
+export const MIN_V3_LATTICE = 'v0.5.1';
 
 const TAG = /^v(\d+)\.(\d+)\.(\d+)$/;
 

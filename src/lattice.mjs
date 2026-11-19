@@ -5,7 +5,7 @@
 // are cosine DISTANCES (0 = identical), never similarities. Collection create
 // uses capitalized distance "Cosine" (REST convention; the jsonl header uses
 // lowercase "cosine"). BM25 query scores are SIMILARITIES (higher = better).
-// Snapshot export moves raw bytes (format 2: "LTDB" | u32 LE format |
+// Snapshot export/import move raw bytes (format 2: "LTDB" | u32 LE format |
 // u32 LE config_len | config JSON | ...), not envelopes.
 
 import { sleep } from './util.mjs';
@@ -23,8 +23,11 @@ export class LatticeClient {
     }
   }
 
-  async request(method, path, body) {
-    const res = await this.send(method, path, body === undefined ? undefined : JSON.stringify(body), 'application/json');
+  async request(method, path, body, rawBytes = false) {
+    const res = await this.send(
+      method, path, rawBytes ? body : body === undefined ? undefined : JSON.stringify(body),
+      rawBytes ? 'application/octet-stream' : 'application/json',
+    );
     const raw = await res.text();
     if (!res.ok) {
       throw new Error(`lattice ${method} ${path}: HTTP ${res.status} - ${raw.slice(0, 500)}`);
@@ -98,6 +101,15 @@ export class LatticeClient {
   /** v3: create from a full REST body (vectors optional, text_index, embedding, hnsw_config). */
   createCollectionFrom(name, body) {
     return this.request('PUT', `/collections/${encodeURIComponent(name)}`, body);
+  }
+
+  deleteCollection(name) {
+    return this.request('DELETE', `/collections/${encodeURIComponent(name)}`);
+  }
+
+  /** Install snapshot bytes as `name` (mode create|replace|merge). */
+  importSnapshot(name, bytes, mode) {
+    return this.request('POST', `/collections/${encodeURIComponent(name)}/import?mode=${mode}`, bytes, true);
   }
 
   addEdge(name, { from, to, rel, w }) {

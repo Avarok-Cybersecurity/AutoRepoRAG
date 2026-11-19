@@ -8,9 +8,9 @@
 // came with a matching checksum file. Versions not listed (older v2 pins
 // such as v0.3.3) rely on the release checksum file alone, as before.
 //
-// v0.5.0 values: the release's published .sha256 files (2026-11-19), each
-// re-computed with `shasum -a 256` over the assets downloaded by
-// `gh release download v0.5.0 -R Avarok-Cybersecurity/lattice-db`; both agreed.
+// v0.5.0 and v0.5.1 values: the releases' published .sha256 files
+// (2026-11-19), each re-computed with `shasum -a 256` over the assets downloaded by
+// `gh release download <tag> -R Avarok-Cybersecurity/lattice-db`; both agreed.
 // To pin a new release, add its entry the same way.
 
 export const PINNED_SHA256 = Object.freeze({
@@ -21,6 +21,14 @@ export const PINNED_SHA256 = Object.freeze({
     'lattice-db-macos-x64.tar.gz': '451bcda5205d764cc946e91f07af82ad18db8566938ab7ae62e0f8871c39e55d',
     'lattice_server.js': 'a0fcea2d1ca1c0122845565c100af4e4a59569b892486496610e634d148265f3',
     'lattice_server_bg.wasm': 'ef37c0fa31ae7bfb65ce26f5a0323763ab839848683bd667ebfb83647cb356ee',
+  }),
+  'v0.5.1': Object.freeze({
+    'lattice-db-linux-x64.tar.gz': 'e32ad109052d887d256c28c8cae5bce8184b52cf73f2ace8ae74acc69a7cc4e5',
+    'lattice-db-linux-arm64.tar.gz': '47be8a7048613ec4c3e7a140dd46b3cc856bda2e7545ad26612350a5bd3f7113',
+    'lattice-db-macos-arm64.tar.gz': '66290352d1e8b84cf169689a91c3396de5ffba5692234083fddb97edd8e4fbe7',
+    'lattice-db-macos-x64.tar.gz': 'b4197555245b06209131726a0cca21007cc89135a81d6083b63a8781ec9c4494',
+    'lattice_server.js': 'a0fcea2d1ca1c0122845565c100af4e4a59569b892486496610e634d148265f3',
+    'lattice_server_bg.wasm': 'e2f5fde1973a33667eb2bc8a4db142b3df9067b8f1e60ce217b09961d3dc19e1',
   }),
 });
 

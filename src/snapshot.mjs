@@ -5,10 +5,11 @@
 // JSON | u64 body_len | pad | rkyv body (lattice-db docs/edge-search.md).
 // exportVerifiedSnapshot exports the loaded collection and proves the
 // snapshot describes the same collection as the jsonl header (format,
-// config) and fits max-snapshot-bytes. It does not load the snapshot back:
-// lattice-server's native transport drops the query string, so
-// POST /collections/{n}/import?mode=... is unusable there (wasm route() is
-// fine); test/integration/site.test.mjs loads it in the wasm build instead.
+// config) and fits max-snapshot-bytes. Then it round-trips it natively: the
+// probe query runs on the loaded collection, the collection is dropped, the
+// snapshot is imported under the same name (import?mode=create; the config
+// it carries names the collection), and points_count, the probe's ids and
+// scores, and a second export's bytes must all equal the first.
 
 import { log, stableStringify } from './util.mjs';
 
@@ -49,16 +50,64 @@ export function assertSnapshotSize(size, max) {
   }
 }
 
+const PROBE_LIMIT = 10;
+
+/**
+ * The query the round-trip repeats: BM25 on the first point's text when the
+ * collection has a text index, else a vector search on its stored vector.
+ * Resolves to the hits as [id, score] pairs.
+ * @param {'lexical'|'vector'|'hybrid'} searchMode
+ * @param {{vector: number[], payload: {text: string}}} point
+ * @returns {(client: import('./lattice.mjs').LatticeClient, name: string) => Promise<Array<[number, number]>>}
+ */
+export function snapshotProbe(searchMode, point) {
+  const pairs = (hits) => (hits ?? []).map((h) => [h.id, h.score]);
+  if (searchMode === 'vector') return async (client, name) => pairs(await client.search(name, point.vector, PROBE_LIMIT));
+  return async (client, name) => pairs((await client.query(name, {
+    query: { text: point.payload.text, model: 'bm25' }, limit: PROBE_LIMIT, with_payload: false,
+  }))?.points);
+}
+
+/** Throws unless the imported collection answered exactly as the original did. */
+export function assertRoundTrip({ pointsBefore, pointsAfter, hitsBefore, hitsAfter, bytes, reexported }) {
+  if (pointsAfter !== pointsBefore) {
+    throw new Error(`snapshot round-trip: imported points_count ${pointsAfter} != ${pointsBefore}`);
+  }
+  if (hitsBefore.length === 0) throw new Error('snapshot round-trip: the probe query returned no hits to compare');
+  if (JSON.stringify(hitsAfter) !== JSON.stringify(hitsBefore)) {
+    throw new Error(
+      `snapshot round-trip: probe hits differ after import:\n  before: ${JSON.stringify(hitsBefore)}\n  after:  ${JSON.stringify(hitsAfter)}`,
+    );
+  }
+  if (!reexported.equals(bytes)) {
+    throw new Error(`snapshot round-trip: re-export is not byte-identical (${reexported.length} vs ${bytes.length} bytes)`);
+  }
+}
+
 /**
  * @param {import('./lattice.mjs').LatticeClient} client
- * @param {{collection: string, config: unknown, maxBytes: number}} opts
+ * @param {{collection: string, config: unknown, maxBytes: number,
+ *   probe: (client: import('./lattice.mjs').LatticeClient, name: string) => Promise<Array<[number, number]>>}} opts
  * @returns {Promise<Buffer>}
  */
-export async function exportVerifiedSnapshot(client, { collection, config, maxBytes }) {
+export async function exportVerifiedSnapshot(client, { collection, config, maxBytes, probe }) {
   const started = Date.now();
   const bytes = await client.exportSnapshot(collection);
   assertSnapshotMatches(bytes, config);
   assertSnapshotSize(bytes.length, maxBytes);
-  log(`[snapshot] format ${SNAPSHOT_FORMAT}, ${bytes.length} bytes, config matches the jsonl header (${Date.now() - started} ms)`);
+
+  const pointsBefore = (await client.collectionInfo(collection)).points_count;
+  const hitsBefore = await probe(client, collection);
+  await client.deleteCollection(collection);
+  await client.importSnapshot(collection, bytes, 'create');
+  const pointsAfter = (await client.collectionInfo(collection)).points_count;
+  const hitsAfter = await probe(client, collection);
+  const reexported = await client.exportSnapshot(collection);
+  assertRoundTrip({ pointsBefore, pointsAfter, hitsBefore, hitsAfter, bytes, reexported });
+  log(
+    `[snapshot] format ${SNAPSHOT_FORMAT}, ${bytes.length} bytes, config matches the jsonl header; ` +
+      `native import: ${pointsAfter} points, ${hitsAfter.length} probe hits identical, re-export byte-identical ` +
+      `(${Date.now() - started} ms)`,
+  );
   return bytes;
 }

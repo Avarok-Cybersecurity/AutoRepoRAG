@@ -94,7 +94,7 @@ describe('resolveEdges', () => {
       { from: 5, to: 6, rel: 'next', w: 1 },
       { from: 6, to: 1, rel: 'links_to', w: 0.5 },
     ]);
-    assert.deepEqual(relations, { next: 0, cites: 1, links_to: 2 });
+    assert.deepEqual(relations, { cites: 0, links_to: 1, next: 2 });
   });
 
   for (const [label, edge, re] of [

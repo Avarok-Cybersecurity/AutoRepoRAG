@@ -3,7 +3,7 @@
 // v3 mode is on when any v3-only input is set. It then requires
 // chunk-strategy, search-mode and snapshot; the conditional v2 inputs are
 // required or refused by what those choose; and lattice-version must be a
-// pinned tag >= v0.5.0.
+// pinned tag >= v0.5.1.
 
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
@@ -24,7 +24,7 @@ const SITE = {
   'search-mode': 'lexical',
   snapshot: 'true',
   'max-snapshot-bytes': String(25 * 1024 * 1024),
-  'lattice-version': 'v0.5.0',
+  'lattice-version': 'v0.5.1',
 };
 
 /** v2 required values minus the conditional inputs, plus v3 overrides. */
@@ -87,11 +87,11 @@ describe('readInputs: v3 mode', () => {
     it(`rejects ${name}=${value}`, () => assert.throws(() => readInputs(siteEnv({ [name]: value })), { message: re }));
   }
 
-  it('requires lattice-version >= v0.5.0, pinned', () => {
-    for (const v of ['v0.3.3', 'v0.4.9', 'latest', '0.5.0']) {
-      assert.throws(() => readInputs(siteEnv({ 'lattice-version': v })), { message: /v3 mode needs lattice-version >= v0\.5\.0/ });
+  it('requires lattice-version >= v0.5.1, pinned', () => {
+    for (const v of ['v0.3.3', 'v0.4.9', 'v0.5.0', 'latest', '0.5.1']) {
+      assert.throws(() => readInputs(siteEnv({ 'lattice-version': v })), { message: /v3 mode needs lattice-version >= v0\.5\.1/ });
     }
-    for (const v of ['v0.5.0', 'v0.10.1', 'v1.0.0']) assert.equal(readInputs(siteEnv({ 'lattice-version': v })).latticeVersion, v);
+    for (const v of ['v0.5.1', 'v0.5.10', 'v0.10.1', 'v1.0.0']) assert.equal(readInputs(siteEnv({ 'lattice-version': v })).latticeVersion, v);
   });
 
   it('files-dir requires corpus-repo and corpus-commit; they are refused without it', () => {

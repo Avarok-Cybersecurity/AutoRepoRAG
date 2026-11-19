@@ -1,9 +1,10 @@
-// snapshot.test.mjs — snapshot header parsing and the size guard (pure).
+// snapshot.test.mjs — snapshot header parsing, the size guard and the
+// round-trip comparison (pure).
 
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { assertSnapshotSize, assertSnapshotMatches, parseSnapshotHeader } from '../../src/snapshot.mjs';
+import { assertRoundTrip, assertSnapshotSize, assertSnapshotMatches, parseSnapshotHeader } from '../../src/snapshot.mjs';
 
 /** "LTDB" | u32 LE format | u32 LE config_len | config JSON | body */
 function snapshotBytes(format, config, body = Buffer.alloc(8)) {
@@ -60,5 +61,32 @@ describe('assertSnapshotSize', () => {
       () => assertSnapshotSize(27_262_976, 26_214_400),
       { message: /^snapshot is 27262976 bytes \(26\.00 MiB\), over max-snapshot-bytes 26214400 \(25\.00 MiB\)/ },
     );
+  });
+});
+
+describe('assertRoundTrip', () => {
+  const bytes = snapshotBytes(2, CONFIG);
+  const ok = { pointsBefore: 20, pointsAfter: 20, hitsBefore: [[3, 4.5], [7, 1.25]], hitsAfter: [[3, 4.5], [7, 1.25]], bytes, reexported: Buffer.from(bytes) };
+
+  it('accepts an identical count, identical hits and a byte-identical re-export', () => assert.doesNotThrow(() => assertRoundTrip(ok)));
+
+  it('refuses a different points_count', () => {
+    assert.throws(() => assertRoundTrip({ ...ok, pointsAfter: 19 }), { message: /imported points_count 19 != 20/ });
+  });
+
+  it('refuses hits that differ in id, order or score, showing both', () => {
+    for (const hitsAfter of [[[7, 1.25], [3, 4.5]], [[3, 4.5], [7, 1.2500001]], [[3, 4.5]]]) {
+      assert.throws(() => assertRoundTrip({ ...ok, hitsAfter }), { message: /probe hits differ after import:\n {2}before: .*\n {2}after: / });
+    }
+  });
+
+  it('refuses a probe with no hits (nothing would be compared)', () => {
+    assert.throws(() => assertRoundTrip({ ...ok, hitsBefore: [], hitsAfter: [] }), { message: /probe query returned no hits/ });
+  });
+
+  it('refuses a re-export that differs by one byte', () => {
+    const reexported = Buffer.from(bytes);
+    reexported[reexported.length - 1] ^= 1;
+    assert.throws(() => assertRoundTrip({ ...ok, reexported }), { message: /re-export is not byte-identical/ });
   });
 });

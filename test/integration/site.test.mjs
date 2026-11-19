@@ -3,12 +3,13 @@
 // Runs the action's entrypoint (src/main.mjs) on fixtures/site: files-dir
 // over a dist/ that is gitignored in its workspace (what GeoHarness hands
 // over), markdown chunking, lexical search, the payload sidecar, an edges
-// file, and a snapshot, with the lattice-server v0.5.0 release the action
+// file, and a snapshot, with the lattice-server v0.5.1 release the action
 // downloads and sha256-verifies itself (linux or macOS). Then loads that
-// snapshot into the v0.5.0 wasm build (fetched and verified by the action's
+// snapshot into the v0.5.1 wasm build (fetched and verified by the action's
 // own website-chat downloader), as a visitor's browser or a Worker would,
 // and checks that a BM25 query ranks the right page first. Also: a
-// hybrid/int8 mock run, and the max-snapshot-bytes guard naming both sizes.
+// hybrid/int8 and a vector/hnsw/f16 mock run (each round-trips its snapshot
+// through the native server), and the max-snapshot-bytes guard.
 // Needs network access to the GitHub release. Run:
 //   node --test test/integration/site.test.mjs
 
@@ -24,7 +25,7 @@ import { sha256Hex } from '../../src/util.mjs';
 import { fetchLatticeWasm } from '../../src/website-chat.mjs';
 
 const ROOT = fileURLToPath(new URL('../../', import.meta.url));
-const LATTICE_VERSION = 'v0.5.0';
+const LATTICE_VERSION = 'v0.5.1';
 const SHA = 'c0ffee'.padEnd(40, '0');
 
 let ws;
@@ -119,7 +120,7 @@ describe('v3 site corpus: files-dir + markdown + lexical + snapshot', () => {
     const nextCount = points.length - files.size;
     assert.equal(edges.length, nextCount + 3);
     assert.equal(header.edges, edges.length);
-    assert.deepEqual(header.config.relations, { next: 0, links_to: 1 });
+    assert.deepEqual(header.config.relations, { links_to: 0, next: 1 });
   });
 
   it('the snapshot loads in the wasm build and BM25 ranks the right page first', async () => {
@@ -140,10 +141,16 @@ describe('v3 site corpus: files-dir + markdown + lexical + snapshot', () => {
     console.log(`  wasm importSnapshot ${loadMs.toFixed(2)} ms`);
   });
 
-  it('is deterministic: a second run writes a byte-identical jsonl', () => {
+  it('round-trips the snapshot through the native server', () => {
+    assert.match(run.out, /\[snapshot\] .*native import: 20 points, \d+ probe hits identical, re-export byte-identical/);
+  });
+
+  it('is deterministic: a second run writes a byte-identical jsonl and snapshot', () => {
     const again = runSite('lexical-again');
     assert.equal(again.status, 0, again.out);
     assert.equal(again.meta.sha256, run.meta.sha256);
+    assert.equal(again.meta.snapshot_sha256, run.meta.snapshot_sha256);
+    assert.ok(readFileSync(join(again.outDir, 'site.lattice')).equals(readFileSync(join(run.outDir, 'site.lattice'))));
   });
 });
 
@@ -160,6 +167,17 @@ describe('v3 site corpus: hybrid with mock vectors, flat int8', () => {
     const header = JSON.parse(readFileSync(join(r.outDir, 'site.jsonl'), 'utf8').split('\n')[0]);
     assert.deepEqual(header.config.embedding, { model: 'mock' });
     assert.deepEqual(header.config.vectors, { distance: 'cosine', index: 'flat', size: 64, storage: 'int8' });
+    assert.match(r.out, /native import: 20 points, \d+ probe hits identical, re-export byte-identical/);
+  });
+
+  it('vector mode (hnsw f16) round-trips the snapshot with a vector-search probe', () => {
+    const r = runSite('vector', {
+      SEARCH_MODE: 'vector', VECTOR_INDEX: 'hnsw', VECTOR_STORAGE: 'f16', MOCK_EMBEDDINGS: 'true',
+      EMBEDDING_ENDPOINT: 'https://api.cloudflare.com/client/v4/accounts/x/ai/v1', VECTOR_PRECISION: '6', REQUEST_INTERVAL_MS: '0',
+    });
+    assert.equal(r.status, 0, r.out);
+    assert.equal(r.meta.search_mode, 'vector');
+    assert.match(r.out, /native import: 20 points, 10 probe hits identical, re-export byte-identical/);
   });
 });
 

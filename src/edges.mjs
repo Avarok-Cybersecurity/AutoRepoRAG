@@ -9,9 +9,9 @@
 // the file's first chunk). Paths and indexes resolve to point ids; anything
 // unresolvable, a self-loop, or a duplicate (from, to, relation) fails
 // naming the entry. The result is sorted (from, relation, to), the order
-// lattice-db's own jsonl export writes, and relation ids are assigned in
-// order of first appearance in that list (the order they are added to the
-// server, so the jsonl header and the snapshot agree).
+// lattice-db's own jsonl export writes, and relation ids are 0..n in
+// ascending relation-name order: lattice-db >= v0.5.1 renumbers them that
+// way in every snapshot, so the jsonl header and the snapshot agree.
 
 const RELATION = /^[A-Za-z0-9_.:-]{1,64}$/;
 export const NEXT_RELATION = 'next';
@@ -73,7 +73,7 @@ export function resolveEdges(chunks, spec, { nextEdges }) {
     add({ from, to, rel: e.relation, w: e.weight }, where);
   });
   edges.sort((a, b) => a.from - b.from || (a.rel < b.rel ? -1 : a.rel > b.rel ? 1 : 0) || a.to - b.to);
-  const relations = {};
-  for (const e of edges) if (!Object.hasOwn(relations, e.rel)) relations[e.rel] = Object.keys(relations).length;
+  const names = [...new Set(edges.map((e) => e.rel))].sort();
+  const relations = Object.fromEntries(names.map((name, id) => [name, id]));
   return { edges, relations };
 }

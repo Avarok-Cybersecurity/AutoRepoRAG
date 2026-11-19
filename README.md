@@ -88,7 +88,7 @@ publish:
 Runs on Linux and macOS runners, x64 or arm64 (`ubuntu-latest`,
 `ubuntu-24.04-arm`, `macos-latest`, …): the `lattice-server` release binary
 for the runner is downloaded and verified against the release's checksum
-file, and for the versions listed in `src/pins.mjs` (v0.5.0 today) also
+file, and for the versions listed in `src/pins.mjs` (v0.5.0 and v0.5.1 today) also
 against the sha256 this action pins.
 
 ## Inputs
@@ -213,7 +213,7 @@ v3 builds the corpus behind a website's search: a plain directory of files
 by BM25 with no embeddings at all, and published as a LatticeDB snapshot that
 loads in about 2 ms in a page, a service worker or a Cloudflare Worker.
 GeoHarness calls it
-this way. **v3 needs `lattice-version` ≥ `v0.5.0`.**
+this way. **v3 needs `lattice-version` ≥ `v0.5.1`.**
 
 v3 mode is on as soon as any v3 input is set; it then requires
 `chunk-strategy`, `search-mode` and `snapshot`. v2 runs (none of them set)
@@ -258,7 +258,7 @@ behave exactly as before.
     collection: site
     output-dir: dist/_search
     output-name: site
-    lattice-version: v0.5.0
+    lattice-version: v0.5.1
     generate-website-chat: 'false'
 ```
 
@@ -301,9 +301,13 @@ when `snapshot` is `'false'`). A lexical corpus has `dim` 0 and `model` /
 `endpoint` `null`. Every chunk's payload also has `heading_path` (markdown)
 and the sidecar fields.
 
-The jsonl is byte-deterministic. The snapshot is not yet: lattice-db writes
-payload maps in hash order, so `snapshot_sha256` changes between identical
-runs while the content does not.
+The jsonl and the snapshot are both byte-deterministic: two runs on the same
+input write the same `sha256` and `snapshot_sha256`. Relation ids in the
+jsonl header are numbered in relation-name order, as lattice-db writes them
+in a snapshot. Before the snapshot is written it is round-tripped through
+the server: the collection is dropped, the snapshot imported in its place
+(`POST /collections/<c>/import?mode=create`), and its `points_count`, a probe
+query's hits and scores, and a second export's bytes must equal the first.
 
 Query the snapshot with LatticeDB ≥ v0.5.0 (npm `lattice-db@0.5.0`) (`LatticeHost.importSnapshot`,
 then `route('POST', '/collections/<c>/points/query', …)`), with
@@ -313,9 +317,10 @@ see lattice-db's `docs/edge-search.md` for service workers and Workers.
 ### Testing v3 locally
 
 `node --test test/integration/site.test.mjs` runs the whole action on
-`fixtures/site` with the v0.5.0 release (downloaded and sha256-verified, on
-Linux or macOS), loads the snapshot into the v0.5.0 wasm build and checks
-BM25 ranking. It needs network access to the GitHub release.
+`fixtures/site` with the v0.5.1 release (downloaded and sha256-verified, on
+Linux or macOS), loads the snapshot into the v0.5.1 wasm build and checks
+BM25 ranking, the native round-trip (lexical, hybrid and vector mode) and
+that a second run writes the same jsonl and snapshot bytes. It needs network access to the GitHub release.
 
 ## Output format
 

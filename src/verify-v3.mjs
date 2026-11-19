@@ -2,7 +2,8 @@
 //
 // Contract: creates the collection from its shape (src/collection-v3.mjs),
 // upserts every point (no vector when lexical), adds every edge in the order
-// given (so relation ids match the jsonl header), and checks points_count.
+// given, and checks points_count. (The server numbers relations by first
+// use; the snapshot renumbers them by name, as the jsonl header does.)
 // With vectors: every stored vector is scrolled back and must equal the
 // local one within the storage's rounding (f32 1e-6; f16 a 2^-10 relative
 // step; int8 the vector's max |component| / 127); the server's values are

@@ -24,14 +24,21 @@ describe('serverAsset', () => {
 });
 
 describe('pinned sha256 table', () => {
-  it('pins every v0.5.0 server archive and the wasm pair as 64-hex', () => {
-    const v5 = PINNED_SHA256['v0.5.0'];
-    assert.deepEqual(Object.keys(v5).sort(), [
-      'lattice-db-linux-arm64.tar.gz', 'lattice-db-linux-x64.tar.gz', 'lattice-db-macos-arm64.tar.gz',
-      'lattice-db-macos-x64.tar.gz', 'lattice_server.js', 'lattice_server_bg.wasm',
-    ]);
-    for (const h of Object.values(v5)) assert.match(h, /^[0-9a-f]{64}$/);
-    assert.ok(Object.isFrozen(PINNED_SHA256) && Object.isFrozen(v5));
+  for (const version of ['v0.5.0', 'v0.5.1']) {
+    it(`pins every ${version} server archive and the wasm pair as 64-hex`, () => {
+      const pins = PINNED_SHA256[version];
+      assert.deepEqual(Object.keys(pins).sort(), [
+        'lattice-db-linux-arm64.tar.gz', 'lattice-db-linux-x64.tar.gz', 'lattice-db-macos-arm64.tar.gz',
+        'lattice-db-macos-x64.tar.gz', 'lattice_server.js', 'lattice_server_bg.wasm',
+      ]);
+      for (const h of Object.values(pins)) assert.match(h, /^[0-9a-f]{64}$/);
+      assert.ok(Object.isFrozen(PINNED_SHA256) && Object.isFrozen(pins));
+    });
+  }
+
+  it('pins v0.5.1 per tag: its server archives and wasm differ from v0.5.0', () => {
+    assert.match(PINNED_SHA256['v0.5.1']['lattice-db-linux-x64.tar.gz'], /^e32ad109/);
+    assert.notEqual(PINNED_SHA256['v0.5.1']['lattice_server_bg.wasm'], PINNED_SHA256['v0.5.0']['lattice_server_bg.wasm']);
   });
 
   it('accepts the pinned hash and an unpinned version', () => {

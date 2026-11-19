@@ -11,7 +11,7 @@ import { chunkSource, embedChunks } from './corpus.mjs';
 import { resolveEdges } from './edges.mjs';
 import { serializeCorpus } from './jsonl.mjs';
 import { mergeSidecar } from './sidecar.mjs';
-import { exportVerifiedSnapshot } from './snapshot.mjs';
+import { exportVerifiedSnapshot, snapshotProbe } from './snapshot.mjs';
 import { log } from './util.mjs';
 import { loadAndVerifyV3 } from './verify-v3.mjs';
 
@@ -50,7 +50,9 @@ export async function buildSiteCorpus({ inputs, client, source, readJson }) {
   const stored = await loadAndVerifyV3(client, { collection: inputs.collection, shape, points: embedded.points, edges });
   const config = headerConfig(shape);
   const snapshotBytes = v3.snapshot
-    ? await exportVerifiedSnapshot(client, { collection: inputs.collection, config, maxBytes: v3.maxSnapshotBytes })
+    ? await exportVerifiedSnapshot(client, {
+      collection: inputs.collection, config, maxBytes: v3.maxSnapshotBytes, probe: snapshotProbe(v3.searchMode, stored[0]),
+    })
     : null;
   return {
     corpusText: serializeCorpus({ collectionName: inputs.collection, dim: embedded.dim, points: stored, config, edges }),

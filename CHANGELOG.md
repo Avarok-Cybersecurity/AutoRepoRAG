@@ -10,12 +10,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [3.0.0] - Unreleased
 
 Site corpora: the corpus behind a website's search. Needs lattice-db
->= v0.5.0. v2 runs (no v3 input set) behave as before; their corpora are
+>= v0.5.1. v2 runs (no v3 input set) behave as before; their corpora are
 byte-identical to 2.2.1's.
 
 ### Added
 - **v3 mode**, on when any v3 input is set; it requires `chunk-strategy`,
-  `search-mode` and `snapshot`, and `lattice-version` >= v0.5.0 (pinned).
+  `search-mode` and `snapshot`, and `lattice-version` >= v0.5.1 (pinned).
 - **`files-dir`** chunks a plain directory (a site's gitignored `dist/`)
   without asking git; repo and commit come from **`corpus-repo`** and
   **`corpus-commit`**.
@@ -26,7 +26,8 @@ byte-identical to 2.2.1's.
 - **`payload-sidecar`** merges per-file payload fields (e.g. `url`, `title`,
   `lastmod`); unknown paths and fields the action writes are errors.
 - **`edges-file`**: graph edges by path and chunk index, written as
-  lattice-jsonl edge lines (header `edges` and `config.relations` set).
+  lattice-jsonl edge lines (header `edges` and `config.relations` set;
+  relation ids in name order, as lattice-db numbers them in a snapshot).
 - **`search-mode: lexical | vector | hybrid`**: lexical makes no embedding
   call and builds a BM25 `text_index` with no `vectors`; hybrid has both.
   **`vector-index: hnsw | flat`** and **`vector-storage: f32 | f16 | int8`**;
@@ -34,7 +35,11 @@ byte-identical to 2.2.1's.
   and the corpus carries the stored values. `embedding.model` is recorded in
   the collection config.
 - **`snapshot`** exports `<name>.lattice` (snapshot format 2), checked to
-  carry the jsonl header's exact config; **`max-snapshot-bytes`** fails a
+  carry the jsonl header's exact config, then round-tripped natively (dropped,
+  imported with `import?mode=create`; `points_count`, a probe query's hits
+  and scores, and a re-export's bytes must match). Snapshots are
+  byte-reproducible: identical runs give the same `snapshot_sha256`.
+  **`max-snapshot-bytes`** fails a
   larger snapshot naming both sizes. meta.json gains `chunk_strategy`,
   `search_mode`, `text_field`, `vector_index`, `vector_storage`, `edges`,
   `snapshot_bytes`, `snapshot_sha256`, `snapshot_format`. New outputs
@@ -42,14 +47,14 @@ byte-identical to 2.2.1's.
 - **Cloudflare Workers AI** via its OpenAI-compatible endpoint, documented
   and tested: the `{success: false, errors}` envelope is read, 3036 (daily
   allocation) is not retried, 3040 (capacity) and 408 are.
-- **lattice-db v0.5.0 assets are pinned** (`src/pins.mjs`): the server
+- **lattice-db v0.5.0 and v0.5.1 assets are pinned** (`src/pins.mjs`): the server
   archives for linux/macOS x64/arm64 and the wasm pair must match both the
   release's checksum file and the sha256 pinned here.
 - **macOS runners**: the `lattice-db-macos-{x64,arm64}` release binaries are
   used there.
 - `test/integration/site.test.mjs`: the whole action on `fixtures/site` with
-  the v0.5.0 release, the snapshot loaded in the v0.5.0 wasm build, BM25
-  ranking checked; CI job `e2e-site-v3` (`.github/workflows/site-v3.yml`, called by `ci.yml`) also runs the composite action.
+  the v0.5.1 release, the snapshot loaded in the v0.5.1 wasm build, BM25
+  ranking, the native round-trip and snapshot determinism checked; CI job `e2e-site-v3` (`.github/workflows/site-v3.yml`, called by `ci.yml`) also runs the composite action.
 
 - **website-chat 3.0.0: search mode.** `mode: 'search'` is retrieval-only
   site search over v3 snapshots (BM25, no API key), with hybrid ranking when
