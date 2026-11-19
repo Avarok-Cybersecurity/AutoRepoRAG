@@ -6,6 +6,11 @@
 //   /repo-chat/*  the bundle the ACTION emitted (e2e/.site/repo-chat, written
 //                 by scripts/emit-website-chat.mjs: dist + verified wasm +
 //                 manifest), so the suite tests what sites actually vendor.
+//   /repo-chat-search/*  the same bundle emitted with lattice-db v0.5.0
+//                 (e2e/.site/repo-chat-search), the first release whose wasm
+//                 installs snapshots; search mode's harness vendors this one
+//   /search       the search-mode harness page (e2e/harness/search.html)
+//   /fixtures/embed.mjs  the shared fake embedder (search.embedder in the harness)
 // Usage: node e2e/serve.mjs <port>
 // =============================================================================
 
@@ -18,10 +23,17 @@ const HERE = fileURLToPath(new URL('.', import.meta.url));
 const MOUNTS = [
   ['/harness/', join(HERE, 'harness')],
   ['/repo-chat/', join(HERE, '.site', 'repo-chat')],
+  ['/repo-chat-search/', join(HERE, '.site', 'repo-chat-search')],
 ];
+const PAGES = {
+  '/': join(HERE, 'harness', 'index.html'),
+  '/search': join(HERE, 'harness', 'search.html'),
+  '/fixtures/embed.mjs': join(HERE, 'fixtures', 'embed.mjs'),
+};
 const TYPES = {
   '.html': 'text/html; charset=utf-8',
   '.js': 'text/javascript; charset=utf-8',
+  '.mjs': 'text/javascript; charset=utf-8',
   '.css': 'text/css; charset=utf-8',
   '.json': 'application/json',
   '.wasm': 'application/wasm',
@@ -35,7 +47,7 @@ if (!Number.isInteger(port) || port < 1) {
 
 /** The file a URL path maps to, or null when it is outside every mount. */
 function resolvePath(urlPath) {
-  if (urlPath === '/') return join(HERE, 'harness', 'index.html');
+  if (Object.hasOwn(PAGES, urlPath)) return PAGES[urlPath];
   for (const [prefix, dir] of MOUNTS) {
     if (!urlPath.startsWith(prefix)) continue;
     const file = normalize(join(dir, decodeURIComponent(urlPath.slice(prefix.length))));

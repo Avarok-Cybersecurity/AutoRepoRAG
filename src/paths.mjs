@@ -4,7 +4,7 @@
 // path relative to a base the action owns (the workspace, the output-dir);
 // it must not be absolute and must not climb out of that base.
 
-import { isAbsolute, normalize, sep } from 'node:path';
+import { isAbsolute, join, normalize, sep } from 'node:path';
 
 /**
  * Normalise `rel` and prove it stays inside `baseName`. Returns the
@@ -23,4 +23,10 @@ export function relativeInside(rel, inputName, baseName) {
     throw new Error(`${inputName} must stay inside the ${baseName}, got ${JSON.stringify(rel)}`);
   }
   return norm;
+}
+
+/** Join a workspace-relative source-dir onto the workspace; '' means the workspace itself. */
+export function resolveSourceRoot(workspace, sourceDir) {
+  if (sourceDir === '') return workspace;
+  return join(workspace, relativeInside(sourceDir, 'source-dir', 'workspace'));
 }

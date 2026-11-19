@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 // =============================================================================
-// corpus.js — the corpus network I/O: the tiny manifest preflight and the
-// streamed .jsonl.gz download (fetch -> byte count -> DecompressionStream).
+// corpus.js — the corpus network I/O: the tiny manifest preflight, the
+// streamed .jsonl.gz download (fetch -> byte count -> DecompressionStream)
+// and, for search mode, the bounded .lattice snapshot download.
 // =============================================================================
 
 /**
@@ -57,5 +58,35 @@ export function createCorpusNet(io) {
     return byteStream.pipeThrough(new DecompressionStream('gzip'));
   }
 
-  return { fetchMeta, openCorpus, gunzip };
+  /**
+   * Download a snapshot of exactly `maxBytes` (the manifest's
+   * snapshot_bytes) into memory, calling onBytes(n) per chunk. A body that
+   * would overflow is refused before it is buffered; a short one throws.
+   * @param {string} url
+   * @param {{signal: AbortSignal|undefined, maxBytes: number, onBytes: (n: number) => void}} opts
+   * @returns {Promise<Uint8Array>}
+   */
+  async function readSnapshot(url, { signal, maxBytes, onBytes }) {
+    const res = await request('snapshot fetch', url, { signal });
+    if (!res.ok) throw httpError('snapshot fetch', res);
+    if (!res.body) throw new Error('snapshot fetch returned no body stream');
+    const out = new Uint8Array(maxBytes);
+    const reader = res.body.getReader();
+    let n = 0;
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      if (n + value.byteLength > maxBytes) {
+        await reader.cancel();
+        throw new Error(`snapshot is larger than its manifest's snapshot_bytes (${maxBytes}); the site published mismatched files`);
+      }
+      out.set(value, n);
+      n += value.byteLength;
+      onBytes(value.byteLength);
+    }
+    if (n !== maxBytes) throw new Error(`snapshot download ended at ${n} of ${maxBytes} bytes`);
+    return out;
+  }
+
+  return { fetchMeta, openCorpus, gunzip, readSnapshot };
 }

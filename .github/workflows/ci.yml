@@ -267,9 +267,12 @@ jobs:
           [ ! -e missing-out/coderag.jsonl ]
 
       # The step above cannot expose its log, so re-run the entrypoint with
-      # the same inputs (embedding-endpoint unset) and check the message.
+      # the same inputs (embedding-endpoint not given, i.e. '') and check the
+      # message. scripts/run-as-action.mjs completes every other declared
+      # input from action.yml as the runner does (src/ refuses an absent one).
       - name: Assert the failure names the input
         env:
+          INPUT_EMBEDDING_ENDPOINT: ''
           INPUT_PATHS: test/fixtures/**
           INPUT_MOCK_EMBEDDINGS: 'true'
           INPUT_OUTPUT_DIR: missing-out
@@ -291,7 +294,7 @@ jobs:
         # The runner's default bash is -e; this step wants the exit status.
         run: |
           set +e -uo pipefail
-          out="$(node src/main.mjs 2>&1)"
+          out="$(node scripts/run-as-action.mjs node src/main.mjs 2>&1)"
           status=$?
           set -e
           printf '%s\n' "$out"
@@ -350,6 +353,11 @@ jobs:
           node test/source-dir-check.mjs "$CORPUS_FILE" "$METADATA_FILE" \
             "$LATTICE_DB_REPO" "$LATTICE_DB_SHA" .sources/lattice-db
 
+  e2e-site-v3:
+    name: E2E site corpus (v3)
+    if: github.event_name != 'schedule'
+    uses: ./.github/workflows/site-v3.yml
+
   website-chat:
     name: Website chat (build, unit, browser)
     if: github.event_name != 'schedule'
@@ -393,6 +401,11 @@ jobs:
       # (dist + the sha256-verified wasm pair + manifest), not against src/.
       - name: Emit the bundle the browser suite serves
         run: node ../scripts/emit-website-chat.mjs "$CORPUS_LATTICE_VERSION" e2e/.site/repo-chat "$RUNNER_TEMP/lattice-wasm"
+
+      # Search mode needs lattice-db >= v0.5.0 (importSnapshot, route); its
+      # spec serves this second emitted copy at /repo-chat-search/.
+      - name: Emit the search-mode bundle (lattice-db v0.5.0)
+        run: node ../scripts/emit-website-chat.mjs v0.5.0 e2e/.site/repo-chat-search "$RUNNER_TEMP/lattice-wasm"
 
       - name: Install Chromium and WebKit for Playwright
         run: npx playwright install --with-deps chromium webkit

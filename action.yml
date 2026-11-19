@@ -49,8 +49,14 @@ inputs:
     required: false
     default: 'true'
   embedding-endpoint:
-    description: OpenAI-compatible embeddings API base URL (POST <endpoint>/embeddings). Required in mock mode too.
-    required: true
+    description: >-
+      OpenAI-compatible embeddings API base URL (POST <endpoint>/embeddings):
+      OpenRouter, Cloudflare Workers AI
+      (https://api.cloudflare.com/client/v4/accounts/<id>/ai/v1) or any
+      other. Required in mock mode too, except that a v3 search-mode
+      "lexical" run embeds nothing and refuses it.
+    required: false
+    default: ''
   embedding-model:
     description: Embedding model id. Required unless mock-embeddings is true.
     required: false
@@ -68,11 +74,15 @@ inputs:
     required: false
     default: '256'
   chunk-lines:
-    description: Lines per chunk window.
-    required: true
+    description: Lines per chunk window. Required for chunk-strategy "lines" (and every v2 run); refused for "markdown".
+    required: false
+    default: ''
   chunk-overlap:
-    description: Lines of overlap between consecutive chunks (stride = chunk-lines - chunk-overlap).
-    required: true
+    description: >-
+      Lines of overlap between consecutive chunks (stride = chunk-lines -
+      chunk-overlap). Required exactly when chunk-lines is.
+    required: false
+    default: ''
   max-chunk-bytes:
     description: Hard byte cap per chunk text (UTF-8).
     required: true
@@ -81,8 +91,9 @@ inputs:
     required: false
     default: '32'
   request-interval-ms:
-    description: Minimum milliseconds between embeddings request starts (free-tier pacing).
-    required: true
+    description: Minimum milliseconds between embeddings request starts (free-tier pacing). Refused when search-mode is "lexical", required otherwise.
+    required: false
+    default: ''
   max-retries:
     description: Attempts per embeddings request (700ms * 2^n backoff on transient failures).
     required: false
@@ -92,8 +103,9 @@ inputs:
     required: false
     default: '0'
   vector-precision:
-    description: Significant digits vectors are rounded to (then f32-cast) before upsert and export.
-    required: true
+    description: Significant digits vectors are rounded to (then f32-cast) before upsert and export. Refused when search-mode is "lexical", required otherwise.
+    required: false
+    default: ''
   previous-corpus-url:
     description: >-
       file:// or http(s):// URL of a previously published corpus (.jsonl or
@@ -130,6 +142,76 @@ inputs:
     required: false
     default: ''
 
+  # --- v3: site corpora. Any one of these set turns v3 mode on; v3 mode
+  # --- then requires chunk-strategy, search-mode and snapshot (src/inputs-v3.mjs).
+  files-dir:
+    description: >-
+      Workspace-relative directory of plain files to chunk instead of a git
+      checkout (e.g. a site's built, gitignored dist/). Never consults git:
+      paths/exclude globs apply relative to it. Requires corpus-repo and
+      corpus-commit; exclusive with source-dir.
+    required: false
+    default: ''
+  corpus-repo:
+    description: '"owner/name" stamped on every chunk in files-dir mode (required there, refused otherwise).'
+    required: false
+    default: ''
+  corpus-commit:
+    description: Full 40- or 64-hex commit id stamped on every chunk in files-dir mode (required there, refused otherwise).
+    required: false
+    default: ''
+  chunk-strategy:
+    description: >-
+      "lines" (v2 line windows: needs chunk-lines/chunk-overlap) or
+      "markdown" (split at headings, heading_path per chunk, long sections
+      split between paragraphs, never inside fenced code or tables; adds a
+      "next" edge between consecutive chunks of a file). Required in v3 mode.
+    required: false
+    default: ''
+  payload-sidecar:
+    description: >-
+      Path (absolute, or relative to the workspace) of a JSON object mapping a
+      chunked file's path to extra payload fields, e.g.
+      {"about/index.md": {"url": "...", "title": "...", "lastmod": "..."}}.
+      A path not in the corpus, or a field the action writes, is an error.
+    required: false
+    default: ''
+  edges-file:
+    description: >-
+      Path (absolute, or relative to the workspace) of a JSON array of
+      {"from": {"path", "chunk"?}, "to": {"path", "chunk"?}, "relation",
+      "weight"} edges (chunk = 0-based index within the file, default 0),
+      written as lattice-jsonl edge lines and added to the snapshot.
+    required: false
+    default: ''
+  search-mode:
+    description: >-
+      "lexical" (BM25 text index, no vectors, no embedding calls),
+      "vector" (dense vectors only) or "hybrid" (both). Required in v3 mode.
+    required: false
+    default: ''
+  vector-index:
+    description: '"hnsw" or "flat" (exact scan). Required when search-mode is "vector" or "hybrid", refused otherwise.'
+    required: false
+    default: ''
+  vector-storage:
+    description: '"f32", "f16" or "int8" stored vector precision. Required when search-mode is "vector" or "hybrid", refused otherwise.'
+    required: false
+    default: ''
+  snapshot:
+    description: >-
+      'true' or 'false'. 'true' exports the loaded collection as a LatticeDB
+      snapshot (format 2: HNSW graph + BM25 postings, <output-name>.lattice).
+      Required in v3 mode.
+    required: false
+    default: ''
+  max-snapshot-bytes:
+    description: >-
+      Fail when the snapshot is larger (e.g. 26214400, Cloudflare's 25 MiB
+      per-asset limit). Required when snapshot is 'true', refused otherwise.
+    required: false
+    default: ''
+
 outputs:
   corpus-file:
     description: Absolute path of the written lattice-jsonl corpus.
@@ -158,6 +240,12 @@ outputs:
   website-chat-dir:
     description: Absolute path of the emitted website-chat bundle (empty when generate-website-chat is 'false').
     value: ${{ steps.build.outputs.website-chat-dir }}
+  snapshot-file:
+    description: Absolute path of the LatticeDB snapshot (empty unless snapshot is 'true').
+    value: ${{ steps.build.outputs.snapshot-file }}
+  edges:
+    description: Number of edges in the corpus (always 0 in v2 mode).
+    value: ${{ steps.build.outputs.edges }}
 
 runs:
   using: composite
@@ -192,13 +280,25 @@ runs:
         INPUT_LATTICE_PORT: ${{ inputs.lattice-port }}
         INPUT_GENERATE_WEBSITE_CHAT: ${{ inputs.generate-website-chat }}
         INPUT_WEBSITE_CHAT_DIR: ${{ inputs.website-chat-dir }}
+        INPUT_FILES_DIR: ${{ inputs.files-dir }}
+        INPUT_CORPUS_REPO: ${{ inputs.corpus-repo }}
+        INPUT_CORPUS_COMMIT: ${{ inputs.corpus-commit }}
+        INPUT_CHUNK_STRATEGY: ${{ inputs.chunk-strategy }}
+        INPUT_PAYLOAD_SIDECAR: ${{ inputs.payload-sidecar }}
+        INPUT_EDGES_FILE: ${{ inputs.edges-file }}
+        INPUT_SEARCH_MODE: ${{ inputs.search-mode }}
+        INPUT_VECTOR_INDEX: ${{ inputs.vector-index }}
+        INPUT_VECTOR_STORAGE: ${{ inputs.vector-storage }}
+        INPUT_SNAPSHOT: ${{ inputs.snapshot }}
+        INPUT_MAX_SNAPSHOT_BYTES: ${{ inputs.max-snapshot-bytes }}
       run: node "$GITHUB_ACTION_PATH/src/main.mjs"
 
     - name: Stop lattice-server
       if: always()
       shell: bash
       run: |
-        pidfile="${RUNNER_TEMP:-${GITHUB_WORKSPACE:-$PWD}/.work}/autoreporag-lattice.pid"
+        # src/run-config.mjs requires RUNNER_TEMP; the pidfile is only ever written there.
+        pidfile="${RUNNER_TEMP:?RUNNER_TEMP is required}/autoreporag-lattice.pid"
         if [ -f "$pidfile" ]; then
           pid="$(cat "$pidfile")"
           if kill -0 "$pid" 2>/dev/null; then

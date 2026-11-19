@@ -11,7 +11,7 @@
 import { readFileSync } from 'node:fs';
 import { basename } from 'node:path';
 
-import { sha256Hex } from './util.mjs';
+import { sha256Hex } from '../util.mjs';
 
 const LINE = /^([0-9a-fA-F]{64}) [ *](.+)$/;
 

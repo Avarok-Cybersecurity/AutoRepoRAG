@@ -5,10 +5,18 @@
 // live client mirrors lattice-db/examples/rag-example/src/openrouter.ts:
 // batch POST /embeddings, results sorted by index, dim derived from the first
 // response with per-vector length assertions, retries with 700ms * 2^n backoff
-// on 429/5xx AND on HTTP-200-with-error bodies matching transient patterns,
-// and a fixed pacing interval between request starts.
+// on 408/429/5xx AND on HTTP-200-with-error bodies matching transient patterns,
+// and a fixed pacing interval between request starts. Cloudflare Workers AI's
+// OpenAI-compatible endpoint (https://developers.cloudflare.com/workers-ai/
+// configuration/open-ai-compatibility/) works as is; its {success: false,
+// errors: [{code, message}]} envelope is read, and code 3036 (daily free
+// allocation used up, sent as HTTP 429) is not retried
+// (https://developers.cloudflare.com/workers-ai/platform/errors/). The live
+// client's I/O arrives as a port: `http` (a fetch-compatible function) and
+// `clock` ({nowMs, sleep}), parts of the src/ports.mjs Io port.
 
-import { sha256Bytes, sleep, log } from './util.mjs';
+import { log } from './log.mjs';
+import { sha256Bytes } from './util.mjs';
 
 // ---------------------------------------------------------------------------
 // Mock mode
@@ -46,7 +54,8 @@ export function mockEmbedding(seedText, dim) {
 // ---------------------------------------------------------------------------
 // Live mode
 
-const TRANSIENT_MESSAGE = /ResourceExhausted|rate.?limit|overloaded/i;
+const TRANSIENT_MESSAGE = /ResourceExhausted|rate.?limit|overloaded|capacity/i;
+const CLOUDFLARE_NOT_TRANSIENT = new Set([3036]); // daily allocation: retrying cannot help
 
 class TransientAwareError extends Error {
   constructor(message, transient) {
@@ -61,20 +70,36 @@ class TransientAwareError extends Error {
  * with an `error` body (common on saturated free-tier providers), so every
  * response funnels through here.
  */
+/** Cloudflare's API envelope error, or null when `data` is not one. */
+function cloudflareError(data, what, transientStatus) {
+  if (!data || typeof data !== 'object' || data.success !== false || !Array.isArray(data.errors)) return null;
+  const first = data.errors[0] ?? {};
+  const code = Number(first.code);
+  const transient = !CLOUDFLARE_NOT_TRANSIENT.has(code) && (transientStatus || TRANSIENT_MESSAGE.test(String(first.message)));
+  return new TransientAwareError(`${what} failed: Cloudflare ${first.code ?? '?'}: ${first.message ?? 'unknown error'}`, transient);
+}
+
+function tryJson(raw) {
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return undefined;
+  }
+}
+
 async function parseResponse(response, what) {
   const raw = await response.text();
+  const data = tryJson(raw);
   if (!response.ok) {
-    throw new TransientAwareError(
-      `${what} failed: HTTP ${response.status} - ${raw.slice(0, 500)}`,
-      response.status === 429 || response.status >= 500,
-    );
+    const transientStatus = response.status === 408 || response.status === 429 || response.status >= 500;
+    throw cloudflareError(data, what, transientStatus)
+      ?? new TransientAwareError(`${what} failed: HTTP ${response.status} - ${raw.slice(0, 500)}`, transientStatus);
   }
-  let data;
-  try {
-    data = JSON.parse(raw);
-  } catch {
+  if (data === undefined) {
     throw new TransientAwareError(`${what} returned invalid JSON: ${raw.slice(0, 200)}`, false);
   }
+  const cf = cloudflareError(data, what, false);
+  if (cf) throw cf;
   if (data && typeof data === 'object' && data.error) {
     const code = data.error.code ?? 0;
     // Providers send codes as numbers (429) or strings ("429", "rate_limited").
@@ -90,7 +115,7 @@ async function parseResponse(response, what) {
 
 const RETRY_BASE_MS = 700;
 
-async function withRetry(operation, maxAttempts) {
+async function withRetry(operation, maxAttempts, clock) {
   let lastError;
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
@@ -101,18 +126,21 @@ async function withRetry(operation, maxAttempts) {
       if (!transient || attempt === maxAttempts) break;
       const backoff = RETRY_BASE_MS * 2 ** (attempt - 1);
       log(`[embed] transient failure (attempt ${attempt}/${maxAttempts}), retrying in ${backoff}ms: ${error.message}`);
-      await sleep(backoff);
+      await clock.sleep(backoff);
     }
   }
   throw lastError;
 }
 
-/** One embeddings request. Returns vectors in input order. */
-export async function embedBatchLive(texts, { endpoint, model, apiKey, maxRetries }) {
+/**
+ * One embeddings request. Returns vectors in input order.
+ * @param {{http: typeof fetch, clock: {nowMs: () => number, sleep: (ms: number) => Promise<void>}}} io
+ */
+export async function embedBatchLive(texts, { endpoint, model, apiKey, maxRetries }, { http, clock }) {
   if (texts.length === 0) return [];
   const base = endpoint.replace(/\/+$/, '');
   const data = await withRetry(async () => {
-    const response = await fetch(`${base}/embeddings`, {
+    const response = await http(`${base}/embeddings`, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${apiKey}`,
@@ -122,25 +150,29 @@ export async function embedBatchLive(texts, { endpoint, model, apiKey, maxRetrie
       body: JSON.stringify({ model, input: texts }),
     });
     return parseResponse(response, 'Embedding request');
-  }, maxRetries);
+  }, maxRetries, clock);
   if (!Array.isArray(data?.data) || data.data.length !== texts.length) {
     throw new Error(
       `Embedding response has ${data?.data?.length ?? 'no'} items for ${texts.length} inputs`,
     );
   }
-  return data.data
-    .slice()
-    .sort((a, b) => a.index - b.index)
-    .map((d) => d.embedding);
+  // OpenAI sends `index` per item; a provider that omits it on every item
+  // returns input order. A mix cannot be ordered safely.
+  const indexed = data.data.filter((d) => Number.isInteger(d?.index)).length;
+  if (indexed !== 0 && indexed !== data.data.length) {
+    throw new Error('Embedding response is ambiguous: some embedding items carry an index and some do not');
+  }
+  const items = indexed === 0 ? data.data : data.data.slice().sort((a, b) => a.index - b.index);
+  return items.map((d) => d.embedding);
 }
 
 /**
  * Embed all texts: batches of batchSize, request starts paced at least
  * requestIntervalMs apart (retries included in pacing). Dim is derived from
  * the first returned vector; every vector's length is asserted against it.
- * Returns { vectors, dim }.
+ * Returns { vectors, dim }. `io` is embedBatchLive's port.
  */
-export async function embedTexts(texts, opts) {
+export async function embedTexts(texts, opts, io) {
   const { batchSize, requestIntervalMs } = opts;
   const vectors = [];
   let dim = 0;
@@ -148,10 +180,10 @@ export async function embedTexts(texts, opts) {
   const totalBatches = Math.ceil(texts.length / batchSize);
   for (let b = 0; b < totalBatches; b++) {
     const batch = texts.slice(b * batchSize, (b + 1) * batchSize);
-    const wait = nextAllowedAt - Date.now();
-    if (wait > 0) await sleep(wait);
-    nextAllowedAt = Date.now() + requestIntervalMs;
-    const got = await embedBatchLive(batch, opts);
+    const wait = nextAllowedAt - io.clock.nowMs();
+    if (wait > 0) await io.clock.sleep(wait);
+    nextAllowedAt = io.clock.nowMs() + requestIntervalMs;
+    const got = await embedBatchLive(batch, opts, io);
     for (const vec of got) {
       if (!Array.isArray(vec) || vec.length === 0) {
         throw new Error('Embedding response contained an empty vector');

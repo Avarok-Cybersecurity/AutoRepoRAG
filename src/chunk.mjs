@@ -1,16 +1,19 @@
 // chunk.mjs — repository file discovery and deterministic line-window chunking.
 //
-// Contract: expand include globs against `git ls-files` output (fs walk
-// fallback), drop excluded and binary (NUL-sniffed) files, split each text
-// file into windows of `chunkLines` lines advancing by (chunkLines - overlap),
+// Contract: list files through the injected io port (io.listFiles: `git
+// ls-files` or a plain walk; io.fs reads them), select them (src/files.mjs),
+// drop binary (NUL-sniffed) files, and split each text file with the given
+// per-file chunker. The "lines" chunker (chunkText) splits a file into windows of `chunkLines` lines advancing by (chunkLines - overlap),
 // preferring a break after a blank line or a column-0 '}' within the window's
-// tail 25%, capped at maxChunkBytes. Chunk ids are ordinals assigned in
-// (path asc, start_line asc) order. chunk_hash = sha256(path \0 start_line \0 text).
+// tail 25%, capped at maxChunkBytes; "markdown" is src/chunk-markdown.mjs.
+// Chunk ids are ordinals assigned in (path asc, start_line asc) order.
+// chunk_hash = sha256(path \0 start_line \0 text).
 
-import { execFileSync } from 'node:child_process';
-import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { compileMatcher, sha256Hex, warning } from './util.mjs';
+import { chunkMarkdown } from './chunk-markdown.mjs';
+import { isBinary, selectFiles } from './files.mjs';
+import { warning } from './log.mjs';
+import { sha256Hex } from './util.mjs';
 
 export const LANGUAGE_BY_EXT = {
   rs: 'rust',
@@ -65,55 +68,6 @@ export function languageForPath(path) {
   if (dot <= 0) return 'text';
   const ext = base.slice(dot + 1).toLowerCase();
   return LANGUAGE_BY_EXT[ext] ?? ext;
-}
-
-/**
- * Enumerate candidate files relative to root. Prefers git (tracked + untracked
- * non-ignored, so .gitignore is honoured); falls back to an fs walk that skips
- * .git and symlinks when root is not a git checkout.
- */
-export function listRepoFiles(root) {
-  try {
-    const out = execFileSync(
-      'git',
-      ['-C', root, 'ls-files', '-z', '--cached', '--others', '--exclude-standard'],
-      { encoding: 'utf8', maxBuffer: 256 * 1024 * 1024 },
-    );
-    return [...new Set(out.split('\0').filter((p) => p !== ''))];
-  } catch {
-    const files = [];
-    const walk = (rel) => {
-      const entries = readdirSync(join(root, rel), { withFileTypes: true });
-      for (const e of entries) {
-        if (e.isSymbolicLink()) continue;
-        const childRel = rel === '' ? e.name : `${rel}/${e.name}`;
-        if (e.isDirectory()) {
-          if (e.name === '.git') continue;
-          walk(childRel);
-        } else if (e.isFile()) {
-          files.push(childRel);
-        }
-      }
-    };
-    walk('');
-    return files;
-  }
-}
-
-/** Apply include/exclude globs; result sorted ascending (code-unit order). */
-export function selectFiles({ root, includeGlobs, excludeGlobs }) {
-  const include = compileMatcher(includeGlobs);
-  const exclude = excludeGlobs.length > 0 ? compileMatcher(excludeGlobs) : () => false;
-  return listRepoFiles(root)
-    .filter((p) => include(p) && !exclude(p))
-    .sort();
-}
-
-/** A file is binary if its first 8 KiB contain a NUL byte. */
-export function isBinary(buf) {
-  const n = Math.min(buf.length, 8192);
-  for (let i = 0; i < n; i++) if (buf[i] === 0) return true;
-  return false;
 }
 
 /** Truncate a string to at most maxBytes of UTF-8 without splitting a code point. */
@@ -180,43 +134,49 @@ export function chunkText(text, { chunkLines, chunkOverlap, maxChunkBytes }) {
 }
 
 /**
+ * The per-file chunker for a chunk strategy.
+ * @param {'lines'|'markdown'} strategy
+ * @param {{chunkLines: number, chunkOverlap: number, maxChunkBytes: number}} opts  chunkLines/overlap: lines only
+ * @returns {(text: string, path: string) => Array<{startLine: number, endLine: number, text: string, headingPath?: string[]}>}
+ */
+export function chunkerFor(strategy, { chunkLines, chunkOverlap, maxChunkBytes }) {
+  if (strategy === 'lines') return (text) => chunkText(text, { chunkLines, chunkOverlap, maxChunkBytes });
+  if (strategy === 'markdown') return (text, path) => chunkMarkdown(text, { maxChunkBytes, path });
+  throw new Error(`unknown chunk strategy ${JSON.stringify(strategy)}`);
+}
+
+/**
  * Full chunking pass. Returns:
- *   chunks: [{id, chunkHash, payload}] with ordinal ids in (path, start_line) order
+ *   chunks: [{id, chunkHash, path, ordinal, payload}] with ordinal ids in
+ *     (path, start_line) order; `ordinal` is the chunk's 0-based index within its file
  *   fileCount: files that produced at least one chunk
  *   skippedBinary: paths dropped by the NUL sniff
  *   truncated: whether maxChunks clipped the list
+ * A chunker that reports a headingPath adds `heading_path` to the payload.
+ * @param {{root: string, includeGlobs: string[], excludeGlobs: string[], listing: 'git'|'walk',
+ *   chunkFile: ReturnType<typeof chunkerFor>, maxChunks: number, repo: string, commitSha: string}} opts
+ * @param {{listFiles: (root: string, listing: 'git'|'walk') => string[],
+ *   fs: {exists: (path: string) => boolean, readBytes: (path: string) => Buffer}}} io
  */
-export function buildChunks({
-  root,
-  includeGlobs,
-  excludeGlobs,
-  chunkLines,
-  chunkOverlap,
-  maxChunkBytes,
-  maxChunks,
-  repo,
-  commitSha,
-}) {
-  const files = selectFiles({ root, includeGlobs, excludeGlobs });
+export function buildChunks({ root, includeGlobs, excludeGlobs, listing, chunkFile, maxChunks, repo, commitSha }, io) {
+  const files = selectFiles({ listed: io.listFiles(root, listing), includeGlobs, excludeGlobs });
   const raw = [];
   const skippedBinary = [];
   for (const path of files) {
     const abs = join(root, path);
-    if (!existsSync(abs)) {
+    if (!io.fs.exists(abs)) {
       // `git ls-files --cached` lists files staged but deleted from the worktree.
       warning(`skipping ${path}: tracked but missing from the worktree`);
       continue;
     }
-    const buf = readFileSync(abs);
+    const buf = io.fs.readBytes(abs);
     if (isBinary(buf)) {
       skippedBinary.push(path);
       continue;
     }
-    for (const c of chunkText(buf.toString('utf8'), { chunkLines, chunkOverlap, maxChunkBytes })) {
-      raw.push({ path, ...c });
-    }
+    chunkFile(buf.toString('utf8'), path).forEach((c, ordinal) => raw.push({ path, ordinal, ...c }));
   }
-  // Files are iterated in sorted order and windows ascend by startLine, so
+  // Files are iterated in sorted order and chunks ascend by startLine, so
   // `raw` is already in (path asc, start_line asc) order.
   let truncated = false;
   if (maxChunks > 0 && raw.length > maxChunks) {
@@ -230,10 +190,13 @@ export function buildChunks({
     return {
       id: i + 1,
       chunkHash,
+      path: c.path,
+      ordinal: c.ordinal,
       payload: {
         chunk_hash: chunkHash,
         commit_sha: commitSha,
         end_line: c.endLine,
+        ...(c.headingPath ? { heading_path: c.headingPath } : {}),
         language: languageForPath(c.path),
         path: c.path,
         repo,

@@ -8,7 +8,8 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { gitContext, parseRemoteRepo, resolveSourceRoot } from '../../src/git.mjs';
+import { gitContext, parseRemoteRepo } from '../../src/adapters/git.mjs';
+import { resolveSourceRoot } from '../../src/paths.mjs';
 
 // Fixture repos must not inherit the developer's git config (signing, hooks).
 process.env.GIT_CONFIG_GLOBAL = '/dev/null';

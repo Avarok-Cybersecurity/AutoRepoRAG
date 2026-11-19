@@ -5,8 +5,8 @@
 // writes repo-chat.manifest.json naming the library version, the lattice
 // version and every file's sha256. The wasm pair is downloaded from the
 // pinned lattice-db release and verified against that release's
-// lattice-db-wasm.sha256 (src/checksum.mjs, the same check the server binary
-// gets); a cached pair is re-verified before reuse. The manifest has no
+// lattice-db-wasm.sha256 (src/adapters/checksum.mjs, the same check the server binary
+// gets, plus src/pins.mjs for pinned versions); a cached pair is re-verified before reuse. The manifest has no
 // timestamp, so the same inputs emit the same bytes.
 
 import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
@@ -14,10 +14,12 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { verifyChecksum } from './checksum.mjs';
+import { assertPinned } from '../pins.mjs';
+import { log } from '../log.mjs';
+import { sha256Hex, stableStringify } from '../util.mjs';
 import { download, releaseUrl } from './server.mjs';
-import { log, sha256Hex, stableStringify } from './util.mjs';
 
-export const LIBRARY_DIR = fileURLToPath(new URL('../website-chat/', import.meta.url));
+export const LIBRARY_DIR = fileURLToPath(new URL('../../website-chat/', import.meta.url));
 export const WASM_FILES = Object.freeze(['lattice_server.js', 'lattice_server_bg.wasm']);
 export const WASM_CHECKSUMS = 'lattice-db-wasm.sha256';
 export const MANIFEST_NAME = 'repo-chat.manifest.json';
@@ -59,7 +61,9 @@ export async function fetchLatticeWasm(version, cacheDir) {
   if (!existsSync(checksums)) await download(releaseUrl(version, WASM_CHECKSUMS), checksums);
   for (const name of WASM_FILES) {
     const path = join(dir, name);
-    if (existsSync(path) && verifyChecksum(path, checksums, name).ok) {
+    const cached = existsSync(path) ? verifyChecksum(path, checksums, name) : { ok: false };
+    if (cached.ok) {
+      assertPinned(version, name, cached.sha256);
       log(`[website-chat] using cached ${name} (${version}, sha256 re-verified)`);
       continue;
     }
@@ -67,6 +71,7 @@ export async function fetchLatticeWasm(version, cacheDir) {
     await download(releaseUrl(version, name), path);
     const check = verifyChecksum(path, checksums, name);
     if (!check.ok) throw new Error(`sha256 verification failed for ${name} (${version}): ${check.detail}`);
+    assertPinned(version, name, check.sha256);
   }
   return dir;
 }

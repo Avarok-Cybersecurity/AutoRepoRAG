@@ -1,0 +1,9 @@
+{
+  "index.md": { "url": "https://acme.example/", "title": "Acme Widgets", "lastmod": "2026-11-01" },
+  "about/index.md": { "url": "https://acme.example/about/", "title": "About", "lastmod": "2026-10-12" },
+  "pricing/index.md": { "url": "https://acme.example/pricing/", "title": "Pricing", "lastmod": "2026-11-15" },
+  "docs/install/index.md": { "url": "https://acme.example/docs/install/", "title": "Installation", "lastmod": "2026-09-30" },
+  "docs/api/index.md": { "url": "https://acme.example/docs/api/", "title": "API reference", "lastmod": "2026-09-30" },
+  "blog/hello-world/index.md": { "url": "https://acme.example/blog/hello-world/", "title": "Hello, world", "lastmod": "2026-08-01" },
+  "contact/index.md": { "url": "https://acme.example/contact/", "title": "Contact", "lastmod": "2026-10-12" }
+}

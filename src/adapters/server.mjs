@@ -1,9 +1,10 @@
 // server.mjs — download, verify, run, and stop a pinned lattice-server release.
 //
-// Contract: fetches lattice-db-linux-{x64|arm64}.tar.gz plus its checksum
-// file from the pinned lattice-db GitHub release (or releases/latest/download
-// when version is "latest"), verifies the archive against its checksum line
-// (src/checksum.mjs), caches the verified pair per
+// Contract: fetches lattice-db-{linux|macos}-{x64|arm64}.tar.gz plus its
+// checksum file from the pinned lattice-db GitHub release (or
+// releases/latest/download when version is "latest"), verifies the archive
+// against its checksum line (src/adapters/checksum.mjs) and, for versions this
+// action pins, against src/pins.mjs too, caches the verified pair per
 // version tag and skips the download while the cache still verifies, extracts
 // the single `lattice-server` binary, asserts the loopback port is free,
 // spawns the server on 127.0.0.1:port with a throwaway LATTICE_DATA_DIR,
@@ -17,22 +18,12 @@ import { mkdirSync, writeFileSync, openSync, closeSync, readFileSync, existsSync
 import { connect } from 'node:net';
 import { join } from 'node:path';
 import { verifyChecksum } from './checksum.mjs';
-import { LatticeClient } from './lattice.mjs';
-import { log, sleep } from './util.mjs';
+import { assertPinned, serverAsset } from '../pins.mjs';
+import { log } from '../log.mjs';
+import { sleep } from './clock.mjs';
+import { LatticeClient } from './lattice-http.mjs';
 
 const RELEASE_BASE = 'https://github.com/Avarok-Cybersecurity/lattice-db/releases';
-
-/** Release asset architecture suffix for this machine. Linux x64/arm64 only. */
-export function detectArch() {
-  if (process.platform !== 'linux') {
-    throw new Error(
-      `unsupported platform "${process.platform}": lattice-server release binaries target linux runners`,
-    );
-  }
-  const arch = { x64: 'x64', arm64: 'arm64' }[process.arch];
-  if (!arch) throw new Error(`unsupported CPU architecture "${process.arch}" (need x64 or arm64)`);
-  return arch;
-}
 
 /** Download URL for a release asset; "latest" uses the floating-latest form. */
 export function releaseUrl(version, file) {
@@ -75,24 +66,26 @@ function assertPortFree(port) {
 }
 
 /**
- * Provision a lattice-server: returns { pid, port, baseUrl, stop() }.
- * pidFile is written before readiness so the cleanup step can always find it.
+ * Provision a lattice-server: download + verify the pinned release binary,
+ * then start it. Returns { pid, port, baseUrl, stop() }.
  */
 export async function provisionServer({ version, port, workDir, pidFile }) {
-  const arch = detectArch();
-  const asset = `lattice-db-linux-${arch}.tar.gz`;
-  const checksums = `lattice-db-linux-${arch}.sha256`;
+  const binary = await fetchServerBinary({ version, workDir });
+  return startServer({ binary, port, workDir, pidFile });
+}
+
+/** Download (or reuse the verified cache of) the release archive; returns the extracted binary path. */
+export async function fetchServerBinary({ version, workDir }) {
+  const { archive: asset, checksums } = serverAsset(process.platform, process.arch);
   const dir = join(workDir, 'lattice', version);
-  const dataDir = join(workDir, 'lattice-data');
   mkdirSync(dir, { recursive: true });
-  rmSync(dataDir, { recursive: true, force: true });
-  mkdirSync(dataDir, { recursive: true });
 
   // "latest" floats between runs, so only pinned tags are cache-eligible.
   let verified = false;
   if (version !== 'latest' && existsSync(join(dir, asset)) && existsSync(join(dir, checksums))) {
     const cached = verifyChecksum(join(dir, asset), join(dir, checksums), asset);
     if (cached.ok) {
+      assertPinned(version, asset, cached.sha256);
       log(`[server] using cached ${asset} (${version}, sha256 re-verified)`);
       verified = true;
     } else {
@@ -107,6 +100,7 @@ export async function provisionServer({ version, port, workDir, pidFile }) {
     if (!fresh.ok) {
       throw new Error(`sha256 verification failed for ${asset} (${version}): ${fresh.detail}`);
     }
+    assertPinned(version, asset, fresh.sha256);
   }
   execFileSync('tar', ['-xzf', join(dir, asset), '-C', dir], {
     stdio: ['ignore', 'inherit', 'inherit'],
@@ -115,10 +109,21 @@ export async function provisionServer({ version, port, workDir, pidFile }) {
   if (!existsSync(binary)) {
     throw new Error(`archive ${asset} did not contain a lattice-server binary`);
   }
+  return binary;
+}
+
+/**
+ * Start `binary` on 127.0.0.1:port with a throwaway data dir. pidFile is
+ * written before readiness so the cleanup step can always find it.
+ */
+export async function startServer({ binary, port, workDir, pidFile }) {
+  const dataDir = join(workDir, 'lattice-data');
+  rmSync(dataDir, { recursive: true, force: true });
+  mkdirSync(dataDir, { recursive: true });
 
   await assertPortFree(port);
 
-  const logPath = join(dir, 'lattice-server.log');
+  const logPath = join(workDir, 'lattice-server.log');
   const logFd = openSync(logPath, 'a');
   const child = spawn(binary, [`127.0.0.1:${port}`], {
     env: { ...process.env, LATTICE_DATA_DIR: dataDir },

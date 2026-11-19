@@ -7,6 +7,103 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.0.0] - 2026-11-19
+
+Site corpora: the corpus behind a website's search. Needs lattice-db
+>= v0.5.1. v2 runs (no v3 input set) behave as before; their corpora are
+byte-identical to 2.2.1's.
+
+### Added
+- **v3 mode**, on when any v3 input is set; it requires `chunk-strategy`,
+  `search-mode` and `snapshot`, and `lattice-version` >= v0.5.1 (pinned).
+- **`files-dir`** chunks a plain directory (a site's gitignored `dist/`)
+  without asking git; repo and commit come from **`corpus-repo`** and
+  **`corpus-commit`**.
+- **`chunk-strategy: markdown`**: split at ATX headings with a
+  `heading_path` per chunk; long sections split between paragraphs, never
+  inside fenced code, tables or front matter; a `next` edge between
+  consecutive chunks of a file.
+- **`payload-sidecar`** merges per-file payload fields (e.g. `url`, `title`,
+  `lastmod`); unknown paths and fields the action writes are errors.
+- **`edges-file`**: graph edges by path and chunk index, written as
+  lattice-jsonl edge lines (header `edges` and `config.relations` set;
+  relation ids in name order, as lattice-db numbers them in a snapshot).
+- **`search-mode: lexical | vector | hybrid`**: lexical makes no embedding
+  call and builds a BM25 `text_index` with no `vectors`; hybrid has both.
+  **`vector-index: hnsw | flat`** and **`vector-storage: f32 | f16 | int8`**;
+  stored vectors are checked against the local ones within that rounding,
+  and the corpus carries the stored values. `embedding.model` is recorded in
+  the collection config.
+- **`snapshot`** exports `<name>.lattice` (snapshot format 2), checked to
+  carry the jsonl header's exact config, then round-tripped natively (dropped,
+  imported with `import?mode=create`; `points_count`, a probe query's hits
+  and scores, and a re-export's bytes must match). Snapshots are
+  byte-reproducible: identical runs give the same `snapshot_sha256`.
+  **`max-snapshot-bytes`** fails a
+  larger snapshot naming both sizes. meta.json gains `chunk_strategy`,
+  `search_mode`, `text_field`, `vector_index`, `vector_storage`, `edges`,
+  `snapshot_bytes`, `snapshot_sha256`, `snapshot_format`. New outputs
+  `snapshot-file` and `edges`.
+- **Cloudflare Workers AI** via its OpenAI-compatible endpoint, documented
+  and tested: the `{success: false, errors}` envelope is read, 3036 (daily
+  allocation) is not retried, 3040 (capacity) and 408 are.
+- **lattice-db v0.5.0 and v0.5.1 assets are pinned** (`src/pins.mjs`): the server
+  archives for linux/macOS x64/arm64 and the wasm pair must match both the
+  release's checksum file and the sha256 pinned here.
+- **macOS runners**: the `lattice-db-macos-{x64,arm64}` release binaries are
+  used there.
+- `test/integration/site.test.mjs`: the whole action on `fixtures/site` with
+  the v0.5.1 release, the snapshot loaded in the v0.5.1 wasm build, BM25
+  ranking, the native round-trip and snapshot determinism checked; CI job `e2e-site-v3` (`.github/workflows/site-v3.yml`, called by `ci.yml`) also runs the composite action.
+
+- **website-chat 3.0.0: search mode.** `mode: 'search'` is retrieval-only
+  site search over v3 snapshots (BM25, no API key), with hybrid ranking when
+  the site supplies an embedder; several corpora merge by rank (RRF). Snapshots
+  are checked against `snapshot_sha256` before they are installed, cached in
+  OPFS, and downloaded only after consent. Needs the lattice-db >= v0.5.0
+  wasm. See `website-chat/README.md`.
+
+### Changed
+- **website-chat: `mode` is a required config key** (`'answer'` or
+  `'search'`). Existing configs add `mode: 'answer'`.
+- `embedding-endpoint`, `vector-precision`, `request-interval-ms`,
+  `chunk-lines` and `chunk-overlap` are declared optional in `action.yml`:
+  v3 lexical / markdown runs refuse them. v2 runs still fail naming each
+  one when it is missing.
+- An embeddings response whose items carry no `index` keeps response order;
+  one where only some do is refused.
+- `src/main.mjs` is a thin entry over `src/run.mjs`, which takes the
+  lattice-server provisioner as a parameter; `src/adapters/server.mjs`
+  splits download (`fetchServerBinary`) from start (`startServer`).
+- **The pipeline's business logic does no I/O itself (SBIO).** Every file,
+  network, git, clock and GitHub-runner access goes through one `io` port
+  that `src/main.mjs` (the composition root) builds from the node adapter
+  `src/adapters/node-io.mjs`. Everything that touches the outside world now
+  lives under `src/adapters/` (lattice REST client, server provisioner,
+  website-chat emitter, checksum files, git, file listing, clock, step
+  outputs); the rest of `src/` receives the port or plain data. Unit tests
+  run the chunker and the previous-corpus loader on in-memory data.
+- **`GITHUB_WORKSPACE` and `RUNNER_TEMP` are required absolute paths**
+  (`src/run-config.mjs`). They used to fall back to the cwd and
+  `<workspace>/.work`; a run without them now fails naming the variable. The
+  GitHub runner always sets both; a local run must export them
+  (`scripts/local-dry-run.sh` and the integration suite already do).
+- **An absent `INPUT_*` variable is an error naming the input.** The runner
+  maps every input `action.yml` declares (an ungiven one arrives as `''`,
+  which still means "not given"), so an absent variable means the code and
+  `action.yml` disagree. A unit test checks that the inputs `src/` reads and
+  the inputs `action.yml` declares are the same set. To run `src/main.mjs`
+  outside Actions, wrap it in `scripts/run-as-action.mjs`, which fills every
+  input you leave unset from `action.yml` as the runner does; the unit tests,
+  `local-dry-run.sh` and the CI missing-input step use it.
+- **Logging goes through a facade** (`src/log.mjs`): `log` and `warning`
+  hand lines to the sink the entrypoint installs (stdout, via
+  `src/adapters/stdout-log.mjs`). Logging before a sink is installed
+  throws instead of dropping `::warning::` lines.
+- The core's ports are declared in `src/ports.mjs` (`Io`, `LatticeStore`,
+  `Clock`). The core names those types and never the adapters
+  that implement them.
+
 ## [2.2.1] - 2026-10-11
 
 Website chat fixes from the third UX review round of its metrale.ai

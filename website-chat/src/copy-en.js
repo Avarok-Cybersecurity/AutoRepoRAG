@@ -134,6 +134,34 @@ export const COPY_EN = deepFreeze({
     label: 'answer model',
     reset: 'back to free',
   },
+  // Search mode (config.mode 'search') only; answer mode never shows these.
+  search: {
+    navLabel: 'Search the site',
+    closeLabel: 'Close search',
+    label: '// search',
+    title: 'Search the site.',
+    sub: 'The search index runs right here in your browser. Type a few words and press enter.',
+    placeholder: 'search the site',
+    submit: 'search',
+    resultsLabel: 'search results',
+    count: '{n} results for “{query}”',
+    countOne: '1 result for “{query}”',
+    empty: 'nothing matched “{query}”, try other words',
+    searching: 'searching',
+    crumbsLabel: 'section',
+    hintLoading: 'the search index is still loading, hang tight',
+    fine: 'results link to the pages they were indexed from',
+    plan: {
+      bm25: 'keyword',
+      hybrid: 'hybrid',
+      dense: 'semantic',
+    },
+    error: {
+      tag: 'search failed',
+      body: 'That search did not go through. Try it again in a moment.',
+      retry: 'search again',
+    },
+  },
   errors: {
     wasm: {
       tag: 'engine fault',
