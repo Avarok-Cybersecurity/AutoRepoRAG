@@ -12,7 +12,7 @@
 import { atLeast, MIN_V3_LATTICE } from './lattice-version.mjs';
 import { readV3Inputs, refuse, requiredIff } from './inputs-v3.mjs';
 import { relativeInside } from './paths.mjs';
-import { getBoolInput, getInput, getIntInput, getRequiredInput } from './util.mjs';
+import { getBoolInput, getInput, getIntInput, getRequiredInput } from './action-inputs.mjs';
 
 function lines(raw) {
   return raw.split('\n').map((s) => s.trim()).filter(Boolean);

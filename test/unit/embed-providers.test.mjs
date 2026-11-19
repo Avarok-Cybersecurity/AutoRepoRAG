@@ -13,7 +13,12 @@ import { after, before, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
 
-import { embedTexts } from '../../src/embed.mjs';
+import { nodeIo } from '../../src/adapters/node-io.mjs';
+import { embedTexts as embedWith } from '../../src/embed.mjs';
+
+// The production node adapter (real fetch, real clock): the loopback server
+// above is the only double.
+const embedTexts = (texts, o) => embedWith(texts, o, nodeIo({}));
 
 const CF_PATH = '/client/v4/accounts/acc123/ai/v1/embeddings';
 let server;

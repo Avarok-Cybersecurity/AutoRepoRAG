@@ -3,8 +3,8 @@
 // Contract: fetches lattice-db-{linux|macos}-{x64|arm64}.tar.gz plus its
 // checksum file from the pinned lattice-db GitHub release (or
 // releases/latest/download when version is "latest"), verifies the archive
-// against its checksum line (src/checksum.mjs) and, for versions this action
-// pins, against src/pins.mjs too, caches the verified pair per
+// against its checksum line (src/adapters/checksum.mjs) and, for versions this
+// action pins, against src/pins.mjs too, caches the verified pair per
 // version tag and skips the download while the cache still verifies, extracts
 // the single `lattice-server` binary, asserts the loopback port is free,
 // spawns the server on 127.0.0.1:port with a throwaway LATTICE_DATA_DIR,
@@ -18,9 +18,10 @@ import { mkdirSync, writeFileSync, openSync, closeSync, readFileSync, existsSync
 import { connect } from 'node:net';
 import { join } from 'node:path';
 import { verifyChecksum } from './checksum.mjs';
-import { assertPinned, serverAsset } from './pins.mjs';
-import { LatticeClient } from './lattice.mjs';
-import { log, sleep } from './util.mjs';
+import { assertPinned, serverAsset } from '../pins.mjs';
+import { log } from '../util.mjs';
+import { sleep } from './clock.mjs';
+import { LatticeClient } from './lattice-http.mjs';
 
 const RELEASE_BASE = 'https://github.com/Avarok-Cybersecurity/lattice-db/releases';
 

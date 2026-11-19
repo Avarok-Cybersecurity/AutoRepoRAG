@@ -3,8 +3,9 @@
 // vectors, load + verify, serialize, and export the snapshot.
 //
 // Contract: JSON input files arrive through the injected `readJson` (the
-// caller owns the I/O and the error naming the input); nothing here writes
-// to disk. Lexical corpora make no embedding call at all.
+// caller owns the I/O and the error naming the input); every other read,
+// network call and clock read goes through the injected `io` port; nothing
+// here writes to disk. Lexical corpora make no embedding call at all.
 
 import { headerConfig } from './collection-v3.mjs';
 import { chunkSource, embedChunks } from './corpus.mjs';
@@ -17,14 +18,14 @@ import { loadAndVerifyV3 } from './verify-v3.mjs';
 
 /**
  * @param {{inputs: ReturnType<typeof import('./inputs.mjs').readInputs>,
- *   client: import('./lattice.mjs').LatticeClient, source: import('./corpus.mjs').Source,
- *   readJson: (path: string, inputName: string) => unknown}} opts
+ *   client: import('./adapters/lattice-http.mjs').LatticeClient, source: import('./corpus.mjs').Source,
+ *   readJson: (path: string, inputName: string) => unknown, io: import('./adapters/node-io.mjs').Io}} opts
  * @returns {Promise<import('./corpus.mjs').BuiltCorpus>}
  */
-export async function buildSiteCorpus({ inputs, client, source, readJson }) {
+export async function buildSiteCorpus({ inputs, client, source, readJson, io }) {
   const { v3 } = inputs;
   const listing = v3.filesDir ? 'walk' : 'git';
-  const chunked = chunkSource(inputs, source, { listing, strategy: v3.chunkStrategy });
+  const chunked = chunkSource(inputs, source, { listing, strategy: v3.chunkStrategy }, io);
   const chunks = v3.payloadSidecar
     ? mergeSidecar(chunked.chunks, readJson(v3.payloadSidecar, 'payload-sidecar'))
     : chunked.chunks;
@@ -36,7 +37,7 @@ export async function buildSiteCorpus({ inputs, client, source, readJson }) {
   const lexical = v3.searchMode === 'lexical';
   const embedded = lexical
     ? { points: chunks.map((c) => ({ id: c.id, vector: [], payload: c.payload })), dim: 0, embedded: 0, reused: 0, model: null }
-    : await embedChunks(chunks, inputs);
+    : await embedChunks(chunks, inputs, io);
 
   const shape = {
     name: inputs.collection,
@@ -47,11 +48,13 @@ export async function buildSiteCorpus({ inputs, client, source, readJson }) {
     model: embedded.model,
     relations,
   };
-  const stored = await loadAndVerifyV3(client, { collection: inputs.collection, shape, points: embedded.points, edges });
+  const stored = await loadAndVerifyV3(client, {
+    collection: inputs.collection, shape, points: embedded.points, edges, clock: io.clock,
+  });
   const config = headerConfig(shape);
   const snapshotBytes = v3.snapshot
     ? await exportVerifiedSnapshot(client, {
-      collection: inputs.collection, config, maxBytes: v3.maxSnapshotBytes, probe: snapshotProbe(v3.searchMode, stored[0]),
+      collection: inputs.collection, config, maxBytes: v3.maxSnapshotBytes, probe: snapshotProbe(v3.searchMode, stored[0]), clock: io.clock,
     })
     : null;
   return {

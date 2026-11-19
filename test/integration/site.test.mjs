@@ -22,7 +22,7 @@ import { join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 import { sha256Hex } from '../../src/util.mjs';
-import { fetchLatticeWasm } from '../../src/website-chat.mjs';
+import { fetchLatticeWasm } from '../../src/adapters/website-chat.mjs';
 
 const ROOT = fileURLToPath(new URL('../../', import.meta.url));
 const LATTICE_VERSION = 'v0.5.1';

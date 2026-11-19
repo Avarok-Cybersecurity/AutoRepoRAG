@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // emit-website-chat.mjs — emit the website-chat bundle outside the action:
-// the same emitWebsiteChat() the action runs (src/website-chat.mjs), used by
+// the same emitWebsiteChat() the action runs (src/adapters/website-chat.mjs), used by
 // the library's browser suite and by the release workflow's tarball.
 //
 // Usage: node scripts/emit-website-chat.mjs <lattice-version> <out-dir> <cache-dir>
@@ -10,7 +10,7 @@
 
 import { resolve } from 'node:path';
 
-import { emitWebsiteChat, LIBRARY_DIR } from '../src/website-chat.mjs';
+import { emitWebsiteChat, LIBRARY_DIR } from '../src/adapters/website-chat.mjs';
 
 const [latticeVersion, outDir, cacheDir] = process.argv.slice(2);
 if (!latticeVersion || !outDir || !cacheDir || process.argv.length !== 5) {

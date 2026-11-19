@@ -2,7 +2,8 @@
 // the v2 (repository, vectors only) path. The v3 path is src/site-corpus.mjs.
 //
 // Contract: both builders return a BuiltCorpus; the caller (src/run.mjs)
-// writes the files and the metadata. Nothing here writes to disk.
+// writes the files and the metadata. Nothing here writes to disk; reads and
+// network calls go through the injected io port (src/adapters/node-io.mjs).
 
 import { buildChunks, chunkerFor } from './chunk.mjs';
 import { serializeCorpus } from './jsonl.mjs';
@@ -18,7 +19,7 @@ import { loadAndVerify } from './verify.mjs';
  */
 
 /** Chunk the source; fails when nothing was produced. */
-export function chunkSource(inputs, source, { listing, strategy }) {
+export function chunkSource(inputs, source, { listing, strategy }, io) {
   const { chunks, fileCount, matchedFiles, skippedBinary, truncated } = buildChunks({
     root: source.root,
     includeGlobs: inputs.paths,
@@ -28,7 +29,7 @@ export function chunkSource(inputs, source, { listing, strategy }) {
     maxChunks: inputs.maxChunks,
     repo: source.repo,
     commitSha: source.commitSha,
-  });
+  }, io);
   if (chunks.length === 0) {
     throw new Error(`no chunks produced: ${matchedFiles} file(s) matched paths, ${skippedBinary.length} skipped as binary`);
   }
@@ -39,12 +40,12 @@ export function chunkSource(inputs, source, { listing, strategy }) {
 }
 
 /** Vectors for every chunk (reuse, then embed); `model` is what meta.json records. */
-export async function embedChunks(chunks, inputs) {
+export async function embedChunks(chunks, inputs, io) {
   const model = inputs.mock ? 'mock' : inputs.model;
   const prev = inputs.previousCorpusUrl
-    ? await loadPreviousCorpus(inputs.previousCorpusUrl, inputs.previousCorpusMetaUrl, model, inputs.mock ? inputs.mockDim : null)
+    ? await loadPreviousCorpus(inputs.previousCorpusUrl, inputs.previousCorpusMetaUrl, model, inputs.mock ? inputs.mockDim : null, io)
     : null;
-  const { points, dim, embedded, reused } = await resolveVectors(chunks, inputs, prev);
+  const { points, dim, embedded, reused } = await resolveVectors(chunks, inputs, prev, io);
   log(`[embed] dim ${dim}: ${embedded} embedded, ${reused} reused`);
   return { points, dim, embedded, reused, model };
 }
@@ -53,9 +54,9 @@ export async function embedChunks(chunks, inputs) {
  * v2: a repository (or source-dir checkout), line windows, vectors only.
  * @returns {Promise<BuiltCorpus>}
  */
-export async function buildRepoCorpus({ inputs, client, source }) {
-  const { chunks, fileCount } = chunkSource(inputs, source, { listing: 'git', strategy: 'lines' });
-  const { points, dim, embedded, reused, model } = await embedChunks(chunks, inputs);
+export async function buildRepoCorpus({ inputs, client, source, io }) {
+  const { chunks, fileCount } = chunkSource(inputs, source, { listing: 'git', strategy: 'lines' }, io);
+  const { points, dim, embedded, reused, model } = await embedChunks(chunks, inputs, io);
   await loadAndVerify(client, inputs.collection, dim, points);
   return {
     corpusText: serializeCorpus({ collectionName: inputs.collection, dim, points }),

@@ -1,6 +1,7 @@
 // chunk.mjs — repository file discovery and deterministic line-window chunking.
 //
-// Contract: select files (src/files.mjs: `git ls-files` or a plain walk),
+// Contract: list files through the injected io port (io.listFiles: `git
+// ls-files` or a plain walk; io.fs reads them), select them (src/files.mjs),
 // drop binary (NUL-sniffed) files, and split each text file with the given
 // per-file chunker. The "lines" chunker (chunkText) splits a file into windows of `chunkLines` lines advancing by (chunkLines - overlap),
 // preferring a break after a blank line or a column-0 '}' within the window's
@@ -8,7 +9,6 @@
 // Chunk ids are ordinals assigned in (path asc, start_line asc) order.
 // chunk_hash = sha256(path \0 start_line \0 text).
 
-import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { chunkMarkdown } from './chunk-markdown.mjs';
 import { isBinary, selectFiles } from './files.mjs';
@@ -154,19 +154,21 @@ export function chunkerFor(strategy, { chunkLines, chunkOverlap, maxChunkBytes }
  * A chunker that reports a headingPath adds `heading_path` to the payload.
  * @param {{root: string, includeGlobs: string[], excludeGlobs: string[], listing: 'git'|'walk',
  *   chunkFile: ReturnType<typeof chunkerFor>, maxChunks: number, repo: string, commitSha: string}} opts
+ * @param {{listFiles: (root: string, listing: 'git'|'walk') => string[],
+ *   fs: {exists: (path: string) => boolean, readBytes: (path: string) => Buffer}}} io
  */
-export function buildChunks({ root, includeGlobs, excludeGlobs, listing, chunkFile, maxChunks, repo, commitSha }) {
-  const files = selectFiles({ root, includeGlobs, excludeGlobs, listing });
+export function buildChunks({ root, includeGlobs, excludeGlobs, listing, chunkFile, maxChunks, repo, commitSha }, io) {
+  const files = selectFiles({ listed: io.listFiles(root, listing), includeGlobs, excludeGlobs });
   const raw = [];
   const skippedBinary = [];
   for (const path of files) {
     const abs = join(root, path);
-    if (!existsSync(abs)) {
+    if (!io.fs.exists(abs)) {
       // `git ls-files --cached` lists files staged but deleted from the worktree.
       warning(`skipping ${path}: tracked but missing from the worktree`);
       continue;
     }
-    const buf = readFileSync(abs);
+    const buf = io.fs.readBytes(abs);
     if (isBinary(buf)) {
       skippedBinary.push(path);
       continue;

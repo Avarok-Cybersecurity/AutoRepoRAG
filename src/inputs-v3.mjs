@@ -7,7 +7,7 @@
 // silently ignored. Every failure names the input.
 
 import { relativeInside } from './paths.mjs';
-import { getBoolInput, getInput, getIntInput } from './util.mjs';
+import { getBoolInput, getInput, getIntInput } from './action-inputs.mjs';
 
 export const V3_INPUTS = Object.freeze([
   'files-dir', 'corpus-repo', 'corpus-commit', 'chunk-strategy', 'payload-sidecar', 'edges-file',

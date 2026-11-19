@@ -10,7 +10,7 @@ import assert from 'node:assert/strict';
 
 import { readInputs } from '../../src/inputs.mjs';
 import { V3_INPUTS } from '../../src/inputs-v3.mjs';
-import { inputEnvName } from '../../src/util.mjs';
+import { inputEnvName } from '../../src/action-inputs.mjs';
 import { CONDITIONAL, DECLARED, envOf } from './action-env.mjs';
 
 const SHA = 'a'.repeat(40);

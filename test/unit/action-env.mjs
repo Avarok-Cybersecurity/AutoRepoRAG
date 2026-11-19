@@ -6,7 +6,7 @@ import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { inputEnvName } from '../../src/util.mjs';
+import { inputEnvName } from '../../src/action-inputs.mjs';
 
 export const ACTION_YML = join(dirname(fileURLToPath(import.meta.url)), '..', '..', 'action.yml');
 

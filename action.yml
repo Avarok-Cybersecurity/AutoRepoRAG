@@ -297,7 +297,8 @@ runs:
       if: always()
       shell: bash
       run: |
-        pidfile="${RUNNER_TEMP:-${GITHUB_WORKSPACE:-$PWD}/.work}/autoreporag-lattice.pid"
+        # src/run-config.mjs requires RUNNER_TEMP; the pidfile is only ever written there.
+        pidfile="${RUNNER_TEMP:?RUNNER_TEMP is required}/autoreporag-lattice.pid"
         if [ -f "$pidfile" ]; then
           pid="$(cat "$pidfile")"
           if kill -0 "$pid" 2>/dev/null; then

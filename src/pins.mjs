@@ -2,7 +2,7 @@
 // this action pins for known lattice-db releases.
 //
 // Contract: pure. Every downloaded asset is first verified against its
-// release's own checksum file (src/checksum.mjs). For a version listed in
+// release's own checksum file (src/adapters/checksum.mjs). For a version listed in
 // PINNED_SHA256 it must ALSO equal the value pinned here, so a release asset
 // replaced after this action shipped is refused even when the replacement
 // came with a matching checksum file. Versions not listed (older v2 pins

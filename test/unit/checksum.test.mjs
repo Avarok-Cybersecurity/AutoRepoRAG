@@ -1,4 +1,4 @@
-// checksum.test.mjs — release-asset verification (src/checksum.mjs), on the
+// checksum.test.mjs — release-asset verification (src/adapters/checksum.mjs), on the
 // two checksum-file shapes lattice-db publishes, against real files.
 
 import { after, describe, it } from 'node:test';
@@ -7,7 +7,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { expectedSha256, verifyChecksum } from '../../src/checksum.mjs';
+import { expectedSha256, verifyChecksum } from '../../src/adapters/checksum.mjs';
 import { sha256Hex } from '../../src/util.mjs';
 
 const SCRATCH = mkdtempSync(join(tmpdir(), 'autoreporag-sum-'));

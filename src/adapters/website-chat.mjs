@@ -5,7 +5,7 @@
 // writes repo-chat.manifest.json naming the library version, the lattice
 // version and every file's sha256. The wasm pair is downloaded from the
 // pinned lattice-db release and verified against that release's
-// lattice-db-wasm.sha256 (src/checksum.mjs, the same check the server binary
+// lattice-db-wasm.sha256 (src/adapters/checksum.mjs, the same check the server binary
 // gets, plus src/pins.mjs for pinned versions); a cached pair is re-verified before reuse. The manifest has no
 // timestamp, so the same inputs emit the same bytes.
 
@@ -14,11 +14,11 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { verifyChecksum } from './checksum.mjs';
-import { assertPinned } from './pins.mjs';
+import { assertPinned } from '../pins.mjs';
+import { log, sha256Hex, stableStringify } from '../util.mjs';
 import { download, releaseUrl } from './server.mjs';
-import { log, sha256Hex, stableStringify } from './util.mjs';
 
-export const LIBRARY_DIR = fileURLToPath(new URL('../website-chat/', import.meta.url));
+export const LIBRARY_DIR = fileURLToPath(new URL('../../website-chat/', import.meta.url));
 export const WASM_FILES = Object.freeze(['lattice_server.js', 'lattice_server_bg.wasm']);
 export const WASM_CHECKSUMS = 'lattice-db-wasm.sha256';
 export const MANIFEST_NAME = 'repo-chat.manifest.json';

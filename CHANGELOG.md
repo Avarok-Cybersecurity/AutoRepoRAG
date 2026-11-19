@@ -73,8 +73,21 @@ byte-identical to 2.2.1's.
 - An embeddings response whose items carry no `index` keeps response order;
   one where only some do is refused.
 - `src/main.mjs` is a thin entry over `src/run.mjs`, which takes the
-  lattice-server provisioner as a parameter; `src/server.mjs` splits
-  download (`fetchServerBinary`) from start (`startServer`).
+  lattice-server provisioner as a parameter; `src/adapters/server.mjs`
+  splits download (`fetchServerBinary`) from start (`startServer`).
+- **The pipeline's business logic does no I/O itself (SBIO).** Every file,
+  network, git, clock and GitHub-runner access goes through one `io` port
+  that `src/main.mjs` (the composition root) builds from the node adapter
+  `src/adapters/node-io.mjs`. Everything that touches the outside world now
+  lives under `src/adapters/` (lattice REST client, server provisioner,
+  website-chat emitter, checksum files, git, file listing, clock, step
+  outputs); the rest of `src/` receives the port or plain data. Unit tests
+  run the chunker and the previous-corpus loader on in-memory data.
+- **`GITHUB_WORKSPACE` and `RUNNER_TEMP` are required absolute paths**
+  (`src/run-config.mjs`). They used to fall back to the cwd and
+  `<workspace>/.work`; a run without them now fails naming the variable. The
+  GitHub runner always sets both; a local run must export them
+  (`scripts/local-dry-run.sh` and the integration suite already do).
 
 ## [2.2.1] - 2026-10-11
 

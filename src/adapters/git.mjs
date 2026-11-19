@@ -1,6 +1,6 @@
 // git.mjs — where the chunked sources live and which repo/commit they are.
 //
-// Contract: resolveSourceRoot and parseRemoteRepo are pure. gitContext is the
+// Contract: parseRemoteRepo is pure. gitContext is the
 // git adapter: without a source-dir it keeps the v1 behaviour (the workflow's
 // own GITHUB_SHA / GITHUB_REPOSITORY, falling back to the checkout); with a
 // source-dir it ignores those variables entirely (they describe the workflow
@@ -9,18 +9,11 @@
 
 import { execFileSync } from 'node:child_process';
 import { realpathSync } from 'node:fs';
-import { join } from 'node:path';
 
-import { relativeInside } from './paths.mjs';
+import { resolveSourceRoot } from '../paths.mjs';
 
 const NAME = /^[A-Za-z0-9_.-]+$/;
 const FULL_SHA = /^[0-9a-f]{40}$/;
-
-/** Join a workspace-relative source-dir onto the workspace; '' means the workspace itself. */
-export function resolveSourceRoot(workspace, sourceDir) {
-  if (sourceDir === '') return workspace;
-  return join(workspace, relativeInside(sourceDir, 'source-dir', 'workspace'));
-}
 
 /** Strip any user:token@ so a remote URL can appear in an error message. */
 function redact(url) {
@@ -89,7 +82,7 @@ function externalContext(root, sourceDir) {
 
 /**
  * The repo identity stamped on every chunk.
- * @param {string} workspace  GITHUB_WORKSPACE (or cwd for local runs)
+ * @param {string} workspace  GITHUB_WORKSPACE (required; src/run-config.mjs)
  * @param {string} sourceDir  workspace-relative external checkout, '' for the workspace
  * @param {Record<string, string|undefined>} env  GITHUB_SHA / GITHUB_REPOSITORY source
  * @returns {{ root: string, commitSha: string, repo: string }}

@@ -9,7 +9,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { readInputs } from '../../src/inputs.mjs';
-import { inputEnvName } from '../../src/util.mjs';
+import { inputEnvName } from '../../src/action-inputs.mjs';
 import { ACTION_TEXT, CONDITIONAL, DECLARED, envOf, PCND, REQUIRED_VALUES } from './action-env.mjs';
 
 describe('action.yml declares the v2 contract', () => {

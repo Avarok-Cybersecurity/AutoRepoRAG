@@ -11,9 +11,11 @@
 // configuration/open-ai-compatibility/) works as is; its {success: false,
 // errors: [{code, message}]} envelope is read, and code 3036 (daily free
 // allocation used up, sent as HTTP 429) is not retried
-// (https://developers.cloudflare.com/workers-ai/platform/errors/).
+// (https://developers.cloudflare.com/workers-ai/platform/errors/). The live
+// client's I/O arrives as a port: `http` (a fetch-compatible function) and
+// `clock` ({nowMs, sleep}), from src/adapters/node-io.mjs in production.
 
-import { sha256Bytes, sleep, log } from './util.mjs';
+import { sha256Bytes, log } from './util.mjs';
 
 // ---------------------------------------------------------------------------
 // Mock mode
@@ -112,7 +114,7 @@ async function parseResponse(response, what) {
 
 const RETRY_BASE_MS = 700;
 
-async function withRetry(operation, maxAttempts) {
+async function withRetry(operation, maxAttempts, clock) {
   let lastError;
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
@@ -123,18 +125,21 @@ async function withRetry(operation, maxAttempts) {
       if (!transient || attempt === maxAttempts) break;
       const backoff = RETRY_BASE_MS * 2 ** (attempt - 1);
       log(`[embed] transient failure (attempt ${attempt}/${maxAttempts}), retrying in ${backoff}ms: ${error.message}`);
-      await sleep(backoff);
+      await clock.sleep(backoff);
     }
   }
   throw lastError;
 }
 
-/** One embeddings request. Returns vectors in input order. */
-export async function embedBatchLive(texts, { endpoint, model, apiKey, maxRetries }) {
+/**
+ * One embeddings request. Returns vectors in input order.
+ * @param {{http: typeof fetch, clock: {nowMs: () => number, sleep: (ms: number) => Promise<void>}}} io
+ */
+export async function embedBatchLive(texts, { endpoint, model, apiKey, maxRetries }, { http, clock }) {
   if (texts.length === 0) return [];
   const base = endpoint.replace(/\/+$/, '');
   const data = await withRetry(async () => {
-    const response = await fetch(`${base}/embeddings`, {
+    const response = await http(`${base}/embeddings`, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${apiKey}`,
@@ -144,7 +149,7 @@ export async function embedBatchLive(texts, { endpoint, model, apiKey, maxRetrie
       body: JSON.stringify({ model, input: texts }),
     });
     return parseResponse(response, 'Embedding request');
-  }, maxRetries);
+  }, maxRetries, clock);
   if (!Array.isArray(data?.data) || data.data.length !== texts.length) {
     throw new Error(
       `Embedding response has ${data?.data?.length ?? 'no'} items for ${texts.length} inputs`,
@@ -164,9 +169,9 @@ export async function embedBatchLive(texts, { endpoint, model, apiKey, maxRetrie
  * Embed all texts: batches of batchSize, request starts paced at least
  * requestIntervalMs apart (retries included in pacing). Dim is derived from
  * the first returned vector; every vector's length is asserted against it.
- * Returns { vectors, dim }.
+ * Returns { vectors, dim }. `io` is embedBatchLive's port.
  */
-export async function embedTexts(texts, opts) {
+export async function embedTexts(texts, opts, io) {
   const { batchSize, requestIntervalMs } = opts;
   const vectors = [];
   let dim = 0;
@@ -174,10 +179,10 @@ export async function embedTexts(texts, opts) {
   const totalBatches = Math.ceil(texts.length / batchSize);
   for (let b = 0; b < totalBatches; b++) {
     const batch = texts.slice(b * batchSize, (b + 1) * batchSize);
-    const wait = nextAllowedAt - Date.now();
-    if (wait > 0) await sleep(wait);
-    nextAllowedAt = Date.now() + requestIntervalMs;
-    const got = await embedBatchLive(batch, opts);
+    const wait = nextAllowedAt - io.clock.nowMs();
+    if (wait > 0) await io.clock.sleep(wait);
+    nextAllowedAt = io.clock.nowMs() + requestIntervalMs;
+    const got = await embedBatchLive(batch, opts, io);
     for (const vec of got) {
       if (!Array.isArray(vec) || vec.length === 0) {
         throw new Error('Embedding response contained an empty vector');

@@ -58,7 +58,7 @@ const PROBE_LIMIT = 10;
  * Resolves to the hits as [id, score] pairs.
  * @param {'lexical'|'vector'|'hybrid'} searchMode
  * @param {{vector: number[], payload: {text: string}}} point
- * @returns {(client: import('./lattice.mjs').LatticeClient, name: string) => Promise<Array<[number, number]>>}
+ * @returns {(client: import('./adapters/lattice-http.mjs').LatticeClient, name: string) => Promise<Array<[number, number]>>}
  */
 export function snapshotProbe(searchMode, point) {
   const pairs = (hits) => (hits ?? []).map((h) => [h.id, h.score]);
@@ -85,13 +85,14 @@ export function assertRoundTrip({ pointsBefore, pointsAfter, hitsBefore, hitsAft
 }
 
 /**
- * @param {import('./lattice.mjs').LatticeClient} client
+ * @param {import('./adapters/lattice-http.mjs').LatticeClient} client
  * @param {{collection: string, config: unknown, maxBytes: number,
- *   probe: (client: import('./lattice.mjs').LatticeClient, name: string) => Promise<Array<[number, number]>>}} opts
+ *   probe: (client: import('./adapters/lattice-http.mjs').LatticeClient, name: string) => Promise<Array<[number, number]>>,
+ *   clock: {nowMs: () => number}}} opts
  * @returns {Promise<Buffer>}
  */
-export async function exportVerifiedSnapshot(client, { collection, config, maxBytes, probe }) {
-  const started = Date.now();
+export async function exportVerifiedSnapshot(client, { collection, config, maxBytes, probe, clock }) {
+  const started = clock.nowMs();
   const bytes = await client.exportSnapshot(collection);
   assertSnapshotMatches(bytes, config);
   assertSnapshotSize(bytes.length, maxBytes);
@@ -107,7 +108,7 @@ export async function exportVerifiedSnapshot(client, { collection, config, maxBy
   log(
     `[snapshot] format ${SNAPSHOT_FORMAT}, ${bytes.length} bytes, config matches the jsonl header; ` +
       `native import: ${pointsAfter} points, ${hitsAfter.length} probe hits identical, re-export byte-identical ` +
-      `(${Date.now() - started} ms)`,
+      `(${clock.nowMs() - started} ms)`,
   );
   return bytes;
 }

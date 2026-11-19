@@ -1,4 +1,4 @@
-// lattice.mjs — minimal REST client for a local lattice-server.
+// lattice-http.mjs — the LatticeClient port's HTTP adapter: a minimal REST client for a local lattice-server.
 //
 // Contract: every response is an envelope {"status":"ok","result":...}; any
 // non-2xx status, non-JSON body, or status !== "ok" is an error. Search scores
@@ -8,7 +8,7 @@
 // Snapshot export/import move raw bytes (format 2: "LTDB" | u32 LE format |
 // u32 LE config_len | config JSON | ...), not envelopes.
 
-import { sleep } from './util.mjs';
+import { sleep } from './clock.mjs';
 
 export class LatticeClient {
   constructor(baseUrl) {
@@ -47,7 +47,7 @@ export class LatticeClient {
   }
 
   /** Poll GET /collections until the server answers, up to timeoutMs. */
-  async waitReady(timeoutMs = 10_000) {
+  async waitReady(timeoutMs) {
     const deadline = Date.now() + timeoutMs;
     let lastError;
     for (;;) {

@@ -56,14 +56,14 @@ async function storedVectors(client, collection, points, storage) {
 }
 
 /**
- * @param {import('./lattice.mjs').LatticeClient} client
+ * @param {import('./adapters/lattice-http.mjs').LatticeClient} client
  * @param {{collection: string, shape: import('./collection-v3.mjs').CollectionShape,
  *   points: Array<{id: number, vector: number[], payload: {text: string}}>,
- *   edges: Array<{from: number, to: number, rel: string, w: number}>}} opts
+ *   edges: Array<{from: number, to: number, rel: string, w: number}>, clock: {nowMs: () => number}}} opts
  * @returns {Promise<Array<{id: number, vector: number[], payload: {text: string}}>>} points as stored
  */
-export async function loadAndVerifyV3(client, { collection, shape, points, edges }) {
-  const started = Date.now();
+export async function loadAndVerifyV3(client, { collection, shape, points, edges, clock }) {
+  const started = clock.nowMs();
   const vectors = shape.searchMode !== 'lexical';
   await client.createCollectionFrom(collection, createBody(shape));
   for (let i = 0; i < points.length; i += UPSERT_BATCH) {
@@ -94,7 +94,7 @@ export async function loadAndVerifyV3(client, { collection, shape, points, edges
   }
   log(
     `[verify] points_count ${info.points_count}, ${edges.length} edges, ${samples.size} sampled self-retrievals` +
-      `${vectors ? `, ${stored.length} stored vectors within ${shape.vectorStorage} rounding` : ''} (${Date.now() - started} ms)`,
+      `${vectors ? `, ${stored.length} stored vectors within ${shape.vectorStorage} rounding` : ''} (${clock.nowMs() - started} ms)`,
   );
   return stored;
 }
