@@ -88,6 +88,14 @@ byte-identical to 2.2.1's.
   `<workspace>/.work`; a run without them now fails naming the variable. The
   GitHub runner always sets both; a local run must export them
   (`scripts/local-dry-run.sh` and the integration suite already do).
+- **An absent `INPUT_*` variable is an error naming the input.** The runner
+  maps every input `action.yml` declares (an ungiven one arrives as `''`,
+  which still means "not given"), so an absent variable means the code and
+  `action.yml` disagree. A unit test checks that the inputs `src/` reads and
+  the inputs `action.yml` declares are the same set. To run `src/main.mjs`
+  outside Actions, wrap it in `scripts/run-as-action.mjs`, which fills every
+  input you leave unset from `action.yml` as the runner does; the unit tests,
+  `local-dry-run.sh` and the CI missing-input step use it.
 
 ## [2.2.1] - 2026-10-11
 

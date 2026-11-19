@@ -65,19 +65,25 @@ describe('readInputs', () => {
     assert.equal(inputs.generateWebsiteChat, false);
   });
 
+  // A caller that does not give an input gets '' from the runner.
   for (const name of Object.keys(REQUIRED_VALUES)) {
-    it(`fails naming "${name}" when it is missing`, () => {
-      const env = envOf();
-      delete env[inputEnvName(name)];
-      assert.throws(() => readInputs(env), { message: new RegExp(`^input "${name}" is required`) });
+    it(`fails naming "${name}" when it is not given`, () => {
+      assert.throws(() => readInputs(envOf({ [name]: '' })), { message: new RegExp(`^input "${name}" is required`) });
     });
   }
 
   it('reads plumbing inputs as required too (no fallback duplicated in code)', () => {
-    const env = envOf();
-    delete env[inputEnvName('output-dir')];
-    assert.throws(() => readInputs(env), { message: /^input "output-dir" is required/ });
+    assert.throws(() => readInputs(envOf({ 'output-dir': '' })), { message: /^input "output-dir" is required/ });
   });
+
+  // An absent INPUT_* never comes from the runner: the code and action.yml disagree.
+  for (const name of Object.keys(DECLARED)) {
+    it(`fails naming "${name}" when its INPUT_* variable is absent altogether`, () => {
+      const env = envOf();
+      delete env[inputEnvName(name)];
+      assert.throws(() => readInputs(env), { message: new RegExp(`^input "${name}" is not set: env ${inputEnvName(name)} is absent`) });
+    });
+  }
 
   it('requires previous-corpus-meta-url iff previous-corpus-url is set', () => {
     assert.throws(

@@ -3,39 +3,11 @@
 // and the INPUT_* env the composite step would build from them.
 
 import { readFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
 
+import { ACTION_YML, actionEnv, parseActionInputs } from '../../scripts/run-as-action.mjs';
 import { inputEnvName } from '../../src/action-inputs.mjs';
 
-export const ACTION_YML = join(dirname(fileURLToPath(import.meta.url)), '..', '..', 'action.yml');
-
-/** Parse the top-level `inputs:` block into { name: { required, default } }. */
-export function parseActionInputs(text) {
-  const out = {};
-  let inInputs = false;
-  let current = null;
-  for (const line of text.split('\n')) {
-    if (/^\S/.test(line)) {
-      inInputs = line === 'inputs:';
-      current = null;
-      continue;
-    }
-    if (!inInputs) continue;
-    const name = /^ {2}([a-z0-9-]+):\s*$/.exec(line);
-    if (name) {
-      current = { required: undefined, default: undefined };
-      out[name[1]] = current;
-      continue;
-    }
-    const field = /^ {4}(required|default):\s*(.*)$/.exec(line);
-    if (field && current) {
-      const raw = field[2].trim();
-      current[field[1]] = field[1] === 'required' ? raw === 'true' : raw.replace(/^'(.*)'$/, '$1');
-    }
-  }
-  return out;
-}
+export { ACTION_YML };
 
 export const ACTION_TEXT = readFileSync(ACTION_YML, 'utf8');
 export const DECLARED = parseActionInputs(ACTION_TEXT);
@@ -69,15 +41,15 @@ export const REQUIRED_VALUES = {
   'generate-website-chat': 'false',
 };
 
-/** The env the composite step builds: action.yml defaults, then caller values. */
+/**
+ * The env the composite step builds: every declared input, caller values
+ * first, the rest action.yml's default or '' (scripts/run-as-action.mjs).
+ */
 export function envOf(overrides = {}) {
-  const env = {};
-  for (const [name, spec] of Object.entries(DECLARED)) {
-    if (spec.default !== undefined) env[inputEnvName(name)] = spec.default;
-  }
+  const given = {};
   for (const [name, value] of Object.entries({ 'mock-embeddings': 'true', ...REQUIRED_VALUES, ...overrides })) {
-    env[inputEnvName(name)] = value;
+    given[inputEnvName(name)] = value;
   }
-  return env;
+  return actionEnv(DECLARED, given);
 }
 

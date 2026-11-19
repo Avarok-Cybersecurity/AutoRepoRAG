@@ -9,13 +9,22 @@ export function inputEnvName(name) {
 }
 
 /**
- * Read a composite-action input from an INPUT_* environment map (action.yml
- * maps every input to one). Trimmed; '' when unset. The map is a parameter so
- * input parsing stays pure: callers pass process.env, tests pass a literal.
+ * Read a composite-action input from an INPUT_* environment map. Trimmed;
+ * '' means the caller did not give it (the runner renders an ungiven input
+ * as ''). action.yml maps every input it declares, so an absent variable
+ * means the code and action.yml disagree (a misspelt or undeclared name):
+ * that throws, naming the input, instead of passing for "not given".
  */
 export function getInput(env, name) {
-  const v = env[inputEnvName(name)];
-  return v === undefined ? '' : v.trim();
+  const key = inputEnvName(name);
+  const v = env[key];
+  if (v === undefined) {
+    throw new Error(
+      `input "${name}" is not set: env ${key} is absent, and action.yml maps every input it declares ` +
+        '(is the name declared there? a local run: scripts/run-as-action.mjs sets them all)',
+    );
+  }
+  return v.trim();
 }
 
 export function getRequiredInput(env, name) {

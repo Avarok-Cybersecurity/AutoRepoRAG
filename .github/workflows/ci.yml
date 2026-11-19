@@ -267,9 +267,12 @@ jobs:
           [ ! -e missing-out/coderag.jsonl ]
 
       # The step above cannot expose its log, so re-run the entrypoint with
-      # the same inputs (embedding-endpoint unset) and check the message.
+      # the same inputs (embedding-endpoint not given, i.e. '') and check the
+      # message. scripts/run-as-action.mjs completes every other declared
+      # input from action.yml as the runner does (src/ refuses an absent one).
       - name: Assert the failure names the input
         env:
+          INPUT_EMBEDDING_ENDPOINT: ''
           INPUT_PATHS: test/fixtures/**
           INPUT_MOCK_EMBEDDINGS: 'true'
           INPUT_OUTPUT_DIR: missing-out
@@ -291,7 +294,7 @@ jobs:
         # The runner's default bash is -e; this step wants the exit status.
         run: |
           set +e -uo pipefail
-          out="$(node src/main.mjs 2>&1)"
+          out="$(node scripts/run-as-action.mjs node src/main.mjs 2>&1)"
           status=$?
           set -e
           printf '%s\n' "$out"

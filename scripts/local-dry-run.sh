@@ -83,6 +83,8 @@ export GITHUB_SHA
 export GITHUB_REPOSITORY="${GITHUB_REPOSITORY:-Avarok-Cybersecurity/AutoRepoRAG-dryrun}"
 
 # run_pipeline <out-dir> <port> <mock|live> <previous-corpus-url> <previous-corpus-meta-url>
+# Inputs not set here (the v3 set) get action.yml's default or '' from
+# scripts/run-as-action.mjs, as on the runner; src/ refuses an absent INPUT_*.
 run_pipeline() {
   local out_dir="$1" port="$2" emode="$3" prev_url="$4" prev_meta_url="$5"
   mkdir -p "$out_dir" "$out_dir/temp"
@@ -120,7 +122,7 @@ run_pipeline() {
     GITHUB_WORKSPACE="$TARGET_DIR" \
     RUNNER_TEMP="$out_dir/temp" \
     GITHUB_OUTPUT="$out_dir/github-output.txt" \
-    node "$REPO_ROOT/src/main.mjs"
+    node "$REPO_ROOT/scripts/run-as-action.mjs" node "$REPO_ROOT/src/main.mjs"
 }
 
 # get_output <key> <out-dir> — reads the heredoc `key<<DELIM` form main.mjs emits.
