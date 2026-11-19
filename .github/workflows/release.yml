@@ -14,7 +14,7 @@ env:
   # The LatticeDB release whose wasm pair ships in repo-chat-<tag>.tar.gz
   # (recorded in its repo-chat.manifest.json). Sites using the action pick
   # their own with the lattice-version input.
-  RELEASE_LATTICE_VERSION: v0.3.3
+  RELEASE_LATTICE_VERSION: v0.5.1
 
 jobs:
   # The exact tagged tree must pass the full CI (lint, unit tests, every e2e
