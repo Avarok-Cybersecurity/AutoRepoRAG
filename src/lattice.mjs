@@ -4,7 +4,9 @@
 // non-2xx status, non-JSON body, or status !== "ok" is an error. Search scores
 // are cosine DISTANCES (0 = identical), never similarities. Collection create
 // uses capitalized distance "Cosine" (REST convention; the jsonl header uses
-// lowercase "cosine").
+// lowercase "cosine"). BM25 query scores are SIMILARITIES (higher = better).
+// Snapshot export moves raw bytes (format 2: "LTDB" | u32 LE format |
+// u32 LE config_len | config JSON | ...), not envelopes.
 
 import { sleep } from './util.mjs';
 
@@ -13,17 +15,16 @@ export class LatticeClient {
     this.baseUrl = baseUrl.replace(/\/+$/, '');
   }
 
-  async request(method, path, body) {
-    let res;
+  async send(method, path, body, contentType) {
     try {
-      res = await fetch(this.baseUrl + path, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: body === undefined ? undefined : JSON.stringify(body),
-      });
+      return await fetch(this.baseUrl + path, { method, headers: { 'Content-Type': contentType }, body });
     } catch (e) {
       throw new Error(`lattice ${method} ${path}: connection failed (${e.cause?.code ?? e.message})`);
     }
+  }
+
+  async request(method, path, body) {
+    const res = await this.send(method, path, body === undefined ? undefined : JSON.stringify(body), 'application/json');
     const raw = await res.text();
     if (!res.ok) {
       throw new Error(`lattice ${method} ${path}: HTTP ${res.status} - ${raw.slice(0, 500)}`);
@@ -92,5 +93,43 @@ export class LatticeClient {
   /** Returns {status, points_count, config, ...}. */
   collectionInfo(name) {
     return this.request('GET', `/collections/${encodeURIComponent(name)}`);
+  }
+
+  /** v3: create from a full REST body (vectors optional, text_index, embedding, hnsw_config). */
+  createCollectionFrom(name, body) {
+    return this.request('PUT', `/collections/${encodeURIComponent(name)}`, body);
+  }
+
+  addEdge(name, { from, to, rel, w }) {
+    return this.request('POST', `/collections/${encodeURIComponent(name)}/graph/edges`, {
+      from_id: from, to_id: to, relation: rel, weight: w,
+    });
+  }
+
+  /** Universal query (BM25 / dense-from-text / hybrid). Returns {points: [{id, score, payload}]}. */
+  query(name, body) {
+    return this.request('POST', `/collections/${encodeURIComponent(name)}/points/query`, body);
+  }
+
+  /** Every point, paging scroll by next_page_offset. */
+  async scrollAll(name, { pageSize, withPayload, withVector }) {
+    const out = [];
+    let offset;
+    for (;;) {
+      const page = await this.request('POST', `/collections/${encodeURIComponent(name)}/points/scroll`, {
+        limit: pageSize, offset, with_payload: withPayload, with_vector: withVector,
+      });
+      out.push(...(page?.points ?? []));
+      if (page?.next_page_offset === undefined || page.next_page_offset === null) return out;
+      offset = page.next_page_offset;
+    }
+  }
+
+  /** The collection's snapshot bytes (GET /collections/{name}/export). */
+  async exportSnapshot(name) {
+    const path = `/collections/${encodeURIComponent(name)}/export`;
+    const res = await this.send('GET', path, undefined, 'application/json');
+    if (!res.ok) throw new Error(`lattice GET ${path}: HTTP ${res.status} - ${(await res.text()).slice(0, 500)}`);
+    return Buffer.from(await res.arrayBuffer());
   }
 }

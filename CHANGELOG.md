@@ -7,6 +7,54 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.0.0] - Unreleased
+
+Site corpora: the corpus behind a website's search. Needs lattice-db
+>= v0.5.0. v2 runs (no v3 input set) behave as before; their corpora are
+byte-identical to 2.2.1's.
+
+### Added
+- **v3 mode**, on when any v3 input is set; it requires `chunk-strategy`,
+  `search-mode` and `snapshot`, and `lattice-version` >= v0.5.0 (pinned).
+- **`files-dir`** chunks a plain directory (a site's gitignored `dist/`)
+  without asking git; repo and commit come from **`corpus-repo`** and
+  **`corpus-commit`**.
+- **`chunk-strategy: markdown`**: split at ATX headings with a
+  `heading_path` per chunk; long sections split between paragraphs, never
+  inside fenced code, tables or front matter; a `next` edge between
+  consecutive chunks of a file.
+- **`payload-sidecar`** merges per-file payload fields (e.g. `url`, `title`,
+  `lastmod`); unknown paths and fields the action writes are errors.
+- **`edges-file`**: graph edges by path and chunk index, written as
+  lattice-jsonl edge lines (header `edges` and `config.relations` set).
+- **`search-mode: lexical | vector | hybrid`**: lexical makes no embedding
+  call and builds a BM25 `text_index` with no `vectors`; hybrid has both.
+  **`vector-index: hnsw | flat`** and **`vector-storage: f32 | f16 | int8`**;
+  stored vectors are checked against the local ones within that rounding,
+  and the corpus carries the stored values. `embedding.model` is recorded in
+  the collection config.
+- **`snapshot`** exports `<name>.lattice` (snapshot format 2), checked to
+  carry the jsonl header's exact config; **`max-snapshot-bytes`** fails a
+  larger snapshot naming both sizes. meta.json gains `chunk_strategy`,
+  `search_mode`, `text_field`, `vector_index`, `vector_storage`, `edges`,
+  `snapshot_bytes`, `snapshot_sha256`, `snapshot_format`. New outputs
+  `snapshot-file` and `edges`.
+- **Cloudflare Workers AI** via its OpenAI-compatible endpoint, documented
+  and tested: the `{success: false, errors}` envelope is read, 3036 (daily
+  allocation) is not retried, 3040 (capacity) and 408 are.
+- `test/integration/site.test.mjs`: the whole action on `fixtures/site`, the
+  snapshot loaded in the wasm build, BM25 ranking checked.
+
+### Changed
+- `embedding-endpoint`, `vector-precision`, `request-interval-ms`,
+  `chunk-lines` and `chunk-overlap` are declared optional in `action.yml`:
+  v3 lexical / markdown runs refuse them. v2 runs still fail naming each
+  one when it is missing.
+- An embeddings response whose items carry no `index` keeps response order;
+  one where only some do is refused.
+- `src/main.mjs` is a thin entry over `src/run.mjs`, which takes the
+  lattice-server provisioner as a parameter.
+
 ## [2.2.1] - 2026-10-11
 
 Website chat fixes from the third UX review round of its metrale.ai

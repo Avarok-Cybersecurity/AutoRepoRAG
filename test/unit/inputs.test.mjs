@@ -8,83 +8,16 @@
 
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
-
 import { readInputs } from '../../src/inputs.mjs';
 import { inputEnvName } from '../../src/util.mjs';
-
-const ACTION_YML = join(dirname(fileURLToPath(import.meta.url)), '..', '..', 'action.yml');
-
-/** Parse the top-level `inputs:` block into { name: { required, default } }. */
-function parseActionInputs(text) {
-  const out = {};
-  let inInputs = false;
-  let current = null;
-  for (const line of text.split('\n')) {
-    if (/^\S/.test(line)) {
-      inInputs = line === 'inputs:';
-      current = null;
-      continue;
-    }
-    if (!inInputs) continue;
-    const name = /^ {2}([a-z0-9-]+):\s*$/.exec(line);
-    if (name) {
-      current = { required: undefined, default: undefined };
-      out[name[1]] = current;
-      continue;
-    }
-    const field = /^ {4}(required|default):\s*(.*)$/.exec(line);
-    if (field && current) {
-      const raw = field[2].trim();
-      current[field[1]] = field[1] === 'required' ? raw === 'true' : raw.replace(/^'(.*)'$/, '$1');
-    }
-  }
-  return out;
-}
-
-const ACTION_TEXT = readFileSync(ACTION_YML, 'utf8');
-const DECLARED = parseActionInputs(ACTION_TEXT);
-
-// The corpus-shaping set the v2 contract makes explicit (the plan's PCND list).
-const PCND = [
-  'embedding-endpoint', 'chunk-lines', 'chunk-overlap', 'max-chunk-bytes',
-  'vector-precision', 'lattice-version', 'collection', 'request-interval-ms',
-];
-
-// Caller values for every required input; mock mode needs no key or model.
-const REQUIRED_VALUES = {
-  paths: 'src/**',
-  collection: 'coderag',
-  'embedding-endpoint': 'https://openrouter.ai/api/v1',
-  'chunk-lines': '90',
-  'chunk-overlap': '15',
-  'max-chunk-bytes': '16384',
-  'request-interval-ms': '2500',
-  'vector-precision': '6',
-  'lattice-version': 'v0.3.3',
-  'generate-website-chat': 'false',
-};
-
-/** The env the composite step builds: action.yml defaults, then caller values. */
-function envOf(overrides = {}) {
-  const env = {};
-  for (const [name, spec] of Object.entries(DECLARED)) {
-    if (spec.default !== undefined) env[inputEnvName(name)] = spec.default;
-  }
-  for (const [name, value] of Object.entries({ 'mock-embeddings': 'true', ...REQUIRED_VALUES, ...overrides })) {
-    env[inputEnvName(name)] = value;
-  }
-  return env;
-}
+import { ACTION_TEXT, CONDITIONAL, DECLARED, envOf, PCND, REQUIRED_VALUES } from './action-env.mjs';
 
 describe('action.yml declares the v2 contract', () => {
   it('parses a non-trivial inputs block', () => {
     assert.ok(Object.keys(DECLARED).length >= 25, `only ${Object.keys(DECLARED).length} inputs parsed`);
   });
 
-  for (const name of PCND) {
+  for (const name of PCND.filter((n) => !CONDITIONAL.includes(n))) {
     it(`${name} is required with no default`, () => {
       assert.ok(DECLARED[name], `${name} missing from action.yml`);
       assert.equal(DECLARED[name].required, true);
@@ -92,9 +25,17 @@ describe('action.yml declares the v2 contract', () => {
     });
   }
 
-  it('every required input is exactly the set the tests supply', () => {
+  for (const name of CONDITIONAL) {
+    it(`${name} is declared conditional ('' default) and is in the PCND set`, () => {
+      assert.ok(PCND.includes(name));
+      assert.equal(DECLARED[name].required, false);
+      assert.equal(DECLARED[name].default, '');
+    });
+  }
+
+  it('every required input is exactly the set the tests supply, less the conditional ones', () => {
     const required = Object.keys(DECLARED).filter((n) => DECLARED[n].required).sort();
-    assert.deepEqual(required, Object.keys(REQUIRED_VALUES).sort());
+    assert.deepEqual(required, Object.keys(REQUIRED_VALUES).filter((n) => !CONDITIONAL.includes(n)).sort());
   });
 
   it('no required input carries a default, every optional one does', () => {

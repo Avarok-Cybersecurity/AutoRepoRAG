@@ -107,6 +107,13 @@ with `input "<name>" is required` when one is missing (GitHub does not enforce
 | `lattice-version` | Pinned lattice-db release tag (e.g. `v0.3.3`) whose `lattice-server` binary is downloaded and sha256-verified. |
 | `generate-website-chat` | `'true'` or `'false'`. `'true'` emits the [website chat library](#website-chat-library) into `<output-dir>/<website-chat-dir>`. |
 
+Every one of these is required in a v2 run. In a [v3 site run](#site-corpora-v3),
+`embedding-endpoint`, `vector-precision` and `request-interval-ms` apply only
+when `search-mode` has vectors, and `chunk-lines` / `chunk-overlap` only when
+`chunk-strategy` is `lines`; otherwise they are refused rather than ignored.
+That is why `action.yml` declares those five optional (`''`); the action still
+fails naming each one whenever the run needs it.
+
 **Conditionally required** — required when their condition holds, and
 rejected when it does not (a silently ignored input is a misconfiguration).
 
@@ -147,6 +154,8 @@ rejected when it does not (a silently ignored input is a misconfiguration).
 | `reused` | Chunks whose vectors were reused from `previous-corpus-url`. |
 | `sha256` | sha256 of the raw corpus file. |
 | `website-chat-dir` | Absolute path of the emitted website-chat bundle (empty when `generate-website-chat` is `'false'`). |
+| `snapshot-file` | Absolute path of the LatticeDB snapshot (`<output-name>.lattice`; empty unless `snapshot` is `'true'`). |
+| `edges` | Number of graph edges in the corpus (`0` in v2). |
 
 ## Scenarios
 
@@ -193,6 +202,125 @@ describe a different repository. The action refuses a `source-dir` that is
 absolute, escapes the workspace, is not the root of a git checkout (a plain
 subdirectory of your repo would silently inherit your repo's identity), has
 no commit, or has no `origin` remote it can parse.
+
+## Site corpora (v3)
+
+v3 builds the corpus behind a website's search: a plain directory of files
+(a site's built, gitignored `dist/`), split at markdown headings, searchable
+by BM25 with no embeddings at all, and published as a LatticeDB snapshot that
+loads in about 2 ms in a page, a service worker or a Cloudflare Worker.
+GeoHarness calls it
+this way. **v3 needs `lattice-version` ≥ `v0.5.0`.**
+
+v3 mode is on as soon as any v3 input is set; it then requires
+`chunk-strategy`, `search-mode` and `snapshot`. v2 runs (none of them set)
+behave exactly as before.
+
+| Input | Required | Meaning |
+|---|---|---|
+| `files-dir` | no | Workspace-relative directory of plain files to chunk instead of a git checkout. Git is never asked (it would hide a gitignored build output); `paths` / `exclude` apply relative to it. Exclusive with `source-dir`. |
+| `corpus-repo` | with `files-dir` | `owner/name` stamped on every chunk (there is no checkout to derive it from). |
+| `corpus-commit` | with `files-dir` | Full 40- or 64-hex commit id stamped on every chunk. |
+| `chunk-strategy` | in v3 | `lines` (v2 windows; needs `chunk-lines` / `chunk-overlap`) or `markdown`: split at ATX headings, `heading_path` per chunk (`["About","Contact"]`), long sections split between paragraphs, never inside fenced code, tables or front matter (one of those larger than `max-chunk-bytes` fails naming file, line and size), and a `next` edge between consecutive chunks of a file. Setext headings are not recognised. |
+| `search-mode` | in v3 | `lexical` (BM25 `text_index`, no `vectors`, **no embedding call**), `vector` (dense only) or `hybrid` (both). The collection records `embedding.model` whenever it has vectors. |
+| `vector-index` | with vectors | `hnsw` or `flat` (exact scan; no graph to load). |
+| `vector-storage` | with vectors | `f32`, `f16` or `int8`. The server rounds on write; the corpus carries the stored values, checked against the local ones within that rounding. |
+| `snapshot` | in v3 | `'true'` exports `<output-name>.lattice` (snapshot format 2: graph + BM25 postings + encoded vectors). Its embedded config must equal the jsonl header's, or the run fails. |
+| `max-snapshot-bytes` | with `snapshot: 'true'` | Fail when the snapshot is larger, naming both sizes (`26214400` = Cloudflare's 25 MiB per static asset). |
+| `payload-sidecar` | no | JSON object `{"<path>": {extra payload}}`, path relative to `files-dir` (or the source root). Merged into every chunk of that file. A path not in the corpus, or a field the action writes (`text`, `path`, `heading_path`, …), is an error. |
+| `edges-file` | no | JSON array of `{"from": {"path", "chunk"?}, "to": {"path", "chunk"?}, "relation", "weight"}`; `chunk` is the 0-based chunk index within the file (default 0). Resolved to point ids and written as lattice-jsonl edge lines; unknown paths, out-of-range chunks, self-loops and duplicates fail naming the entry. |
+
+`payload-sidecar` and `edges-file` paths may be absolute or workspace-relative.
+
+### Example: a website's search corpus
+
+```yaml
+- run: npm run build            # writes dist/**/index.html + a dist/**/index.md twin per page,
+                                # plus $RUNNER_TEMP/pages.json ({"about/index.md": {"url", "title", "lastmod"}})
+- name: Build site search corpus
+  id: corpus
+  uses: Avarok-Cybersecurity/AutoRepoRAG@v3
+  with:
+    files-dir: dist
+    corpus-repo: ${{ github.repository }}
+    corpus-commit: ${{ github.sha }}
+    paths: |
+      **/*.md
+    chunk-strategy: markdown
+    max-chunk-bytes: '2000'          # bge-base reads 512 tokens
+    search-mode: lexical
+    snapshot: 'true'
+    max-snapshot-bytes: '26214400'
+    payload-sidecar: ${{ runner.temp }}/pages.json
+    collection: site
+    output-dir: dist/_search
+    output-name: site
+    lattice-version: v0.5.0
+    generate-website-chat: 'false'
+```
+
+For `hybrid`, add `vector-index`, `vector-storage`, `vector-precision`,
+`request-interval-ms` and an embedding provider (below).
+
+### Embedding with Cloudflare Workers AI
+
+Workers AI serves an OpenAI-compatible API, so it is just another
+`embedding-endpoint`
+([docs](https://developers.cloudflare.com/workers-ai/configuration/open-ai-compatibility/)):
+
+```yaml
+    embedding-endpoint: https://api.cloudflare.com/client/v4/accounts/${{ vars.CF_ACCOUNT_ID }}/ai/v1
+    embedding-model: '@cf/baai/bge-base-en-v1.5'   # 768 dims, 512 input tokens
+    embedding-api-key: ${{ secrets.CLOUDFLARE_API_TOKEN }}   # sent as Authorization: Bearer
+```
+
+The action POSTs `{"model", "input": [...]}` to `<endpoint>/embeddings` and
+reads `data[].embedding` (ordered by `index` when the items carry one, in
+response order when none do). Cloudflare errors arrive as
+`{"success": false, "errors": [{"code", "message"}]}`; code 3040 (out of
+capacity, HTTP 429) is retried, code 3036 (daily free allocation used up, also
+HTTP 429) fails at once, and 408 timeouts are retried
+([error codes](https://developers.cloudflare.com/workers-ai/platform/errors/)).
+Model facts are from the
+[bge-base-en-v1.5 page](https://developers.cloudflare.com/workers-ai/models/bge-base-en-v1.5/).
+OpenRouter and any other OpenAI-compatible endpoint work as before. The
+Cloudflare path is tested against a loopback server speaking the documented
+shapes, not a live account.
+
+### What a v3 run writes
+
+`<name>.jsonl` (+ `.gz`), `<name>.lattice` when `snapshot` is `'true'`, and
+`<name>.meta.json`, which adds to the v2 fields: `chunk_strategy`,
+`search_mode`, `text_field` (`"text"`, or `null` without a text index),
+`vector_index`, `vector_storage` (`null` when lexical), `edges`, and
+`snapshot_bytes`, `snapshot_sha256`, `snapshot_format` (`2`; all three `null`
+when `snapshot` is `'false'`). A lexical corpus has `dim` 0 and `model` /
+`endpoint` `null`. Every chunk's payload also has `heading_path` (markdown)
+and the sidecar fields.
+
+The jsonl is byte-deterministic. The snapshot is not yet: lattice-db writes
+payload maps in hash order, so `snapshot_sha256` changes between identical
+runs while the content does not.
+
+Query the snapshot with LatticeDB ≥ v0.5.0 (`LatticeHost.importSnapshot`,
+then `route('POST', '/collections/<c>/points/query', …)`), with
+`{"query": {"text": "free plan limits", "model": "bm25"}, "limit": 10, "with_payload": true}`;
+see lattice-db's `docs/edge-search.md` for service workers and Workers.
+
+### Testing v3 locally
+
+Release binaries are Linux-only and v0.5.0 is not released yet, so the
+integration test runs the whole action through
+`test/integration/local-action.mjs` against a locally built server. Only that
+harness reads `LATTICE_SERVER_PATH`; the action never does.
+
+```sh
+CARGO_TARGET_DIR=$PWD/.lattice-target cargo build --release \
+  -p latticedb-server --bin lattice-server --manifest-path ../lattice-db/Cargo.toml
+LATTICE_SERVER_PATH=$PWD/.lattice-target/release/lattice-server \
+LATTICE_WASM_DIR=../lattice-db/packages/lattice-db-js/wasm \
+  node --test test/integration/site.test.mjs
+```
 
 ## Output format
 

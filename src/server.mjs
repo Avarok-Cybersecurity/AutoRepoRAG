@@ -75,18 +75,21 @@ function assertPortFree(port) {
 }
 
 /**
- * Provision a lattice-server: returns { pid, port, baseUrl, stop() }.
- * pidFile is written before readiness so the cleanup step can always find it.
+ * Provision a lattice-server: download + verify the pinned release binary,
+ * then start it. Returns { pid, port, baseUrl, stop() }.
  */
 export async function provisionServer({ version, port, workDir, pidFile }) {
+  const binary = await fetchServerBinary({ version, workDir });
+  return startServer({ binary, port, workDir, pidFile });
+}
+
+/** Download (or reuse the verified cache of) the release archive; returns the extracted binary path. */
+export async function fetchServerBinary({ version, workDir }) {
   const arch = detectArch();
   const asset = `lattice-db-linux-${arch}.tar.gz`;
   const checksums = `lattice-db-linux-${arch}.sha256`;
   const dir = join(workDir, 'lattice', version);
-  const dataDir = join(workDir, 'lattice-data');
   mkdirSync(dir, { recursive: true });
-  rmSync(dataDir, { recursive: true, force: true });
-  mkdirSync(dataDir, { recursive: true });
 
   // "latest" floats between runs, so only pinned tags are cache-eligible.
   let verified = false;
@@ -115,10 +118,21 @@ export async function provisionServer({ version, port, workDir, pidFile }) {
   if (!existsSync(binary)) {
     throw new Error(`archive ${asset} did not contain a lattice-server binary`);
   }
+  return binary;
+}
+
+/**
+ * Start `binary` on 127.0.0.1:port with a throwaway data dir. pidFile is
+ * written before readiness so the cleanup step can always find it.
+ */
+export async function startServer({ binary, port, workDir, pidFile }) {
+  const dataDir = join(workDir, 'lattice-data');
+  rmSync(dataDir, { recursive: true, force: true });
+  mkdirSync(dataDir, { recursive: true });
 
   await assertPortFree(port);
 
-  const logPath = join(dir, 'lattice-server.log');
+  const logPath = join(workDir, 'lattice-server.log');
   const logFd = openSync(logPath, 'a');
   const child = spawn(binary, [`127.0.0.1:${port}`], {
     env: { ...process.env, LATTICE_DATA_DIR: dataDir },

@@ -6,3 +6,4 @@ npm-debug.log*
 website-chat/e2e/.site/
 website-chat/test-results/
 website-chat/playwright-report/
+/.lattice-target/

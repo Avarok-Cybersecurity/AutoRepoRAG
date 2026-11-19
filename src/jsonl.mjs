@@ -47,8 +47,12 @@ function assertPoint(p, dim) {
  * Serialize a corpus to lattice-jsonl v1 text (trailing newline included).
  * points: [{id, vector, payload}] — sorted ascending by id here; vectors must
  * already be quantized (the same values were upserted to the server).
+ * v3 passes `config` (src/collection-v3.mjs headerConfig) and `edges`
+ * ([{from, to, rel, w}], already in (from, rel, to) order); a lexical
+ * collection has dim 0 and empty vectors, which lattice-db's export writes
+ * as "vector":[]. v2 omits both and gets collectionConfig + no edges.
  */
-export function serializeCorpus({ collectionName, dim, points }) {
+export function serializeCorpus({ collectionName, dim, points, config = null, edges = [] }) {
   const sorted = [...points].sort((a, b) => a.id - b.id);
   for (let i = 1; i < sorted.length; i++) {
     if (sorted[i].id === sorted[i - 1].id) {
@@ -58,9 +62,9 @@ export function serializeCorpus({ collectionName, dim, points }) {
   const lines = [];
   lines.push(
     stableStringify({
-      config: collectionConfig(collectionName, dim),
+      config: config ?? collectionConfig(collectionName, dim),
       dim,
-      edges: 0,
+      edges: edges.length,
       format: FORMAT,
       points: sorted.length,
       t: 'header',
@@ -76,6 +80,10 @@ export function serializeCorpus({ collectionName, dim, points }) {
     // payload numbers stay bare JSON.stringify (Rust parses those as integers).
     const vector = p.vector.map((x) => formatRustF64(x)).join(',');
     lines.push(`{"id":${p.id},"payload":${stableStringify(p.payload)},"t":"point","vector":[${vector}]}`);
+  }
+  for (const e of edges) {
+    // Keys from < rel < t < to < w. The weight is an f32 on the server.
+    lines.push(`{"from":${e.from},"rel":${JSON.stringify(e.rel)},"t":"edge","to":${e.to},"w":${formatRustF64(Math.fround(e.w))}}`);
   }
   return `${lines.join('\n')}\n`;
 }

@@ -1,0 +1,5 @@
+[
+  { "from": { "path": "index.md", "chunk": 2 }, "to": { "path": "docs/install/index.md" }, "relation": "links_to", "weight": 1 },
+  { "from": { "path": "index.md", "chunk": 2 }, "to": { "path": "pricing/index.md" }, "relation": "links_to", "weight": 1 },
+  { "from": { "path": "about/index.md", "chunk": 2 }, "to": { "path": "contact/index.md" }, "relation": "links_to", "weight": 0.5 }
+]
