@@ -13,7 +13,7 @@ import { resolveEdges } from './edges.mjs';
 import { serializeCorpus } from './jsonl.mjs';
 import { mergeSidecar } from './sidecar.mjs';
 import { exportVerifiedSnapshot, snapshotProbe } from './snapshot.mjs';
-import { log } from './util.mjs';
+import { log } from './log.mjs';
 import { loadAndVerifyV3 } from './verify-v3.mjs';
 
 /**

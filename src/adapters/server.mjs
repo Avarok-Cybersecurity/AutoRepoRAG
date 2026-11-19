@@ -19,7 +19,7 @@ import { connect } from 'node:net';
 import { join } from 'node:path';
 import { verifyChecksum } from './checksum.mjs';
 import { assertPinned, serverAsset } from '../pins.mjs';
-import { log } from '../util.mjs';
+import { log } from '../log.mjs';
 import { sleep } from './clock.mjs';
 import { LatticeClient } from './lattice-http.mjs';
 

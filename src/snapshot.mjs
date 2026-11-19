@@ -11,7 +11,8 @@
 // it carries names the collection), and points_count, the probe's ids and
 // scores, and a second export's bytes must all equal the first.
 
-import { log, stableStringify } from './util.mjs';
+import { log } from './log.mjs';
+import { stableStringify } from './util.mjs';
 
 export const SNAPSHOT_FORMAT = 2;
 const MIB = 1024 * 1024;

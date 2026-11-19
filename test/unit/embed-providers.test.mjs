@@ -15,6 +15,10 @@ import { createServer } from 'node:http';
 
 import { nodeIo } from '../../src/adapters/node-io.mjs';
 import { embedTexts as embedWith } from '../../src/embed.mjs';
+import { stdoutSink } from '../../src/adapters/stdout-log.mjs';
+import { installLogSink } from '../../src/log.mjs';
+
+installLogSink(stdoutSink);
 
 // The production node adapter (real fetch, real clock): the loopback server
 // above is the only double.

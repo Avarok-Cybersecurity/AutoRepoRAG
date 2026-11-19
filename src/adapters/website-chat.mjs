@@ -15,7 +15,8 @@ import { fileURLToPath } from 'node:url';
 
 import { verifyChecksum } from './checksum.mjs';
 import { assertPinned } from '../pins.mjs';
-import { log, sha256Hex, stableStringify } from '../util.mjs';
+import { log } from '../log.mjs';
+import { sha256Hex, stableStringify } from '../util.mjs';
 import { download, releaseUrl } from './server.mjs';
 
 export const LIBRARY_DIR = fileURLToPath(new URL('../../website-chat/', import.meta.url));

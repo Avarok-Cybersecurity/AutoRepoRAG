@@ -12,7 +12,8 @@
 import { join } from 'node:path';
 import { chunkMarkdown } from './chunk-markdown.mjs';
 import { isBinary, selectFiles } from './files.mjs';
-import { sha256Hex, warning } from './util.mjs';
+import { warning } from './log.mjs';
+import { sha256Hex } from './util.mjs';
 
 export const LANGUAGE_BY_EXT = {
   rs: 'rust',

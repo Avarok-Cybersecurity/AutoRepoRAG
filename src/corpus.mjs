@@ -7,7 +7,7 @@
 
 import { buildChunks, chunkerFor } from './chunk.mjs';
 import { serializeCorpus } from './jsonl.mjs';
-import { log, warning } from './util.mjs';
+import { log, warning } from './log.mjs';
 import { loadPreviousCorpus, resolveVectors } from './vectors.mjs';
 import { loadAndVerify } from './verify.mjs';
 

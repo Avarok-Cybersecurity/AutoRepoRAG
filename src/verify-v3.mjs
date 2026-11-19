@@ -13,7 +13,7 @@
 // identical-text twin) in the top 10 of a BM25 query of their own text.
 
 import { createBody } from './collection-v3.mjs';
-import { log } from './util.mjs';
+import { log } from './log.mjs';
 import { assertSelfHit, sampleIndexes, UPSERT_BATCH } from './verify.mjs';
 
 const SCROLL_PAGE = 256;

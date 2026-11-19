@@ -4,7 +4,7 @@
 // serde_json + sort_keys in lattice-core's interchange/jsonl.rs for ASCII
 // keys), sha256 helpers, glob matching (** / * / ? plus {a,b} expansion),
 // float quantization (N significant digits, then f32 via Math.fround),
-// gzip/gunzip, and the log helpers. Zero dependencies;
+// and gzip/gunzip. Zero dependencies (logging is src/log.mjs);
 // Node 18 and 20 compatible.
 
 import { createHash } from 'node:crypto';
@@ -195,15 +195,4 @@ export function gunzip(buf) {
 
 export function isGzipBytes(buf) {
   return buf.length >= 2 && buf[0] === 0x1f && buf[1] === 0x8b;
-}
-
-// ---------------------------------------------------------------------------
-// Logging (stdout; the runner reads ::warning:: lines)
-
-export function warning(msg) {
-  process.stdout.write(`::warning::${msg}\n`);
-}
-
-export function log(msg) {
-  process.stdout.write(`${msg}\n`);
 }

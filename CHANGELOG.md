@@ -96,6 +96,10 @@ byte-identical to 2.2.1's.
   outside Actions, wrap it in `scripts/run-as-action.mjs`, which fills every
   input you leave unset from `action.yml` as the runner does; the unit tests,
   `local-dry-run.sh` and the CI missing-input step use it.
+- **Logging goes through a facade** (`src/log.mjs`): `log` and `warning`
+  hand lines to the sink the entrypoint installs (stdout, via
+  `src/adapters/stdout-log.mjs`). Logging before a sink is installed
+  throws instead of dropping `::warning::` lines.
 
 ## [2.2.1] - 2026-10-11
 

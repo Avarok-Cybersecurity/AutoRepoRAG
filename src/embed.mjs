@@ -15,7 +15,8 @@
 // client's I/O arrives as a port: `http` (a fetch-compatible function) and
 // `clock` ({nowMs, sleep}), from src/adapters/node-io.mjs in production.
 
-import { sha256Bytes, log } from './util.mjs';
+import { log } from './log.mjs';
+import { sha256Bytes } from './util.mjs';
 
 // ---------------------------------------------------------------------------
 // Mock mode

@@ -22,6 +22,10 @@ import { join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 import { sha256Hex } from '../../src/util.mjs';
+import { stdoutSink } from '../../src/adapters/stdout-log.mjs';
+import { installLogSink } from '../../src/log.mjs';
+
+installLogSink(stdoutSink);
 import { fetchLatticeWasm } from '../../src/adapters/website-chat.mjs';
 
 const ROOT = fileURLToPath(new URL('../../', import.meta.url));

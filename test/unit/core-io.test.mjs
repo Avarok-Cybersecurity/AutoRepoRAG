@@ -11,8 +11,13 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 
 import { buildChunks, chunkerFor } from '../../src/chunk.mjs';
+import { installLogSink } from '../../src/log.mjs';
 import { serializeCorpus } from '../../src/jsonl.mjs';
 import { loadPreviousCorpus } from '../../src/vectors.mjs';
+
+// The log facade's sink is a test input like any other: the lines land here.
+const logged = [];
+installLogSink((text) => logged.push(text));
 
 /** An in-memory io.listFiles + io.fs over `files` ({path: string|Buffer}); `listed` may name absent paths. */
 function memoryFiles(files, listed = Object.keys(files)) {
@@ -48,6 +53,7 @@ describe('buildChunks through the io port', () => {
     const { chunks, skippedBinary } = buildChunks(chunkOpts(), io);
     assert.deepEqual(chunks.map((c) => c.path), ['a.md']);
     assert.deepEqual(skippedBinary, ['img.png']);
+    assert.ok(logged.includes('::warning::skipping gone.md: tracked but missing from the worktree\n'), logged.join(''));
   });
 
   it('applies the include and exclude globs to the listing', () => {
@@ -79,6 +85,7 @@ describe('loadPreviousCorpus through the io port', () => {
   it('discards a corpus another model produced', async () => {
     const io = memoryUrls({ 'u:corpus': corpus, 'u:meta': JSON.stringify({ model: 'other' }) });
     assert.equal(await loadPreviousCorpus('u:corpus', 'u:meta', 'm', null, io), null);
+    assert.ok(logged.includes('::warning::previous corpus discarded: model "other" != current "m"\n'), logged.join(''));
   });
 
   it('discards an unreadable corpus instead of failing the run', async () => {

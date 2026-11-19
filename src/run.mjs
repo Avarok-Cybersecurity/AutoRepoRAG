@@ -18,7 +18,8 @@ import { buildRepoCorpus } from './corpus.mjs';
 import { buildMeta } from './meta.mjs';
 import { resolveSourceRoot } from './paths.mjs';
 import { buildSiteCorpus } from './site-corpus.mjs';
-import { gzip9, log, sha256Hex } from './util.mjs';
+import { log } from './log.mjs';
+import { gzip9, sha256Hex } from './util.mjs';
 
 /** Resolve a JSON input file (absolute, or relative to the workspace) and parse it, naming the input on failure. */
 export function jsonFileReader(workspace, fs) {

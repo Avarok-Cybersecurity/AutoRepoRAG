@@ -4,7 +4,8 @@
 // upserted and the values exported are the same. Fetching the previous
 // corpus and embedding go through the injected io port (src/adapters/node-io.mjs).
 
-import { gunzip, isGzipBytes, log, quantizeVector, warning } from './util.mjs';
+import { log, warning } from './log.mjs';
+import { gunzip, isGzipBytes, quantizeVector } from './util.mjs';
 import { embedTexts, mockEmbedding } from './embed.mjs';
 import { parseCorpus } from './jsonl.mjs';
 

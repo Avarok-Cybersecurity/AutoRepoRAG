@@ -10,7 +10,11 @@
 
 import { resolve } from 'node:path';
 
+import { stdoutSink } from '../src/adapters/stdout-log.mjs';
 import { emitWebsiteChat, LIBRARY_DIR } from '../src/adapters/website-chat.mjs';
+import { installLogSink } from '../src/log.mjs';
+
+installLogSink(stdoutSink);
 
 const [latticeVersion, outDir, cacheDir] = process.argv.slice(2);
 if (!latticeVersion || !outDir || !cacheDir || process.argv.length !== 5) {

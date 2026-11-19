@@ -1,9 +1,10 @@
 // main.mjs — AutoRepoRAG entrypoint and composition root (the composite
 // action runs this).
 //
-// Contract: masks the embedding key, parses the run configuration from
-// process.env once (src/run-config.mjs: a missing input or GITHUB_WORKSPACE /
-// RUNNER_TEMP is an error, never a fallback), and runs the pipeline
+// Contract: installs the stdout log sink (src/log.mjs), masks the embedding
+// key, parses the run configuration from process.env once
+// (src/run-config.mjs: a missing input or GITHUB_WORKSPACE / RUNNER_TEMP is
+// an error, never a fallback), and runs the pipeline
 // (src/run.mjs) with the node io adapter (src/adapters/node-io.mjs) and the
 // pinned, sha256-verified lattice-server release (src/adapters/server.mjs).
 // Exits nonzero on any failure, after an ::error:: line naming it.
@@ -11,11 +12,14 @@
 import { addMask } from './adapters/github.mjs';
 import { nodeIo } from './adapters/node-io.mjs';
 import { provisionServer } from './adapters/server.mjs';
+import { stdoutSink } from './adapters/stdout-log.mjs';
+import { installLogSink } from './log.mjs';
 import { readRunConfig } from './run-config.mjs';
 import { runAction } from './run.mjs';
 import { getInput } from './action-inputs.mjs';
 
 async function main(env) {
+  installLogSink(stdoutSink);
   addMask(env, getInput(env, 'embedding-api-key')); // before any other output
   await runAction({ config: readRunConfig(env), io: nodeIo(env), provision: provisionServer });
 }

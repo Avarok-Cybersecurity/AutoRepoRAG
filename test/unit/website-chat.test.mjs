@@ -13,6 +13,10 @@ import { sha256Hex } from '../../src/util.mjs';
 import {
   buildManifest, emitWebsiteChat, LIBRARY_DIR, LIBRARY_FILES, libraryVersion, MANIFEST_NAME, WASM_CHECKSUMS, WASM_FILES,
 } from '../../src/adapters/website-chat.mjs';
+import { stdoutSink } from '../../src/adapters/stdout-log.mjs';
+import { installLogSink } from '../../src/log.mjs';
+
+installLogSink(stdoutSink);
 
 const SCRATCH = mkdtempSync(join(tmpdir(), 'autoreporag-chat-'));
 after(() => rmSync(SCRATCH, { recursive: true, force: true }));

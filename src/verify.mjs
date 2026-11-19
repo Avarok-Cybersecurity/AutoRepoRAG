@@ -5,7 +5,7 @@
 // scrolled vectors equal the local ones within 1e-6. sampleIndexes and
 // assertSelfHit are shared with the v3 verifier (src/verify-v3.mjs).
 
-import { log } from './util.mjs';
+import { log } from './log.mjs';
 
 export const UPSERT_BATCH = 256;
 const SELF_RETRIEVAL_SAMPLES = 5;
