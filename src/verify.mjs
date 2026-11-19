@@ -52,6 +52,7 @@ export function assertSelfHit(p, hits, accepted, acceptedText) {
   }
 }
 
+/** @param {import('./ports.mjs').LatticeStore} client */
 export async function loadAndVerify(client, collection, dim, points) {
   await client.createCollection(collection, dim);
   for (let i = 0; i < points.length; i += UPSERT_BATCH) {

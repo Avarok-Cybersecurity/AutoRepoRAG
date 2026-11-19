@@ -10,6 +10,7 @@
 
 import { sleep } from './clock.mjs';
 
+/** The HTTP implementation of the core's LatticeStore port. @implements {import('../ports.mjs').LatticeStore} */
 export class LatticeClient {
   constructor(baseUrl) {
     this.baseUrl = baseUrl.replace(/\/+$/, '');

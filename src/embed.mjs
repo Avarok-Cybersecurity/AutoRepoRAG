@@ -13,7 +13,7 @@
 // allocation used up, sent as HTTP 429) is not retried
 // (https://developers.cloudflare.com/workers-ai/platform/errors/). The live
 // client's I/O arrives as a port: `http` (a fetch-compatible function) and
-// `clock` ({nowMs, sleep}), from src/adapters/node-io.mjs in production.
+// `clock` ({nowMs, sleep}), parts of the src/ports.mjs Io port.
 
 import { log } from './log.mjs';
 import { sha256Bytes } from './util.mjs';

@@ -56,7 +56,7 @@ async function storedVectors(client, collection, points, storage) {
 }
 
 /**
- * @param {import('./adapters/lattice-http.mjs').LatticeClient} client
+ * @param {import('./ports.mjs').LatticeStore} client
  * @param {{collection: string, shape: import('./collection-v3.mjs').CollectionShape,
  *   points: Array<{id: number, vector: number[], payload: {text: string}}>,
  *   edges: Array<{from: number, to: number, rel: string, w: number}>, clock: {nowMs: () => number}}} opts

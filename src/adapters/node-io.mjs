@@ -17,21 +17,7 @@ import { LatticeClient } from './lattice-http.mjs';
 import { listFiles } from './list-files.mjs';
 import { emitWebsiteChat, LIBRARY_DIR } from './website-chat.mjs';
 
-/**
- * @typedef {{
- *   fs: {readText: (path: string) => string, readBytes: (path: string) => Buffer, exists: (path: string) => boolean,
- *     isDirectory: (path: string) => boolean, mkdirp: (path: string) => void,
- *     writeFile: (path: string, data: string|Buffer) => void},
- *   listFiles: (root: string, listing: 'git'|'walk') => string[],
- *   readUrl: (url: string) => Promise<Buffer>,
- *   http: typeof fetch,
- *   clock: {nowMs: () => number, isoNow: () => string, sleep: (ms: number) => Promise<void>},
- *   latticeClient: (baseUrl: string) => LatticeClient,
- *   gitContext: (workspace: string, sourceDir: string) => {root: string, commitSha: string, repo: string},
- *   emitWebsiteChat: (opts: {outDir: string, latticeVersion: string, cacheDir: string}) => Promise<{dir: string}>,
- *   github: {setOutput: (name: string, value: string) => void, writeSummary: (summary: object) => void},
- * }} Io
- */
+/** @typedef {import('../ports.mjs').Io} Io */
 
 /** A previous-corpus (or its meta.json) URL's bytes: file:// or http(s):// only. */
 async function readUrl(url) {

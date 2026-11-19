@@ -3,7 +3,8 @@
 //
 // Contract: both builders return a BuiltCorpus; the caller (src/run.mjs)
 // writes the files and the metadata. Nothing here writes to disk; reads and
-// network calls go through the injected io port (src/adapters/node-io.mjs).
+// network calls go through the injected io port (src/ports.mjs Io), and the
+// lattice-server through the injected LatticeStore port.
 
 import { buildChunks, chunkerFor } from './chunk.mjs';
 import { serializeCorpus } from './jsonl.mjs';
@@ -52,6 +53,8 @@ export async function embedChunks(chunks, inputs, io) {
 
 /**
  * v2: a repository (or source-dir checkout), line windows, vectors only.
+ * @param {{inputs: ReturnType<typeof import('./inputs.mjs').readInputs>, client: import('./ports.mjs').LatticeStore,
+ *   source: Source, io: import('./ports.mjs').Io}} deps
  * @returns {Promise<BuiltCorpus>}
  */
 export async function buildRepoCorpus({ inputs, client, source, io }) {

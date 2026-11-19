@@ -59,7 +59,7 @@ const PROBE_LIMIT = 10;
  * Resolves to the hits as [id, score] pairs.
  * @param {'lexical'|'vector'|'hybrid'} searchMode
  * @param {{vector: number[], payload: {text: string}}} point
- * @returns {(client: import('./adapters/lattice-http.mjs').LatticeClient, name: string) => Promise<Array<[number, number]>>}
+ * @returns {(client: import('./ports.mjs').LatticeStore, name: string) => Promise<Array<[number, number]>>}
  */
 export function snapshotProbe(searchMode, point) {
   const pairs = (hits) => (hits ?? []).map((h) => [h.id, h.score]);
@@ -86,9 +86,9 @@ export function assertRoundTrip({ pointsBefore, pointsAfter, hitsBefore, hitsAft
 }
 
 /**
- * @param {import('./adapters/lattice-http.mjs').LatticeClient} client
+ * @param {import('./ports.mjs').LatticeStore} client
  * @param {{collection: string, config: unknown, maxBytes: number,
- *   probe: (client: import('./adapters/lattice-http.mjs').LatticeClient, name: string) => Promise<Array<[number, number]>>,
+ *   probe: (client: import('./ports.mjs').LatticeStore, name: string) => Promise<Array<[number, number]>>,
  *   clock: {nowMs: () => number}}} opts
  * @returns {Promise<Buffer>}
  */

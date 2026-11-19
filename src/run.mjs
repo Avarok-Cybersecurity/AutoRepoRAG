@@ -1,7 +1,7 @@
 // run.mjs — the AutoRepoRAG pipeline, with its I/O and lattice-server injected.
 //
 // Contract: takes the parsed run configuration (src/run-config.mjs), the io
-// port (src/adapters/node-io.mjs in production) and a lattice-server
+// port (src/ports.mjs; src/adapters/node-io.mjs in production) and a lattice-server
 // provisioner. Resolves the source (a git checkout, or files-dir with
 // corpus-repo / corpus-commit), starts a lattice-server through `provision`,
 // builds the corpus there (src/corpus.mjs v2, src/site-corpus.mjs v3), writes
@@ -56,7 +56,7 @@ function resolveSource(inputs, workspace, io) {
 
 /**
  * @param {{config: ReturnType<typeof import('./run-config.mjs').readRunConfig>,
- *   io: import('./adapters/node-io.mjs').Io,
+ *   io: import('./ports.mjs').Io,
  *   provision: (opts: {version: string, port: number, workDir: string, pidFile: string}) =>
  *     Promise<{baseUrl: string, stop: () => Promise<void>}>}} deps
  */

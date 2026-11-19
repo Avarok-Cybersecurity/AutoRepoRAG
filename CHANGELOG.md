@@ -100,6 +100,9 @@ byte-identical to 2.2.1's.
   hand lines to the sink the entrypoint installs (stdout, via
   `src/adapters/stdout-log.mjs`). Logging before a sink is installed
   throws instead of dropping `::warning::` lines.
+- The core's ports are declared in `src/ports.mjs` (`Io`, `LatticeStore`,
+  `Clock`). The core names those types and never the adapters
+  that implement them.
 
 ## [2.2.1] - 2026-10-11
 

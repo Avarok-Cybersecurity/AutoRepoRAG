@@ -2,7 +2,7 @@
 // chunk_hash (guarded by model + dim, from its meta.json), embed the rest
 // (mock or live), then quantize (significant digits + fround) so the values
 // upserted and the values exported are the same. Fetching the previous
-// corpus and embedding go through the injected io port (src/adapters/node-io.mjs).
+// corpus and embedding go through the injected io port (src/ports.mjs Io).
 
 import { log, warning } from './log.mjs';
 import { gunzip, isGzipBytes, quantizeVector } from './util.mjs';

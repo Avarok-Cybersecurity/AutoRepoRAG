@@ -18,8 +18,8 @@ import { loadAndVerifyV3 } from './verify-v3.mjs';
 
 /**
  * @param {{inputs: ReturnType<typeof import('./inputs.mjs').readInputs>,
- *   client: import('./adapters/lattice-http.mjs').LatticeClient, source: import('./corpus.mjs').Source,
- *   readJson: (path: string, inputName: string) => unknown, io: import('./adapters/node-io.mjs').Io}} opts
+ *   client: import('./ports.mjs').LatticeStore, source: import('./corpus.mjs').Source,
+ *   readJson: (path: string, inputName: string) => unknown, io: import('./ports.mjs').Io}} opts
  * @returns {Promise<import('./corpus.mjs').BuiltCorpus>}
  */
 export async function buildSiteCorpus({ inputs, client, source, readJson, io }) {
