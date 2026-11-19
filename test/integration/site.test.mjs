@@ -1,17 +1,16 @@
 // site.test.mjs — the whole action in v3 site mode, end to end.
 //
-// Runs src/run.mjs (through local-action.mjs) on fixtures/site: files-dir
+// Runs the action's entrypoint (src/main.mjs) on fixtures/site: files-dir
 // over a dist/ that is gitignored in its workspace (what GeoHarness hands
 // over), markdown chunking, lexical search, the payload sidecar, an edges
-// file, and a snapshot. Then loads that snapshot into the LatticeDB wasm
-// build, as a visitor's browser or a Worker would, and checks that a BM25
-// query ranks the right page first. Also: a hybrid/int8 mock run, and the
-// max-snapshot-bytes guard failing with both sizes named.
-//
-// Needs (harness-only env; production never reads them):
-//   LATTICE_SERVER_PATH  a lattice-server >= v0.5.0 binary
-//   LATTICE_WASM_DIR     a dir holding that release's lattice_server.js + lattice_server_bg.wasm
-// Run: node --test test/integration/
+// file, and a snapshot, with the lattice-server v0.5.0 release the action
+// downloads and sha256-verifies itself (linux or macOS). Then loads that
+// snapshot into the v0.5.0 wasm build (fetched and verified by the action's
+// own website-chat downloader), as a visitor's browser or a Worker would,
+// and checks that a BM25 query ranks the right page first. Also: a
+// hybrid/int8 mock run, and the max-snapshot-bytes guard naming both sizes.
+// Needs network access to the GitHub release. Run:
+//   node --test test/integration/site.test.mjs
 
 import { before, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
@@ -22,9 +21,10 @@ import { join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 import { sha256Hex } from '../../src/util.mjs';
+import { fetchLatticeWasm } from '../../src/website-chat.mjs';
 
 const ROOT = fileURLToPath(new URL('../../', import.meta.url));
-const { LATTICE_SERVER_PATH, LATTICE_WASM_DIR } = process.env;
+const LATTICE_VERSION = 'v0.5.0';
 const SHA = 'c0ffee'.padEnd(40, '0');
 
 let ws;
@@ -38,15 +38,16 @@ function runSite(name, overrides = {}) {
     GZIP: 'true', EMBEDDING_ENDPOINT: '', EMBEDDING_MODEL: '', EMBEDDING_API_KEY: '', MOCK_EMBEDDINGS: 'false',
     MOCK_DIM: '64', CHUNK_LINES: '', CHUNK_OVERLAP: '', MAX_CHUNK_BYTES: '2000', BATCH_SIZE: '32',
     REQUEST_INTERVAL_MS: '', MAX_RETRIES: '3', MAX_CHUNKS: '0', VECTOR_PRECISION: '', PREVIOUS_CORPUS_URL: '',
-    PREVIOUS_CORPUS_META_URL: '', LATTICE_VERSION: 'v0.5.0', LATTICE_PORT: String(port++), GENERATE_WEBSITE_CHAT: 'false',
+    PREVIOUS_CORPUS_META_URL: '', LATTICE_VERSION, LATTICE_PORT: String(port++), GENERATE_WEBSITE_CHAT: 'false',
     WEBSITE_CHAT_DIR: '', FILES_DIR: 'dist', CORPUS_REPO: 'acme/site', CORPUS_COMMIT: SHA, CHUNK_STRATEGY: 'markdown',
     PAYLOAD_SIDECAR: 'sidecar.json', EDGES_FILE: 'edges.json', SEARCH_MODE: 'lexical', VECTOR_INDEX: '',
     VECTOR_STORAGE: '', SNAPSHOT: 'true', MAX_SNAPSHOT_BYTES: String(25 * 1024 * 1024), ...overrides,
   };
-  const env = { PATH: process.env.PATH, HOME: process.env.HOME, LATTICE_SERVER_PATH, GITHUB_WORKSPACE: ws, RUNNER_TEMP: join(ws, `tmp-${name}`) };
+  // One RUNNER_TEMP for every run: the verified release download is cached there.
+  const env = { PATH: process.env.PATH, HOME: process.env.HOME, GITHUB_WORKSPACE: ws, RUNNER_TEMP: join(ws, 'tmp') };
   for (const [k, v] of Object.entries(inputs)) env[`INPUT_${k}`] = v;
   const started = Date.now();
-  const r = spawnSync(process.execPath, [join(ROOT, 'test/integration/local-action.mjs')], { env, encoding: 'utf8' });
+  const r = spawnSync(process.execPath, [join(ROOT, 'src/main.mjs')], { env, encoding: 'utf8' });
   const out = `${r.stdout}${r.stderr}`;
   const metaPath = join(outDir, 'site.meta.json');
   const meta = r.status === 0 ? JSON.parse(readFileSync(metaPath, 'utf8')) : null;
@@ -54,8 +55,9 @@ function runSite(name, overrides = {}) {
 }
 
 async function wasmDb() {
-  const mod = await import(pathToFileURL(join(LATTICE_WASM_DIR, 'lattice_server.js')).href);
-  await mod.default({ module_or_path: readFileSync(join(LATTICE_WASM_DIR, 'lattice_server_bg.wasm')) });
+  const dir = await fetchLatticeWasm(LATTICE_VERSION, join(ws, 'tmp', 'wasm-cache'));
+  const mod = await import(pathToFileURL(join(dir, 'lattice_server.js')).href);
+  await mod.default({ module_or_path: readFileSync(join(dir, 'lattice_server_bg.wasm')) });
   return new mod.LatticeDB({ readOnly: true });
 }
 
@@ -67,12 +69,10 @@ async function bm25(db, collection, text, limit = 3) {
 }
 
 before(() => {
-  assert.ok(LATTICE_SERVER_PATH && existsSync(LATTICE_SERVER_PATH), 'LATTICE_SERVER_PATH must name a lattice-server >= v0.5.0');
-  assert.ok(LATTICE_WASM_DIR && existsSync(join(LATTICE_WASM_DIR, 'lattice_server_bg.wasm')), 'LATTICE_WASM_DIR must hold the wasm pair');
   ws = mkdtempSync(join(tmpdir(), 'autoreporag-site-'));
   cpSync(join(ROOT, 'fixtures/site'), ws, { recursive: true });
   // dist/ is gitignored, as a site build's output is: git would list nothing.
-  writeFileSync(join(ws, '.gitignore'), 'dist/\ntmp-*/\nout-*/\n');
+  writeFileSync(join(ws, '.gitignore'), 'dist/\ntmp/\nout-*/\n');
   execFileSync('git', ['init', '-q', ws]);
   assert.equal(execFileSync('git', ['-C', ws, 'ls-files', '--others', '--exclude-standard', 'dist']).toString(), '');
 });

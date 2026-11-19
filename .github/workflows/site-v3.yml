@@ -1,0 +1,61 @@
+name: Site corpus (v3)
+
+# Called by ci.yml (and so by the release gate). v3 builds a website's search
+# corpus: files-dir, markdown chunking, BM25, a LatticeDB snapshot.
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+env:
+  # v3 needs lattice-db >= v0.5.0; its assets are pinned in src/pins.mjs.
+  CORPUS_V3_LATTICE_VERSION: v0.5.0
+
+jobs:
+  site:
+    name: files-dir + markdown + lexical + snapshot
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # The composite action itself, as GeoHarness calls it: lexical, no
+      # embedding inputs at all.
+      - name: Run action (files-dir + markdown + lexical + snapshot)
+        id: site
+        uses: ./
+        with:
+          files-dir: fixtures/site/dist
+          corpus-repo: ${{ github.repository }}
+          corpus-commit: ${{ github.sha }}
+          paths: |
+            **/*.md
+          chunk-strategy: markdown
+          max-chunk-bytes: '2000'
+          search-mode: lexical
+          snapshot: 'true'
+          max-snapshot-bytes: '26214400'
+          payload-sidecar: fixtures/site/sidecar.json
+          edges-file: fixtures/site/edges.json
+          collection: site
+          output-dir: site-out
+          output-name: site
+          lattice-version: ${{ env.CORPUS_V3_LATTICE_VERSION }}
+          generate-website-chat: 'false'
+
+      - name: Assert the snapshot and the v3 outputs
+        env:
+          SNAPSHOT_FILE: ${{ steps.site.outputs.snapshot-file }}
+          METADATA_FILE: ${{ steps.site.outputs.metadata-file }}
+          EDGES: ${{ steps.site.outputs.edges }}
+          DIM: ${{ steps.site.outputs.dim }}
+        run: |
+          set -euo pipefail
+          [ -s "$SNAPSHOT_FILE" ]
+          [ "$DIM" = 0 ]
+          [ "$EDGES" -gt 0 ]
+          node -e 'const m = require(process.argv[1]); if (m.search_mode !== "lexical" || m.snapshot_format !== 2) process.exit(1)' "$METADATA_FILE"
+
+      - name: Integration test (wasm load + BM25 ranking, determinism, hybrid int8, size guard)
+        run: node --test test/integration/site.test.mjs

@@ -85,8 +85,11 @@ publish:
     generate-website-chat: 'false'
 ```
 
-Runs on `ubuntu-latest` and `ubuntu-24.04-arm` (Linux x64/arm64 runners; the
-pinned `lattice-server` release binaries target Linux).
+Runs on Linux and macOS runners, x64 or arm64 (`ubuntu-latest`,
+`ubuntu-24.04-arm`, `macos-latest`, …): the `lattice-server` release binary
+for the runner is downloaded and verified against the release's checksum
+file, and for the versions listed in `src/pins.mjs` (v0.5.0 today) also
+against the sha256 this action pins.
 
 ## Inputs
 
@@ -302,25 +305,17 @@ The jsonl is byte-deterministic. The snapshot is not yet: lattice-db writes
 payload maps in hash order, so `snapshot_sha256` changes between identical
 runs while the content does not.
 
-Query the snapshot with LatticeDB ≥ v0.5.0 (`LatticeHost.importSnapshot`,
+Query the snapshot with LatticeDB ≥ v0.5.0 (npm `lattice-db@0.5.0`) (`LatticeHost.importSnapshot`,
 then `route('POST', '/collections/<c>/points/query', …)`), with
 `{"query": {"text": "free plan limits", "model": "bm25"}, "limit": 10, "with_payload": true}`;
 see lattice-db's `docs/edge-search.md` for service workers and Workers.
 
 ### Testing v3 locally
 
-Release binaries are Linux-only and v0.5.0 is not released yet, so the
-integration test runs the whole action through
-`test/integration/local-action.mjs` against a locally built server. Only that
-harness reads `LATTICE_SERVER_PATH`; the action never does.
-
-```sh
-CARGO_TARGET_DIR=$PWD/.lattice-target cargo build --release \
-  -p latticedb-server --bin lattice-server --manifest-path ../lattice-db/Cargo.toml
-LATTICE_SERVER_PATH=$PWD/.lattice-target/release/lattice-server \
-LATTICE_WASM_DIR=../lattice-db/packages/lattice-db-js/wasm \
-  node --test test/integration/site.test.mjs
-```
+`node --test test/integration/site.test.mjs` runs the whole action on
+`fixtures/site` with the v0.5.0 release (downloaded and sha256-verified, on
+Linux or macOS), loads the snapshot into the v0.5.0 wasm build and checks
+BM25 ranking. It needs network access to the GitHub release.
 
 ## Output format
 

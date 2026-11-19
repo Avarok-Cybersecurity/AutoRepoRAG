@@ -42,8 +42,14 @@ byte-identical to 2.2.1's.
 - **Cloudflare Workers AI** via its OpenAI-compatible endpoint, documented
   and tested: the `{success: false, errors}` envelope is read, 3036 (daily
   allocation) is not retried, 3040 (capacity) and 408 are.
-- `test/integration/site.test.mjs`: the whole action on `fixtures/site`, the
-  snapshot loaded in the wasm build, BM25 ranking checked.
+- **lattice-db v0.5.0 assets are pinned** (`src/pins.mjs`): the server
+  archives for linux/macOS x64/arm64 and the wasm pair must match both the
+  release's checksum file and the sha256 pinned here.
+- **macOS runners**: the `lattice-db-macos-{x64,arm64}` release binaries are
+  used there.
+- `test/integration/site.test.mjs`: the whole action on `fixtures/site` with
+  the v0.5.0 release, the snapshot loaded in the v0.5.0 wasm build, BM25
+  ranking checked; CI job `e2e-site-v3` (`.github/workflows/site-v3.yml`, called by `ci.yml`) also runs the composite action.
 
 ### Changed
 - `embedding-endpoint`, `vector-precision`, `request-interval-ms`,
@@ -53,7 +59,8 @@ byte-identical to 2.2.1's.
 - An embeddings response whose items carry no `index` keeps response order;
   one where only some do is refused.
 - `src/main.mjs` is a thin entry over `src/run.mjs`, which takes the
-  lattice-server provisioner as a parameter.
+  lattice-server provisioner as a parameter; `src/server.mjs` splits
+  download (`fetchServerBinary`) from start (`startServer`).
 
 ## [2.2.1] - 2026-10-11
 

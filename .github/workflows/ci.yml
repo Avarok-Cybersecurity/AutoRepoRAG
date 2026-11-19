@@ -36,11 +36,6 @@ env:
   # External source for the source-dir job: lattice-db v0.3.3, pinned by sha.
   LATTICE_DB_REPO: Avarok-Cybersecurity/lattice-db
   LATTICE_DB_SHA: a1a407515e8765ce93db9870ee4c076fc3de459a
-  # v3 (site corpora) needs lattice-db >= v0.5.0, which is not released yet:
-  # the site job builds lattice-server and the wasm from this pinned commit of
-  # lattice-db PR #29. Once v0.5.0 is released, switch the job to the
-  # release's sha256-verified assets.
-  LATTICE_DB_V3_SHA: 9ab1e8dc59e99bd7655d68489fa53c852be398fd
 
 jobs:
   lint:
@@ -356,35 +351,9 @@ jobs:
             "$LATTICE_DB_REPO" "$LATTICE_DB_SHA" .sources/lattice-db
 
   e2e-site-v3:
-    name: E2E site corpus (v3, lattice-db built from source)
+    name: E2E site corpus (v3)
     if: github.event_name != 'schedule'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-
-      - name: Check out lattice-db at the pinned v3 sha
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          repository: ${{ env.LATTICE_DB_REPO }}
-          ref: ${{ env.LATTICE_DB_V3_SHA }}
-          path: .sources/lattice-db-v3
-          persist-credentials: false
-
-      - name: Build lattice-server and the wasm pair
-        run: |
-          set -euo pipefail
-          rustup target add wasm32-unknown-unknown
-          cargo install wasm-pack --locked
-          cargo build --release -p latticedb-server --bin lattice-server \
-            --manifest-path .sources/lattice-db-v3/Cargo.toml
-          wasm-pack build .sources/lattice-db-v3/crates/lattice-server --target web \
-            --out-dir "$GITHUB_WORKSPACE/.sources/lattice-wasm" --no-default-features --features wasm
-
-      - name: Integration test (files-dir + markdown + lexical + snapshot, wasm load, hybrid, size guard)
-        env:
-          LATTICE_SERVER_PATH: ${{ github.workspace }}/.sources/lattice-db-v3/target/release/lattice-server
-          LATTICE_WASM_DIR: ${{ github.workspace }}/.sources/lattice-wasm
-        run: node --test test/integration/site.test.mjs
+    uses: ./.github/workflows/site-v3.yml
 
   website-chat:
     name: Website chat (build, unit, browser)
