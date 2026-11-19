@@ -20,7 +20,6 @@
 // Nothing here swallows a removal error.
 // =============================================================================
 
-import { corpusFileName, metaFileName, parseCorpusFileName, parseMetaFileName, parsePartialFileName, partialFileName } from '../core/cache-names.js';
 
 // Backoff between attempts while a released lock settles (~0.8 s in all).
 const LOCK_SETTLE_DELAYS_MS = [10, 25, 50, 100, 200, 400];
@@ -35,11 +34,13 @@ export class CacheCleanupError extends Error {
 
 /**
  * @param {string} keyPrefix  config.storage.keyPrefix
+ * @param {import('../core/cache-names.js').CacheLayout} layout  which files (core/cache-names.js)
  * @param {{getDirectory: null | (() => Promise<FileSystemDirectoryHandle>), sleep: (ms: number) => Promise<void>}} io
  *   getDirectory is null when the browser has no OPFS (some private-browsing
  *   modes); every call then degrades to "no cache". sleep paces the retries.
  */
-export function createOpfsCache(keyPrefix, io) {
+export function createOpfsCache(keyPrefix, layout, io) {
+  const { corpusFileName, metaFileName, parseCorpusFileName, parseMetaFileName, parsePartialFileName, partialFileName } = layout;
   /** Run `op`, retrying only the lock-release lag; throws a CacheCleanupError otherwise. */
   async function settled(what, op) {
     for (let attempt = 0; ; attempt++) {

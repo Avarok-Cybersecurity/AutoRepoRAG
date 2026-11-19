@@ -6,6 +6,7 @@ import { COPY_EN } from '../../src/copy-en.js';
 
 export function validConfig() {
   return {
+    mode: 'answer',
     mount: { nodeType: 1, appendChild() {} },
     assets: { cssHref: '/repo-chat/repo-chat.css' },
     wasm: { jsUrl: '/repo-chat/lattice_server.js', binUrl: '/repo-chat/lattice_server_bg.wasm' },
@@ -44,5 +45,25 @@ export function validConfig() {
       fontSans: 'var(--font-sans)',
       shadowLg: 'var(--shadow-lg)',
     },
+  };
+}
+
+/** A complete, valid search-mode config: the shared keys plus corpora of snapshots and `search`. */
+export function validSearchConfig() {
+  const { mount, assets, wasm, storage, copy, theme } = validConfig();
+  return {
+    mode: 'search',
+    mount,
+    assets,
+    wasm,
+    corpora: [
+      { id: 'site', snapshotUrl: 'https://example.test/site.lattice', metaUrl: 'https://example.test/site.meta.json' },
+      { id: 'blog', snapshotUrl: 'https://example.test/blog.lattice', metaUrl: 'https://example.test/blog.meta.json' },
+    ],
+    search: { topK: 8, snippetChars: 160, embedder: null },
+    storage,
+    copy,
+    brand: { motifSvg: null },
+    theme,
   };
 }

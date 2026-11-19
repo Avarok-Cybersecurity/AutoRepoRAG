@@ -465,6 +465,29 @@ button.addEventListener('click', async () => {
   [`website-chat/README.md`](website-chat/README.md) for the full config
   reference, the theme keys and how to build and test the library.
 
+### Search mode (no API key, library 3.0)
+
+`mode: 'search'` turns the chat into site search over v3 snapshots: BM25 in
+the visitor's browser, no key and no model call, results listed with their
+`title`, `url` and `heading_path`. With `search.embedder` set (a site-owned
+function whose model and dim match the corpus), vector and hybrid corpora are
+queried too (BM25 + dense, RRF). It needs the wasm of lattice-db ≥ v0.5.0,
+so emit the bundle with `lattice-version: v0.5.0` or later. Every corpus
+must have been built with `snapshot: 'true'`. Full config:
+[website-chat/README.md](website-chat/README.md).
+
+```js
+openRepoChat({ mode: 'search', mount: document.body,
+  assets: { cssHref: '/repo-chat/repo-chat.css' },
+  wasm: { jsUrl: '/repo-chat/lattice_server.js', binUrl: '/repo-chat/lattice_server_bg.wasm' }, // lattice-db >= v0.5.0
+  corpora: [{ id: 'site', snapshotUrl: '/rag/site.lattice', metaUrl: '/rag/site.meta.json' }],
+  search: { topK: 8, snippetChars: 160, embedder: null },
+  storage: { keyPrefix: 'mysite-' }, copy: COPY_EN, brand: { motifSvg: null }, theme });
+```
+
+Library 3.0 makes `mode` a required key: existing answer-mode configs add
+`mode: 'answer'`.
+
 ## Rate limits & incremental refresh
 
 A first full run on a mid-sized repo is a few hundred embedding requests

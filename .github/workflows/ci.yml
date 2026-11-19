@@ -399,6 +399,11 @@ jobs:
       - name: Emit the bundle the browser suite serves
         run: node ../scripts/emit-website-chat.mjs "$CORPUS_LATTICE_VERSION" e2e/.site/repo-chat "$RUNNER_TEMP/lattice-wasm"
 
+      # Search mode needs lattice-db >= v0.5.0 (importSnapshot, route); its
+      # spec serves this second emitted copy at /repo-chat-search/.
+      - name: Emit the search-mode bundle (lattice-db v0.5.0)
+        run: node ../scripts/emit-website-chat.mjs v0.5.0 e2e/.site/repo-chat-search "$RUNNER_TEMP/lattice-wasm"
+
       - name: Install Chromium and WebKit for Playwright
         run: npx playwright install --with-deps chromium webkit
 

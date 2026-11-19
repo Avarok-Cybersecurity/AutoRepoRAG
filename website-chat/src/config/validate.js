@@ -2,7 +2,8 @@
 // =============================================================================
 // validate.js — the openRepoChat(config) contract. Pure: no DOM, no network.
 //
-// Every key is required; there are no defaults. One call reports EVERY
+// Every key is required; there are no defaults. `mode` decides which keys
+// exist: answer mode has provider/retrieval, search mode has search. One call reports EVERY
 // problem at once (a missing parent lists each of its missing leaves), so a
 // site author fixes the config in one pass instead of one error per reload.
 // Unknown keys are refused too: a typo would otherwise be silently ignored.
@@ -56,48 +57,90 @@ const fn = (v) => (typeof v === 'function' ? null : 'must be a function');
 const leaf = (check) => ({ kind: 'leaf', check });
 const optional = (check) => ({ kind: 'leaf', check, optional: true });
 const object = (fields) => ({ kind: 'object', fields });
+// A key whose shape depends on the mode: not judged while the mode is unknown.
+const SKIP = { kind: 'skip' };
 
-const SPEC = object({
+const corpusId = leaf((v) => (typeof v === 'string' && CORPUS_ID.test(v) ? null : 'must match /^[a-z0-9][a-z0-9_-]{0,63}$/'));
+const corpora = (urlKey) => ({ kind: 'corpora', shape: `{ id, ${urlKey}, metaUrl }`, entry: object({ id: corpusId, [urlKey]: leaf(nonEmptyString), metaUrl: leaf(nonEmptyString) }) });
+
+const embedder = {
+  kind: 'nullable',
+  what: 'null or { model, dim, embed }',
+  spec: object({ model: leaf(nonEmptyString), dim: leaf(integerAtLeast(1)), embed: leaf(fn) }),
+};
+
+const MODES = ['answer', 'search'];
+const modeLeaf = {
+  kind: 'leaf',
+  check: (v) => (MODES.includes(v) ? null : `must be one of ${MODES.map((m) => `'${m}'`).join(', ')}`),
+  missing: `missing (one of ${MODES.map((m) => `'${m}'`).join(', ')})`,
+};
+
+/** Keys every mode has, with one shape. */
+const SHARED = {
+  mode: modeLeaf,
   mount: leaf(element),
   assets: object({ cssHref: leaf(nonEmptyString) }),
   wasm: object({ jsUrl: leaf(nonEmptyString), binUrl: leaf(nonEmptyString) }),
-  corpora: { kind: 'corpora' },
-  provider: object({
-    apiUrl: leaf(httpUrl),
-    rerankModel: leaf(nonEmptyString),
-    chatModel: leaf(nonEmptyString),
-    appTitle: leaf(nonEmptyString),
-    referer: leaf(httpUrl),
-    maxAttempts: leaf(integerAtLeast(1)),
-    retryBaseMs: leaf(integerAtLeast(0)),
-  }),
-  retrieval: object({
-    topK: leaf(integerAtLeast(1)),
-    rerankMultiplier: leaf(integerAtLeast(1)),
-    upsertBatch: leaf(integerAtLeast(1)),
-  }),
   storage: object({ keyPrefix: leaf(keyPrefix) }),
   copy: { kind: 'copy' },
-  brand: object({ productName: leaf(nonEmptyString), motifSvg: leaf(svgOrNull) }),
   theme: object(Object.fromEntries(THEME_KEYS.map((k) => [k, leaf(nonEmptyString)]))),
   onReady: optional(fn),
   onClose: optional(fn),
-});
+};
+
+const SPECS = {
+  answer: object({
+    ...SHARED,
+    corpora: corpora('gzUrl'),
+    provider: object({
+      apiUrl: leaf(httpUrl),
+      rerankModel: leaf(nonEmptyString),
+      chatModel: leaf(nonEmptyString),
+      appTitle: leaf(nonEmptyString),
+      referer: leaf(httpUrl),
+      maxAttempts: leaf(integerAtLeast(1)),
+      retryBaseMs: leaf(integerAtLeast(0)),
+    }),
+    retrieval: object({
+      topK: leaf(integerAtLeast(1)),
+      rerankMultiplier: leaf(integerAtLeast(1)),
+      upsertBatch: leaf(integerAtLeast(1)),
+    }),
+    brand: object({ productName: leaf(nonEmptyString), motifSvg: leaf(svgOrNull) }),
+  }),
+  search: object({
+    ...SHARED,
+    corpora: corpora('snapshotUrl'),
+    search: object({ topK: leaf(integerAtLeast(1)), snippetChars: leaf(integerAtLeast(40)), embedder }),
+    brand: object({ motifSvg: leaf(svgOrNull) }),
+  }),
+};
+
+// The mode is missing or unknown: report it and the shared keys, nothing more.
+const MODELESS = object({ ...SHARED, corpora: SKIP, provider: SKIP, retrieval: SKIP, search: SKIP, brand: SKIP });
 
 // --- walkers ----------------------------------------------------------------
 
 function walk(spec, value, path, problems) {
+  if (spec.kind === 'skip') return;
   if (spec.kind === 'leaf') {
     if (value === undefined) {
-      if (!spec.optional) problems.push(`${path}: missing`);
+      if (!spec.optional) problems.push(`${path}: ${spec.missing ?? 'missing'}`);
       return;
     }
     const why = spec.check(value);
     if (why) problems.push(`${path}: ${why}`);
     return;
   }
-  if (spec.kind === 'corpora') return checkCorpora(value, path, problems);
+  if (spec.kind === 'corpora') return checkCorpora(spec, value, path, problems);
   if (spec.kind === 'copy') return checkCopy(COPY_EN, value, path, problems);
+  if (spec.kind === 'nullable') {
+    if (value === undefined) problems.push(`${path}: missing (${spec.what})`);
+    else if (value !== null && !isPlainObject(value)) problems.push(`${path}: must be ${spec.what}`);
+    else if (value !== null) walk(spec.spec, value, path, problems);
+    return;
+  }
 
   if (value !== undefined && !isPlainObject(value)) {
     problems.push(`${path}: must be an object`);
@@ -112,19 +155,19 @@ function walk(spec, value, path, problems) {
   }
 }
 
-function checkCorpora(value, path, problems) {
+function checkCorpora(spec, value, path, problems) {
   if (value === undefined) {
-    problems.push(`${path}: missing (a non-empty array of { id, gzUrl, metaUrl })`);
+    problems.push(`${path}: missing (a non-empty array of ${spec.shape})`);
     return;
   }
   if (!Array.isArray(value) || value.length === 0) {
-    problems.push(`${path}: must be a non-empty array of { id, gzUrl, metaUrl }`);
+    problems.push(`${path}: must be a non-empty array of ${spec.shape}`);
     return;
   }
   const seen = new Set();
   value.forEach((corpus, i) => {
     const at = `${path}[${i}]`;
-    walk(object({ id: leaf((v) => (typeof v === 'string' && CORPUS_ID.test(v) ? null : 'must match /^[a-z0-9][a-z0-9_-]{0,63}$/')), gzUrl: leaf(nonEmptyString), metaUrl: leaf(nonEmptyString) }), corpus, at, problems);
+    walk(spec.entry, corpus, at, problems);
     const id = isPlainObject(corpus) ? corpus.id : undefined;
     if (typeof id === 'string') {
       if (seen.has(id)) problems.push(`${at}.id: duplicate corpus id ${JSON.stringify(id)}`);
@@ -175,17 +218,16 @@ function checkCopy(reference, value, path, problems) {
 }
 
 /**
- * Validate an openRepoChat/warmRepoChat config. Returns it unchanged when
+ * Validate an openRepoChat/warmRepoChat config. `mode` picks the contract:
+ * 'answer' (corpora of .jsonl.gz, OpenRouter answers) or 'search' (corpora of
+ * LatticeDB snapshots, a ranked result list, no key). Returns it unchanged when
  * valid; otherwise throws one ConfigError whose message lists every problem.
  */
 export function validateConfig(config) {
   const problems = [];
-  if (!isPlainObject(config)) {
-    problems.push('config: must be a plain object');
-    walk(SPEC, undefined, '', problems);
-  } else {
-    walk(SPEC, config, '', problems);
-  }
+  if (!isPlainObject(config)) problems.push('config: must be a plain object');
+  const value = isPlainObject(config) ? config : undefined;
+  walk(Object.hasOwn(SPECS, value?.mode) ? SPECS[value.mode] : MODELESS, value, '', problems);
   if (problems.length > 0) throw new ConfigError(problems);
   return config;
 }

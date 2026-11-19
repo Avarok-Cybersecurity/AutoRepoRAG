@@ -1537,7 +1537,7 @@ function _r(e) {
 }
 //#endregion
 //#region node_modules/svelte/src/internal/client/dom/template.js
-function q(e, t) {
+function vr(e, t) {
 	var n = U;
 	n.nodes === null && (n.nodes = {
 		start: e,
@@ -1547,24 +1547,24 @@ function q(e, t) {
 	});
 }
 /*#__NO_SIDE_EFFECTS__*/
-function J(e, t) {
+function q(e, t) {
 	var n = !!(t & 1), r = !!(t & 2), i, a = !e.startsWith("<!>");
 	return () => {
-		if (E) return q(D, null), D;
+		if (E) return vr(D, null), D;
 		i === void 0 && (i = _r(a ? e : "<!>" + e), n || (i = /* @__PURE__ */ L(i)));
 		var t = r || Qt ? document.importNode(i, !0) : i.cloneNode(!0);
 		if (n) {
 			var o = /* @__PURE__ */ L(t), s = t.lastChild;
-			q(o, s);
-		} else q(t, t);
+			vr(o, s);
+		} else vr(t, t);
 		return t;
 	};
 }
 /*#__NO_SIDE_EFFECTS__*/
-function vr(e, t, n = "svg") {
+function yr(e, t, n = "svg") {
 	var r = !e.startsWith("<!>"), i = !!(t & 1), a = `<${n}>${r ? e : "<!>" + e}</${n}>`, o;
 	return () => {
-		if (E) return q(D, null), D;
+		if (E) return vr(D, null), D;
 		if (!o) {
 			var e = /* @__PURE__ */ L(_r(a));
 			if (i) for (o = document.createDocumentFragment(); /* @__PURE__ */ L(e);) o.appendChild(/* @__PURE__ */ L(e));
@@ -1573,57 +1573,57 @@ function vr(e, t, n = "svg") {
 		var t = o.cloneNode(!0);
 		if (i) {
 			var n = /* @__PURE__ */ L(t), r = t.lastChild;
-			q(n, r);
-		} else q(t, t);
+			vr(n, r);
+		} else vr(t, t);
 		return t;
 	};
 }
 /*#__NO_SIDE_EFFECTS__*/
-function yr(e, t) {
-	return /* @__PURE__ */ vr(e, t, "svg");
+function br(e, t) {
+	return /* @__PURE__ */ yr(e, t, "svg");
 }
-function br(e = "") {
+function xr(e = "") {
 	if (!E) {
 		var t = I(e + "");
-		return q(t, t), t;
+		return vr(t, t), t;
 	}
 	var n = D;
-	return n.nodeType === 3 ? cn(n) : (n.before(n = I()), O(n)), q(n, n), n;
+	return n.nodeType === 3 ? cn(n) : (n.before(n = I()), O(n)), vr(n, n), n;
 }
-function xr() {
-	if (E) return q(D, null), D;
+function Sr() {
+	if (E) return vr(D, null), D;
 	var e = document.createDocumentFragment(), t = document.createComment(""), n = I();
-	return e.append(t, n), q(t, n), e;
+	return e.append(t, n), vr(t, n), e;
 }
-function Y(e, t) {
+function J(e, t) {
 	if (E) {
 		var n = U;
 		(!(n.f & 32768) || n.nodes.end === null) && (n.nodes.end = D), Ne();
 	} else e !== null && e.before(t);
 }
-function Sr() {
+function Cr() {
 	if (E && D && D.nodeType === 8 && D.textContent?.startsWith("$")) {
 		let e = D.textContent.substring(1);
 		return Ne(), e;
 	}
 	return (window.__svelte ??= {}).uid ??= 1, `c${window.__svelte.uid++}`;
 }
-function X(e, t) {
+function Y(e, t) {
 	var n = t == null ? "" : typeof t == "object" ? `${t}` : t;
 	n !== (e[ue] ??= e.nodeValue) && (e[ue] = n, e.nodeValue = `${n}`);
 }
-function Cr(e, t) {
-	return Tr(e, t);
+function wr(e, t) {
+	return Er(e, t);
 }
-var wr = /* @__PURE__ */ new Map();
-function Tr(e, { target: t, anchor: n, props: i = {}, events: a, context: o, intro: s = !0, transformError: c }) {
+var Tr = /* @__PURE__ */ new Map();
+function Er(e, { target: t, anchor: n, props: i = {}, events: a, context: o, intro: s = !0, transformError: c }) {
 	tn();
 	var l = void 0, u = gn(() => {
 		var s = n ?? t.appendChild(I());
 		ct(s, { pending: () => {} }, (t) => {
 			Ve({});
 			var n = A;
-			if (o && (n.c = o), a && (i.$$events = a), E && q(t, null), l = e(t, i) || {}, E && (U.nodes.end = D, D === null || D.nodeType !== 8 || D.data !== "]")) throw Ae(), Te;
+			if (o && (n.c = o), a && (i.$$events = a), E && vr(t, null), l = e(t, i) || {}, E && (U.nodes.end = D, D === null || D.nodeType !== 8 || D.data !== "]")) throw Ae(), Te;
 			He();
 		}, c);
 		var u = /* @__PURE__ */ new Set(), d = (e) => {
@@ -1633,8 +1633,8 @@ function Tr(e, { target: t, anchor: n, props: i = {}, events: a, context: o, int
 					u.add(r);
 					var i = or(r);
 					for (let e of [t, document]) {
-						var a = wr.get(e);
-						a === void 0 && (a = /* @__PURE__ */ new Map(), wr.set(e, a));
+						var a = Tr.get(e);
+						a === void 0 && (a = /* @__PURE__ */ new Map(), Tr.set(e, a));
 						var o = a.get(r);
 						o === void 0 ? (e.addEventListener(r, mr, { passive: i }), a.set(r, 1)) : a.set(r, o + 1);
 					}
@@ -1643,22 +1643,22 @@ function Tr(e, { target: t, anchor: n, props: i = {}, events: a, context: o, int
 		};
 		return d(r(cr)), lr.add(d), () => {
 			for (var e of u) for (let n of [t, document]) {
-				var r = wr.get(n), i = r.get(e);
-				--i == 0 ? (n.removeEventListener(e, mr), r.delete(e), r.size === 0 && wr.delete(n)) : r.set(e, i);
+				var r = Tr.get(n), i = r.get(e);
+				--i == 0 ? (n.removeEventListener(e, mr), r.delete(e), r.size === 0 && Tr.delete(n)) : r.set(e, i);
 			}
 			lr.delete(d), s !== n && s.parentNode?.removeChild(s);
 		};
 	});
-	return Er.set(l, u), l;
+	return Dr.set(l, u), l;
 }
-var Er = /* @__PURE__ */ new WeakMap();
-function Dr(e, t) {
-	let n = Er.get(e);
-	return n ? (Er.delete(e), n(t)) : Promise.resolve();
+var Dr = /* @__PURE__ */ new WeakMap();
+function Or(e, t) {
+	let n = Dr.get(e);
+	return n ? (Dr.delete(e), n(t)) : Promise.resolve();
 }
 //#endregion
 //#region node_modules/svelte/src/internal/client/dom/blocks/branches.js
-var Or = class {
+var kr = class {
 	anchor;
 	#e = /* @__PURE__ */ new Map();
 	#t = /* @__PURE__ */ new Map();
@@ -1722,10 +1722,10 @@ var Or = class {
 };
 //#endregion
 //#region node_modules/svelte/src/internal/client/dom/blocks/if.js
-function Z(e, t, n = !1) {
+function X(e, t, n = !1) {
 	var r;
 	E && (r = D, Ne());
-	var i = new Or(e), a = n ? x : 0;
+	var i = new kr(e), a = n ? x : 0;
 	function o(e, t) {
 		if (E) {
 			var n = Ie(r);
@@ -1746,17 +1746,17 @@ function Z(e, t, n = !1) {
 }
 //#endregion
 //#region node_modules/svelte/src/internal/client/dom/blocks/each.js
-function kr(e, t) {
+function Ar(e, t) {
 	return t;
 }
-function Ar(e, t, n) {
+function jr(e, t, n) {
 	for (var i = [], a = t.length, o, s = t.length, c = 0; c < a; c++) {
 		let n = t[c];
 		Dn(n, () => {
 			if (o) {
 				if (o.pending.delete(n), o.done.add(n), o.pending.size === 0) {
 					var t = e.outrogroups;
-					jr(e, r(o.done)), t.delete(o), t.size === 0 && (e.outrogroups = null);
+					Mr(e, r(o.done)), t.delete(o), t.size === 0 && (e.outrogroups = null);
 				}
 			} else --s;
 		}, !1);
@@ -1767,13 +1767,13 @@ function Ar(e, t, n) {
 			var u = n, d = u.parentNode;
 			an(d), d.append(u), e.items.clear();
 		}
-		jr(e, t, !l);
+		Mr(e, t, !l);
 	} else o = {
 		pending: new Set(t),
 		done: /* @__PURE__ */ new Set()
 	}, (e.outrogroups ??= /* @__PURE__ */ new Set()).add(o);
 }
-function jr(e, t, n = !0) {
+function Mr(e, t, n = !0) {
 	var r;
 	if (e.pending.size > 0) {
 		r = /* @__PURE__ */ new Set();
@@ -1784,8 +1784,8 @@ function jr(e, t, n = !0) {
 		r?.has(a) ? (a.f |= te, jn(a, document.createDocumentFragment())) : V(t[i], n);
 	}
 }
-var Mr;
-function Nr(t, n, i, a, o, s = null) {
+var Nr;
+function Pr(t, n, i, a, o, s = null) {
 	var c = t, l = /* @__PURE__ */ new Map();
 	if (n & 4) {
 		var u = t;
@@ -1797,7 +1797,7 @@ function Nr(t, n, i, a, o, s = null) {
 		return e(t) ? t : t == null ? [] : r(t);
 	}), p, m = /* @__PURE__ */ new Map(), h = !0;
 	function g(e) {
-		v.effect.f & 16384 || (v.pending.delete(e), v.fallback = d, Fr(v, p, c, n, a), d !== null && (p.length === 0 ? d.f & 33554432 ? (d.f ^= te, Lr(d, null, c)) : kn(d) : Dn(d, () => {
+		v.effect.f & 16384 || (v.pending.delete(e), v.fallback = d, Ir(v, p, c, n, a), d !== null && (p.length === 0 ? d.f & 33554432 ? (d.f ^= te, Rr(d, null, c)) : kn(d) : Dn(d, () => {
 			d = null;
 		})));
 	}
@@ -1813,9 +1813,9 @@ function Nr(t, n, i, a, o, s = null) {
 			for (var r = /* @__PURE__ */ new Set(), u = N, v = on(), y = 0; y < e; y += 1) {
 				E && D.nodeType === 8 && D.data === "]" && (c = D, t = !0, Me(!1));
 				var b = p[y], x = a(b, y), S = h ? null : l.get(x);
-				S ? (S.v && Kt(S.v, b), S.i && Kt(S.i, y), v && u.unskip_effect(S.e)) : (S = Ir(l, h ? c : Mr ??= I(), b, x, y, o, n, i), h || (S.e.f |= te), l.set(x, S)), r.add(x);
+				S ? (S.v && Kt(S.v, b), S.i && Kt(S.i, y), v && u.unskip_effect(S.e)) : (S = Lr(l, h ? c : Nr ??= I(), b, x, y, o, n, i), h || (S.e.f |= te), l.set(x, S)), r.add(x);
 			}
-			if (e === 0 && s && !d && (h ? d = xn(() => s(c)) : (d = xn(() => s(Mr ??= I())), d.f |= te)), e > r.size && he("", "", ""), E && e > 0 && O(Fe()), !h) {
+			if (e === 0 && s && !d && (h ? d = xn(() => s(c)) : (d = xn(() => s(Nr ??= I())), d.f |= te)), e > r.size && he("", "", ""), E && e > 0 && O(Fe()), !h) {
 				if (m.set(u, r), v) {
 					for (let [e, t] of l) r.has(e) || u.skip_effect(t.e);
 					u.oncommit(g), u.ondiscard(_);
@@ -1831,20 +1831,20 @@ function Nr(t, n, i, a, o, s = null) {
 	};
 	h = !1, E && (c = D);
 }
-function Pr(e) {
+function Fr(e) {
 	for (; e !== null && !(e.f & 32);) e = e.next;
 	return e;
 }
-function Fr(e, t, n, i, a) {
-	var o = !!(i & 8), s = t.length, c = e.items, l = Pr(e.effect.first), u, d = null, f, p = [], m = [], h, g, _, v;
+function Ir(e, t, n, i, a) {
+	var o = !!(i & 8), s = t.length, c = e.items, l = Fr(e.effect.first), u, d = null, f, p = [], m = [], h, g, _, v;
 	if (o) for (v = 0; v < s; v += 1) h = t[v], g = a(h, v), _ = c.get(g).e, _.f & 33554432 || (_.nodes?.a?.measure(), (f ??= /* @__PURE__ */ new Set()).add(_));
 	for (v = 0; v < s; v += 1) {
 		if (h = t[v], g = a(h, v), _ = c.get(g).e, e.outrogroups !== null) for (let t of e.outrogroups) t.pending.delete(_), t.done.delete(_);
 		if (_.f & 8192 && (kn(_), o && (_.nodes?.a?.unfix(), (f ??= /* @__PURE__ */ new Set()).delete(_))), _.f & 33554432) {
-			if (_.f ^= te, _ === l) Lr(_, null, n);
+			if (_.f ^= te, _ === l) Rr(_, null, n);
 			else {
 				var y = d ? d.next : l;
-				_ === e.effect.last && (e.effect.last = _.prev), _.prev && (_.prev.next = _.next), _.next && (_.next.prev = _.prev), Rr(e, d, _), Rr(e, _, y), Lr(_, y, n), d = _, p = [], m = [], l = Pr(d.next);
+				_ === e.effect.last && (e.effect.last = _.prev), _.prev && (_.prev.next = _.next), _.next && (_.next.prev = _.prev), zr(e, d, _), zr(e, _, y), Rr(_, y, n), d = _, p = [], m = [], l = Fr(d.next);
 				continue;
 			}
 		}
@@ -1854,25 +1854,25 @@ function Fr(e, t, n, i, a) {
 					var b = m[0], x;
 					d = b.prev;
 					var S = p[0], ee = p[p.length - 1];
-					for (x = 0; x < p.length; x += 1) Lr(p[x], b, n);
+					for (x = 0; x < p.length; x += 1) Rr(p[x], b, n);
 					for (x = 0; x < m.length; x += 1) u.delete(m[x]);
-					Rr(e, S.prev, ee.next), Rr(e, d, S), Rr(e, ee, b), l = b, d = ee, --v, p = [], m = [];
-				} else u.delete(_), Lr(_, l, n), Rr(e, _.prev, _.next), Rr(e, _, d === null ? e.effect.first : d.next), Rr(e, d, _), d = _;
+					zr(e, S.prev, ee.next), zr(e, d, S), zr(e, ee, b), l = b, d = ee, --v, p = [], m = [];
+				} else u.delete(_), Rr(_, l, n), zr(e, _.prev, _.next), zr(e, _, d === null ? e.effect.first : d.next), zr(e, d, _), d = _;
 				continue;
 			}
-			for (p = [], m = []; l !== null && l !== _;) (u ??= /* @__PURE__ */ new Set()).add(l), m.push(l), l = Pr(l.next);
+			for (p = [], m = []; l !== null && l !== _;) (u ??= /* @__PURE__ */ new Set()).add(l), m.push(l), l = Fr(l.next);
 			if (l === null) continue;
 		}
-		_.f & 33554432 || p.push(_), d = _, l = Pr(_.next);
+		_.f & 33554432 || p.push(_), d = _, l = Fr(_.next);
 	}
 	if (e.outrogroups !== null) {
-		for (let t of e.outrogroups) t.pending.size === 0 && (jr(e, r(t.done)), e.outrogroups?.delete(t));
+		for (let t of e.outrogroups) t.pending.size === 0 && (Mr(e, r(t.done)), e.outrogroups?.delete(t));
 		e.outrogroups.size === 0 && (e.outrogroups = null);
 	}
 	if (l !== null || u !== void 0) {
 		var C = [];
 		if (u !== void 0) for (_ of u) _.f & 8192 || C.push(_);
-		for (; l !== null;) !(l.f & 8192) && l !== e.fallback && C.push(l), l = Pr(l.next);
+		for (; l !== null;) !(l.f & 8192) && l !== e.fallback && C.push(l), l = Fr(l.next);
 		var w = C.length;
 		if (w > 0) {
 			var ne = i & 4 && s === 0 ? n : null;
@@ -1880,14 +1880,14 @@ function Fr(e, t, n, i, a) {
 				for (v = 0; v < w; v += 1) C[v].nodes?.a?.measure();
 				for (v = 0; v < w; v += 1) C[v].nodes?.a?.fix();
 			}
-			Ar(e, C, ne);
+			jr(e, C, ne);
 		}
 	}
 	o && Ke(() => {
 		if (f !== void 0) for (_ of f) _.nodes?.a?.apply();
 	});
 }
-function Ir(e, t, n, r, i, a, o, s) {
+function Lr(e, t, n, r, i, a, o, s) {
 	var c = o & 1 ? o & 16 ? Wt(n) : /* @__PURE__ */ Gt(n, !1, !1) : null, l = o & 2 ? Wt(i) : null;
 	return {
 		v: c,
@@ -1897,17 +1897,17 @@ function Ir(e, t, n, r, i, a, o, s) {
 		}))
 	};
 }
-function Lr(e, t, n) {
+function Rr(e, t, n) {
 	if (e.nodes) for (var r = e.nodes.start, i = e.nodes.end, a = t && !(t.f & 33554432) ? t.nodes.start : n; r !== null;) {
 		var o = /* @__PURE__ */ nn(r);
 		if (a.before(r), r === i) return;
 		r = o;
 	}
 }
-function Rr(e, t, n) {
+function zr(e, t, n) {
 	t === null ? e.effect.first = n : t.next = n, n === null ? e.effect.last = t : n.prev = t;
 }
-function zr(e, t, n = !1, r = !1, i = !1, a = !1) {
+function Br(e, t, n = !1, r = !1, i = !1, a = !1) {
 	var o = e, s = "";
 	if (n) {
 		var c = e;
@@ -1916,17 +1916,17 @@ function zr(e, t, n = !1, r = !1, i = !1, a = !1) {
 	B(() => {
 		var e = U;
 		if (s === (s = t() ?? "")) E && Ne();
-		else if (n && !E) e.nodes = null, c.innerHTML = s, s !== "" && q(/* @__PURE__ */ L(c), c.lastChild);
+		else if (n && !E) e.nodes = null, c.innerHTML = s, s !== "" && vr(/* @__PURE__ */ L(c), c.lastChild);
 		else if (e.nodes !== null && (Tn(e.nodes.start, e.nodes.end), e.nodes = null), s !== "") {
 			if (E) {
 				for (var a = D.data, l = Ne(), u = l; l !== null && (l.nodeType !== 8 || l.data !== "");) u = l, l = /* @__PURE__ */ nn(l);
 				if (l === null) throw Ae(), Te;
-				q(D, u), o = O(l);
+				vr(D, u), o = O(l);
 			} else {
 				var d = sn(r ? "svg" : i ? "math" : "template", r ? De : i ? Oe : void 0);
 				d.innerHTML = s;
 				var f = r || i ? d : d.content;
-				if (q(/* @__PURE__ */ L(f), f.lastChild), r || i) for (; /* @__PURE__ */ L(f);) o.before(/* @__PURE__ */ L(f));
+				if (vr(/* @__PURE__ */ L(f), f.lastChild), r || i) for (; /* @__PURE__ */ L(f);) o.before(/* @__PURE__ */ L(f));
 				else o.before(f);
 			}
 		}
@@ -1934,19 +1934,19 @@ function zr(e, t, n = !1, r = !1, i = !1, a = !1) {
 }
 //#endregion
 //#region node_modules/svelte/src/internal/shared/attributes.js
-var Br = [..." 	\n\r\f\xA0\v﻿"];
-function Vr(e, t, n) {
+var Vr = [..." 	\n\r\f\xA0\v﻿"];
+function Hr(e, t, n) {
 	var r = e == null ? "" : "" + e;
 	if (t && (r = r ? r + " " + t : t), n) {
 		for (var i of Object.keys(n)) if (n[i]) r = r ? r + " " + i : i;
 		else if (r.length) for (var a = i.length, o = 0; (o = r.indexOf(i, o)) >= 0;) {
 			var s = o + a;
-			(o === 0 || Br.includes(r[o - 1])) && (s === r.length || Br.includes(r[s])) ? r = (o === 0 ? "" : r.substring(0, o)) + r.substring(s + 1) : o = s;
+			(o === 0 || Vr.includes(r[o - 1])) && (s === r.length || Vr.includes(r[s])) ? r = (o === 0 ? "" : r.substring(0, o)) + r.substring(s + 1) : o = s;
 		}
 	}
 	return r === "" ? null : r;
 }
-function Hr(e, t = !1) {
+function Ur(e, t = !1) {
 	var n = t ? " !important;" : ";", r = "";
 	for (var i of Object.keys(e)) {
 		var a = e[i];
@@ -1954,16 +1954,16 @@ function Hr(e, t = !1) {
 	}
 	return r;
 }
-function Ur(e) {
+function Wr(e) {
 	return e[0] !== "-" || e[1] !== "-" ? e.toLowerCase() : e;
 }
-function Wr(e, t) {
+function Gr(e, t) {
 	if (t) {
 		var n = "", r, i;
 		if (Array.isArray(t) ? (r = t[0], i = t[1]) : r = t, e) {
 			e = String(e).replaceAll(/\s*\/\*.*?\*\/\s*/g, "").trim();
 			var a = !1, o = 0, s = !1, c = [];
-			r && c.push(...Object.keys(r).map(Ur)), i && c.push(...Object.keys(i).map(Ur));
+			r && c.push(...Object.keys(r).map(Wr)), i && c.push(...Object.keys(i).map(Wr));
 			var l = 0, u = -1;
 			let t = e.length;
 			for (var d = 0; d < t; d++) {
@@ -1972,7 +1972,7 @@ function Wr(e, t) {
 					if (f === ":" && u === -1) u = d;
 					else if (f === ";" || d === t - 1) {
 						if (u !== -1) {
-							var p = Ur(e.substring(l, u).trim());
+							var p = Wr(e.substring(l, u).trim());
 							if (!c.includes(p)) {
 								f !== ";" && d++;
 								var m = e.substring(l, d).trim();
@@ -1984,16 +1984,16 @@ function Wr(e, t) {
 				}
 			}
 		}
-		return r && (n += Hr(r)), i && (n += Hr(i, !0)), n = n.trim(), n === "" ? null : n;
+		return r && (n += Ur(r)), i && (n += Ur(i, !0)), n = n.trim(), n === "" ? null : n;
 	}
 	return e == null ? null : String(e);
 }
 //#endregion
 //#region node_modules/svelte/src/internal/client/dom/elements/class.js
-function Gr(e, t, n, r, i, a) {
+function Kr(e, t, n, r, i, a) {
 	var o = e[ce];
 	if (E || o !== n || o === void 0) {
-		var s = Vr(n, r, a);
+		var s = Hr(n, r, a);
 		(!E || s !== e.getAttribute("class")) && (s == null ? e.removeAttribute("class") : t ? e.className = s : e.setAttribute("class", s)), e[ce] = n;
 	} else if (a && i !== a) for (var c in a) {
 		var l = !!a[c];
@@ -2003,55 +2003,55 @@ function Gr(e, t, n, r, i, a) {
 }
 //#endregion
 //#region node_modules/svelte/src/internal/client/dom/elements/style.js
-function Kr(e, t = {}, n, r) {
+function qr(e, t = {}, n, r) {
 	for (var i in n) {
 		var a = n[i];
 		t[i] !== a && (n[i] == null ? e.style.removeProperty(i) : e.style.setProperty(i, a, r));
 	}
 }
-function qr(e, t, n, r) {
+function Jr(e, t, n, r) {
 	var i = e[le];
 	if (E || i !== t) {
-		var a = Wr(t, r);
+		var a = Gr(t, r);
 		(!E || a !== e.getAttribute("style")) && (a == null ? e.removeAttribute("style") : e.style.cssText = a), e[le] = t;
-	} else r && (Array.isArray(r) ? (Kr(e, n?.[0], r[0]), Kr(e, n?.[1], r[1], "important")) : Kr(e, n, r));
+	} else r && (Array.isArray(r) ? (qr(e, n?.[0], r[0]), qr(e, n?.[1], r[1], "important")) : qr(e, n, r));
 	return r;
 }
 //#endregion
 //#region node_modules/svelte/src/internal/client/dom/elements/attributes.js
-var Jr = Symbol("is custom element"), Yr = Symbol("is html"), Xr = pe ? "link" : "LINK";
-function Zr(e) {
+var Yr = Symbol("is custom element"), Xr = Symbol("is html"), Zr = pe ? "link" : "LINK";
+function Qr(e) {
 	if (E) {
 		var t = !1, n = () => {
 			if (!t) {
 				if (t = !0, e.hasAttribute("value")) {
 					var n = e.value;
-					Q(e, "value", null), e.value = n;
+					Z(e, "value", null), e.value = n;
 				}
 				if (e.hasAttribute("checked")) {
 					var r = e.checked;
-					Q(e, "checked", null), e.checked = r;
+					Z(e, "checked", null), e.checked = r;
 				}
 			}
 		};
 		e[de] = n, Ke(n), rt();
 	}
 }
-function Q(e, t, n, r) {
-	var i = Qr(e);
-	E && (i[t] = e.getAttribute(t), t === "src" || t === "srcset" || t === "href" && e.nodeName === Xr) || i[t] !== (i[t] = n) && (t === "loading" && (e[oe] = n), n == null ? e.removeAttribute(t) : typeof n != "string" && ei(e).includes(t) ? e[t] = n : e.setAttribute(t, n));
+function Z(e, t, n, r) {
+	var i = $r(e);
+	E && (i[t] = e.getAttribute(t), t === "src" || t === "srcset" || t === "href" && e.nodeName === Zr) || i[t] !== (i[t] = n) && (t === "loading" && (e[oe] = n), n == null ? e.removeAttribute(t) : typeof n != "string" && ti(e).includes(t) ? e[t] = n : e.setAttribute(t, n));
 }
-function Qr(e) {
+function $r(e) {
 	return e[se] ??= {
-		[Jr]: e.nodeName.includes("-"),
-		[Yr]: e.namespaceURI === Ee
+		[Yr]: e.nodeName.includes("-"),
+		[Xr]: e.namespaceURI === Ee
 	};
 }
-var $r = /* @__PURE__ */ new Map();
-function ei(e) {
-	var t = e.getAttribute("is") || e.nodeName, n = $r.get(t);
+var ei = /* @__PURE__ */ new Map();
+function ti(e) {
+	var t = e.getAttribute("is") || e.nodeName, n = ei.get(t);
 	if (n) return n;
-	$r.set(t, n = []);
+	ei.set(t, n = []);
 	for (var r, i = e, a = Element.prototype; a !== i;) {
 		for (var s in r = o(i), r) r[s].set && s !== "innerHTML" && s !== "textContent" && s !== "innerText" && n.push(s);
 		i = l(i);
@@ -2060,51 +2060,51 @@ function ei(e) {
 }
 //#endregion
 //#region node_modules/svelte/src/internal/client/dom/elements/bindings/input.js
-function ti(e, t, n = t) {
+function ni(e, t, n = t) {
 	var r = /* @__PURE__ */ new WeakSet();
 	at(e, "input", async (i) => {
 		var a = i ? e.defaultValue : e.value;
-		if (a = ni(e) ? ri(a) : a, n(a), N !== null && r.add(N), await tr(), a !== (a = t())) {
+		if (a = ri(e) ? ii(a) : a, n(a), N !== null && r.add(N), await tr(), a !== (a = t())) {
 			var o = e.selectionStart, s = e.selectionEnd, c = e.value.length;
 			if (e.value = a ?? "", s !== null) {
 				var l = e.value.length;
 				o === s && s === c && l > c ? (e.selectionStart = l, e.selectionEnd = l) : (e.selectionStart = o, e.selectionEnd = Math.min(s, l));
 			}
 		}
-	}), (E && e.defaultValue !== e.value || ir(t) == null && e.value) && (n(ni(e) ? ri(e.value) : e.value), N !== null && r.add(N)), yn(() => {
+	}), (E && e.defaultValue !== e.value || ir(t) == null && e.value) && (n(ri(e) ? ii(e.value) : e.value), N !== null && r.add(N)), yn(() => {
 		var n = t();
 		if (e === document.activeElement) {
 			var i = N;
 			if (r.has(i)) return;
 		}
-		ni(e) && n === ri(e.value) || (e.type !== "date" || n || e.value) && n !== e.value && (e.value = n ?? "");
+		ri(e) && n === ii(e.value) || (e.type !== "date" || n || e.value) && n !== e.value && (e.value = n ?? "");
 	});
 }
-function ni(e) {
+function ri(e) {
 	var t = e.type;
 	return t === "number" || t === "range";
 }
-function ri(e) {
+function ii(e) {
 	return e === "" ? null : +e;
 }
 //#endregion
 //#region node_modules/svelte/src/internal/client/dom/elements/bindings/this.js
-function ii(e, t) {
+function ai(e, t) {
 	return e === t || e?.[ie] === t;
 }
-function ai(e = {}, t, n, r) {
+function oi(e = {}, t, n, r) {
 	var i = A.r, a = U;
 	return _n(() => {
 		var o, s;
 		return yn(() => {
 			o = s, s = r?.() || [], ir(() => {
-				ii(n(...s), e) || (t(e, ...s), o && ii(n(...o), e) && t(null, ...o));
+				ai(n(...s), e) || (t(e, ...s), o && ai(n(...o), e) && t(null, ...o));
 			});
 		}), () => {
 			let r = a;
 			for (; r !== i && r.parent !== null && r.parent.f & 33554432;) r = r.parent;
 			let o = () => {
-				s && ii(n(...s), e) && t(null, ...s);
+				s && ai(n(...s), e) && t(null, ...s);
 			}, c = r.teardown;
 			r.teardown = () => {
 				o(), c?.();
@@ -2114,7 +2114,7 @@ function ai(e = {}, t, n, r) {
 }
 //#endregion
 //#region node_modules/svelte/src/internal/client/reactivity/props.js
-function oi(e, t, n, r) {
+function si(e, t, n, r) {
 	var i = !0, o = !!(n & 8), s = !!(n & 16), c = r, l = !0, u = void 0, d = () => s && i ? (u ??= /* @__PURE__ */ mt(r), G(u)) : (l && (l = !1, c = s ? ir(r) : r), c);
 	let f;
 	if (o) {
@@ -2150,14 +2150,14 @@ function oi(e, t, n, r) {
 }
 //#endregion
 //#region src/copy-en.js
-function si(e) {
+function ci(e) {
 	if (e && typeof e == "object") {
-		for (let t of Object.values(e)) si(t);
+		for (let t of Object.values(e)) ci(t);
 		Object.freeze(e);
 	}
 	return e;
 }
-var ci = si({
+var li = ci({
 	navLabel: "Ask the codebase",
 	closeLabel: "Close ask the codebase",
 	label: "// ask the codebase",
@@ -2275,6 +2275,33 @@ var ci = si({
 		label: "answer model",
 		reset: "back to free"
 	},
+	search: {
+		navLabel: "Search the site",
+		closeLabel: "Close search",
+		label: "// search",
+		title: "Search the site.",
+		sub: "The search index runs right here in your browser. Type a few words and press enter.",
+		placeholder: "search the site",
+		submit: "search",
+		resultsLabel: "search results",
+		count: "{n} results for “{query}”",
+		countOne: "1 result for “{query}”",
+		empty: "nothing matched “{query}”, try other words",
+		searching: "searching",
+		crumbsLabel: "section",
+		hintLoading: "the search index is still loading, hang tight",
+		fine: "results link to the pages they were indexed from",
+		plan: {
+			bm25: "keyword",
+			hybrid: "hybrid",
+			dense: "semantic"
+		},
+		error: {
+			tag: "search failed",
+			body: "That search did not go through. Try it again in a moment.",
+			retry: "search again"
+		}
+	},
 	errors: {
 		wasm: {
 			tag: "engine fault",
@@ -2340,7 +2367,7 @@ var ci = si({
 			retry: "retry"
 		}
 	}
-}), li = Object.freeze([
+}), ui = Object.freeze([
 	"bg",
 	"bg2",
 	"card",
@@ -2358,140 +2385,190 @@ var ci = si({
 	"fontSans",
 	"shadowLg"
 ]);
-function ui(e) {
+function di(e) {
 	return `--arr-${e.replace(/[A-Z]/g, (e) => `-${e.toLowerCase()}`)}`;
 }
-function di(e) {
-	return li.map((t) => [ui(t), e[t]]);
+function fi(e) {
+	return ui.map((t) => [di(t), e[t]]);
 }
 //#endregion
 //#region src/config/validate.js
-var fi = class extends Error {
+var pi = class extends Error {
 	constructor(e) {
 		super(`openRepoChat: invalid config (${e.length} problem${e.length === 1 ? "" : "s"}):\n${e.map((e) => `  - ${e}`).join("\n")}`), this.name = "ConfigError", this.problems = e;
 	}
-}, pi = /^[a-z0-9][a-z0-9_-]{0,63}$/, mi = /^[A-Za-z0-9._-]{1,64}$/, hi = /^https?:\/\/[^\s/]+/, gi = /\{(\w+)\}/g, _i = (e) => typeof e == "object" && !!e && !Array.isArray(e) && Object.getPrototypeOf(e) === Object.prototype, vi = (e) => typeof e == "string" && e.trim() !== "" ? null : "must be a non-empty string", yi = (e) => vi(e) ?? (hi.test(e) ? null : "must be an absolute http(s) URL"), bi = (e) => (t) => Number.isSafeInteger(t) && t >= e ? null : `must be an integer >= ${e}`, xi = (e) => typeof e == "string" && mi.test(e) ? null : "must be 1-64 characters of [A-Za-z0-9._-]", Si = (e) => e === null || typeof e == "string" && /^\s*<svg[\s>]/.test(e) && /<\/svg>\s*$/.test(e) ? null : "must be null (no watermark) or a complete <svg>...</svg> string", Ci = (e) => typeof e == "object" && e && e.nodeType === 1 && typeof e.appendChild == "function" ? null : "must be a DOM Element", wi = (e) => typeof e == "function" ? null : "must be a function", $ = (e) => ({
+}, mi = /^[a-z0-9][a-z0-9_-]{0,63}$/, hi = /^[A-Za-z0-9._-]{1,64}$/, gi = /^https?:\/\/[^\s/]+/, _i = /\{(\w+)\}/g, vi = (e) => typeof e == "object" && !!e && !Array.isArray(e) && Object.getPrototypeOf(e) === Object.prototype, yi = (e) => typeof e == "string" && e.trim() !== "" ? null : "must be a non-empty string", bi = (e) => yi(e) ?? (gi.test(e) ? null : "must be an absolute http(s) URL"), xi = (e) => (t) => Number.isSafeInteger(t) && t >= e ? null : `must be an integer >= ${e}`, Si = (e) => typeof e == "string" && hi.test(e) ? null : "must be 1-64 characters of [A-Za-z0-9._-]", Ci = (e) => e === null || typeof e == "string" && /^\s*<svg[\s>]/.test(e) && /<\/svg>\s*$/.test(e) ? null : "must be null (no watermark) or a complete <svg>...</svg> string", wi = (e) => typeof e == "object" && e && e.nodeType === 1 && typeof e.appendChild == "function" ? null : "must be a DOM Element", Ti = (e) => typeof e == "function" ? null : "must be a function", Q = (e) => ({
 	kind: "leaf",
 	check: e
-}), Ti = (e) => ({
+}), Ei = (e) => ({
 	kind: "leaf",
 	check: e,
 	optional: !0
-}), Ei = (e) => ({
+}), Di = (e) => ({
 	kind: "object",
 	fields: e
-}), Di = Ei({
-	mount: $(Ci),
-	assets: Ei({ cssHref: $(vi) }),
-	wasm: Ei({
-		jsUrl: $(vi),
-		binUrl: $(vi)
+}), Oi = { kind: "skip" }, ki = Q((e) => typeof e == "string" && mi.test(e) ? null : "must match /^[a-z0-9][a-z0-9_-]{0,63}$/"), Ai = (e) => ({
+	kind: "corpora",
+	shape: `{ id, ${e}, metaUrl }`,
+	entry: Di({
+		id: ki,
+		[e]: Q(yi),
+		metaUrl: Q(yi)
+	})
+}), ji = {
+	kind: "nullable",
+	what: "null or { model, dim, embed }",
+	spec: Di({
+		model: Q(yi),
+		dim: Q(xi(1)),
+		embed: Q(Ti)
+	})
+}, Mi = ["answer", "search"], Ni = {
+	mode: {
+		kind: "leaf",
+		check: (e) => Mi.includes(e) ? null : `must be one of ${Mi.map((e) => `'${e}'`).join(", ")}`,
+		missing: `missing (one of ${Mi.map((e) => `'${e}'`).join(", ")})`
+	},
+	mount: Q(wi),
+	assets: Di({ cssHref: Q(yi) }),
+	wasm: Di({
+		jsUrl: Q(yi),
+		binUrl: Q(yi)
 	}),
-	corpora: { kind: "corpora" },
-	provider: Ei({
-		apiUrl: $(yi),
-		rerankModel: $(vi),
-		chatModel: $(vi),
-		appTitle: $(vi),
-		referer: $(yi),
-		maxAttempts: $(bi(1)),
-		retryBaseMs: $(bi(0))
-	}),
-	retrieval: Ei({
-		topK: $(bi(1)),
-		rerankMultiplier: $(bi(1)),
-		upsertBatch: $(bi(1))
-	}),
-	storage: Ei({ keyPrefix: $(xi) }),
+	storage: Di({ keyPrefix: Q(Si) }),
 	copy: { kind: "copy" },
-	brand: Ei({
-		productName: $(vi),
-		motifSvg: $(Si)
+	theme: Di(Object.fromEntries(ui.map((e) => [e, Q(yi)]))),
+	onReady: Ei(Ti),
+	onClose: Ei(Ti)
+}, Pi = {
+	answer: Di({
+		...Ni,
+		corpora: Ai("gzUrl"),
+		provider: Di({
+			apiUrl: Q(bi),
+			rerankModel: Q(yi),
+			chatModel: Q(yi),
+			appTitle: Q(yi),
+			referer: Q(bi),
+			maxAttempts: Q(xi(1)),
+			retryBaseMs: Q(xi(0))
+		}),
+		retrieval: Di({
+			topK: Q(xi(1)),
+			rerankMultiplier: Q(xi(1)),
+			upsertBatch: Q(xi(1))
+		}),
+		brand: Di({
+			productName: Q(yi),
+			motifSvg: Q(Ci)
+		})
 	}),
-	theme: Ei(Object.fromEntries(li.map((e) => [e, $(vi)]))),
-	onReady: Ti(wi),
-	onClose: Ti(wi)
+	search: Di({
+		...Ni,
+		corpora: Ai("snapshotUrl"),
+		search: Di({
+			topK: Q(xi(1)),
+			snippetChars: Q(xi(40)),
+			embedder: ji
+		}),
+		brand: Di({ motifSvg: Q(Ci) })
+	})
+}, Fi = Di({
+	...Ni,
+	corpora: Oi,
+	provider: Oi,
+	retrieval: Oi,
+	search: Oi,
+	brand: Oi
 });
-function Oi(e, t, n, r) {
+function Ii(e, t, n, r) {
+	if (e.kind === "skip") return;
 	if (e.kind === "leaf") {
 		if (t === void 0) {
-			e.optional || r.push(`${n}: missing`);
+			e.optional || r.push(`${n}: ${e.missing ?? "missing"}`);
 			return;
 		}
 		let i = e.check(t);
 		i && r.push(`${n}: ${i}`);
 		return;
 	}
-	if (e.kind === "corpora") return ki(t, n, r);
-	if (e.kind === "copy") return ji(ci, t, n, r);
-	t !== void 0 && !_i(t) && (r.push(`${n}: must be an object`), t = void 0);
+	if (e.kind === "corpora") return Li(e, t, n, r);
+	if (e.kind === "copy") return zi(li, t, n, r);
+	if (e.kind === "nullable") {
+		t === void 0 ? r.push(`${n}: missing (${e.what})`) : t !== null && !vi(t) ? r.push(`${n}: must be ${e.what}`) : t !== null && Ii(e.spec, t, n, r);
+		return;
+	}
+	t !== void 0 && !vi(t) && (r.push(`${n}: must be an object`), t = void 0);
 	let i = t ?? {};
-	for (let [t, a] of Object.entries(e.fields)) Oi(a, i[t], n ? `${n}.${t}` : t, r);
+	for (let [t, a] of Object.entries(e.fields)) Ii(a, i[t], n ? `${n}.${t}` : t, r);
 	for (let t of Object.keys(i)) t in e.fields || r.push(`${n ? `${n}.` : ""}${t}: unknown key`);
 }
-function ki(e, t, n) {
-	if (e === void 0) {
-		n.push(`${t}: missing (a non-empty array of { id, gzUrl, metaUrl })`);
+function Li(e, t, n, r) {
+	if (t === void 0) {
+		r.push(`${n}: missing (a non-empty array of ${e.shape})`);
 		return;
 	}
-	if (!Array.isArray(e) || e.length === 0) {
-		n.push(`${t}: must be a non-empty array of { id, gzUrl, metaUrl }`);
+	if (!Array.isArray(t) || t.length === 0) {
+		r.push(`${n}: must be a non-empty array of ${e.shape}`);
 		return;
 	}
-	let r = /* @__PURE__ */ new Set();
-	e.forEach((e, i) => {
-		let a = `${t}[${i}]`;
-		Oi(Ei({
-			id: $((e) => typeof e == "string" && pi.test(e) ? null : "must match /^[a-z0-9][a-z0-9_-]{0,63}$/"),
-			gzUrl: $(vi),
-			metaUrl: $(vi)
-		}), e, a, n);
-		let o = _i(e) ? e.id : void 0;
-		typeof o == "string" && (r.has(o) && n.push(`${a}.id: duplicate corpus id ${JSON.stringify(o)}`), r.add(o));
+	let i = /* @__PURE__ */ new Set();
+	t.forEach((t, a) => {
+		let o = `${n}[${a}]`;
+		Ii(e.entry, t, o, r);
+		let s = vi(t) ? t.id : void 0;
+		typeof s == "string" && (i.has(s) && r.push(`${o}.id: duplicate corpus id ${JSON.stringify(s)}`), i.add(s));
 	});
 }
-function Ai(e) {
-	return [...e.matchAll(gi)].map((e) => e[1]);
+function Ri(e) {
+	return [...e.matchAll(_i)].map((e) => e[1]);
 }
-function ji(e, t, n, r) {
+function zi(e, t, n, r) {
 	if (t === void 0) r.push(`${n}: missing (start from COPY_EN: { ...COPY_EN, ... })`);
 	else if (typeof e == "string") {
-		let i = vi(t);
+		let i = yi(t);
 		if (i) {
 			r.push(`${n}: ${i}`);
 			return;
 		}
-		let a = new Set(Ai(e));
-		for (let e of Ai(t)) a.has(e) || r.push(`${n}: unknown placeholder {${e}} (allowed: ${[...a].map((e) => `{${e}}`).join(" ") || "none"})`);
-	} else if (Array.isArray(e)) (!Array.isArray(t) || t.some((e) => vi(e) !== null)) && r.push(`${n}: must be an array of non-empty strings`);
-	else if (!_i(t)) r.push(`${n}: must be an object`);
+		let a = new Set(Ri(e));
+		for (let e of Ri(t)) a.has(e) || r.push(`${n}: unknown placeholder {${e}} (allowed: ${[...a].map((e) => `{${e}}`).join(" ") || "none"})`);
+	} else if (Array.isArray(e)) (!Array.isArray(t) || t.some((e) => yi(e) !== null)) && r.push(`${n}: must be an array of non-empty strings`);
+	else if (!vi(t)) r.push(`${n}: must be an object`);
 	else {
-		for (let [i, a] of Object.entries(e)) ji(a, t[i], `${n}.${i}`, r);
+		for (let [i, a] of Object.entries(e)) zi(a, t[i], `${n}.${i}`, r);
 		for (let i of Object.keys(t)) i in e || r.push(`${n}.${i}: unknown key`);
 	}
 }
-function Mi(e) {
+function Bi(e) {
 	let t = [];
-	if (_i(e) ? Oi(Di, e, "", t) : (t.push("config: must be a plain object"), Oi(Di, void 0, "", t)), t.length > 0) throw new fi(t);
+	vi(e) || t.push("config: must be a plain object");
+	let n = vi(e) ? e : void 0;
+	if (Ii(Object.hasOwn(Pi, n?.mode) ? Pi[n.mode] : Fi, n, "", t), t.length > 0) throw new pi(t);
 	return e;
 }
 //#endregion
 //#region src/adapters/browser.js
-function Ni() {
+function Vi() {
 	return new Promise((e) => {
 		typeof requestIdleCallback == "function" ? requestIdleCallback(() => e(), { timeout: 100 }) : setTimeout(e, 0);
 	});
 }
-var Pi = (e) => new Promise((t) => setTimeout(t, e)), Fi = {
+var Hi = (e) => new Promise((t) => setTimeout(t, e)), Ui = {
 	now: () => performance.now(),
 	epochMs: () => Date.now(),
 	requestFrame: (e) => requestAnimationFrame(e),
 	cancelFrame: (e) => cancelAnimationFrame(e)
-}, Ii = (e) => typeof window < "u" && window.matchMedia(e).matches, Li = (e, t) => globalThis.fetch(e, t), Ri = (e) => import(
+}, Wi = (e) => typeof window < "u" && window.matchMedia(e).matches, Gi = (e, t) => globalThis.fetch(e, t);
+async function Ki(e) {
+	let t = new Uint8Array(await crypto.subtle.digest("SHA-256", e));
+	return Array.from(t, (e) => e.toString(16).padStart(2, "0")).join("");
+}
+var qi = (e) => import(
 	/* @vite-ignore */
 	e
-), zi = () => typeof navigator < "u" && navigator.storage?.getDirectory ? () => navigator.storage.getDirectory() : null;
-function Bi(e) {
+), Ji = () => typeof navigator < "u" && navigator.storage?.getDirectory ? () => navigator.storage.getDirectory() : null;
+function Yi(e) {
 	let t = [...document.querySelectorAll("link[rel=\"stylesheet\"][data-repo-chat]")].find((t) => t.getAttribute("href") === e);
 	if (t?.dataset.repoChat === "loaded") return Promise.resolve();
 	let n = t ?? document.createElement("link"), r = new Promise((t, r) => {
@@ -2501,11 +2578,11 @@ function Bi(e) {
 	});
 	return t || (n.rel = "stylesheet", n.href = e, n.dataset.repoChat = "pending", document.head.appendChild(n)), r;
 }
-function Vi() {
+function Xi() {
 	let e = typeof navigator < "u" ? navigator.connection : void 0;
 	return !e || !(e.saveData || typeof e.effectiveType == "string" && /(^|-)2g$/.test(e.effectiveType));
 }
-async function Hi(e, t) {
+async function Zi(e, t) {
 	try {
 		if (typeof caches < "u" && await caches.match(e, { cacheName: t })) return 0;
 	} catch {}
@@ -2516,10 +2593,10 @@ async function Hi(e, t) {
 		return null;
 	}
 }
-var Ui = /* @__PURE__ */ new Set();
-function Wi(e, t) {
-	if (Ui.has(e) || typeof window > "u" || typeof caches > "u" || !Vi()) return;
-	Ui.add(e);
+var Qi = /* @__PURE__ */ new Set();
+function $i(e, t) {
+	if (Qi.has(e) || typeof window > "u" || typeof caches > "u" || !Xi()) return;
+	Qi.add(e);
 	let n = async () => {
 		try {
 			let n = await caches.open(t);
@@ -2527,30 +2604,30 @@ function Wi(e, t) {
 			let r = await fetch(e, { priority: "low" });
 			r.ok && await n.put(e, r);
 		} catch {
-			Ui.delete(e);
+			Qi.delete(e);
 		}
 	};
 	typeof requestIdleCallback == "function" ? requestIdleCallback(() => void n(), { timeout: 4e3 }) : setTimeout(() => void n(), 2e3);
 }
 //#endregion
 //#region src/adapters/corpus.js
-var Gi = class extends Error {
+var ea = class extends Error {
 	constructor(e, { network: t, status: n }) {
 		super(e), this.name = "CorpusFetchError", this.network = t, this.status = n;
 	}
 };
-function Ki(e) {
+function ta(e) {
 	async function t(t, n, r) {
 		try {
 			return await e.fetch(n, r);
 		} catch (e) {
-			throw e?.name === "AbortError" ? e : new Gi(`${t} unreachable: ${e?.message ?? e}`, {
+			throw e?.name === "AbortError" ? e : new ea(`${t} unreachable: ${e?.message ?? e}`, {
 				network: !0,
 				status: null
 			});
 		}
 	}
-	let n = (e, t) => new Gi(`${e} failed: HTTP ${t.status}`, {
+	let n = (e, t) => new ea(`${e} failed: HTTP ${t.status}`, {
 		network: !1,
 		status: t.status
 	});
@@ -2572,19 +2649,34 @@ function Ki(e) {
 	function a(e) {
 		return typeof DecompressionStream == "function" ? e.pipeThrough(new DecompressionStream("gzip")) : null;
 	}
+	async function o(e, { signal: r, maxBytes: i, onBytes: a }) {
+		let o = await t("snapshot fetch", e, { signal: r });
+		if (!o.ok) throw n("snapshot fetch", o);
+		if (!o.body) throw Error("snapshot fetch returned no body stream");
+		let s = new Uint8Array(i), c = o.body.getReader(), l = 0;
+		for (;;) {
+			let { done: e, value: t } = await c.read();
+			if (e) break;
+			if (l + t.byteLength > i) throw await c.cancel(), Error(`snapshot is larger than its manifest's snapshot_bytes (${i}); the site published mismatched files`);
+			s.set(t, l), l += t.byteLength, a(t.byteLength);
+		}
+		if (l !== i) throw Error(`snapshot download ended at ${l} of ${i} bytes`);
+		return s;
+	}
 	return {
 		fetchMeta: r,
 		openCorpus: i,
-		gunzip: a
+		gunzip: a,
+		readSnapshot: o
 	};
 }
 //#endregion
 //#region src/adapters/lattice.js
-function qi(e, t) {
+function na(e, t) {
 	if (e && e.status === "ok" && e.result !== void 0) return e.result;
 	throw Error(`${t} failed: ${e && e.error || "unknown wasm error"}`);
 }
-function Ji(e, t) {
+function ra(e, t) {
 	let n = null, r = null;
 	function i() {
 		return n ? Promise.resolve(n) : r || (r = (async () => {
@@ -2606,7 +2698,7 @@ function Ji(e, t) {
 		return n;
 	}
 	function o() {
-		let e = qi(a().listCollections(), "listCollections");
+		let e = na(a().listCollections(), "listCollections");
 		return Array.isArray(e) ? e.map((e) => typeof e == "string" ? e : e?.name) : (e?.collections ?? []).map((e) => e.name);
 	}
 	function s(e, t) {
@@ -2619,10 +2711,10 @@ function Ji(e, t) {
 		if (!r || r.status !== "ok" || r.result !== !0) throw Error(`createCollection failed: ${r && r.error || "unknown wasm error"}`);
 	}
 	function c(e, t) {
-		return qi(a().upsert(e, t), "upsert");
+		return na(a().upsert(e, t), "upsert");
 	}
 	function l(e, t, n) {
-		return qi(a().search(e, new Float32Array(t), n, { with_payload: !0 }), "search");
+		return na(a().search(e, new Float32Array(t), n, { with_payload: !0 }), "search");
 	}
 	return {
 		init: i,
@@ -2632,61 +2724,224 @@ function Ji(e, t) {
 	};
 }
 //#endregion
+//#region src/core/search.js
+var ia = 60, aa = 4;
+function oa(e, t, n) {
+	if (e.snapshot === null) throw Error(`corpus "${n}" was published without a snapshot (the action ran with snapshot: false); search mode installs <name>.lattice, so rebuild it with snapshot: true.`);
+	if (e.snapshot.format !== 2) throw Error(`corpus "${n}" has a snapshot in format ${e.snapshot.format}; this chat installs format 2 (lattice-db >= v0.5.0).`);
+	if (e.searchMode === "lexical") return {
+		kind: "bm25",
+		model: null
+	};
+	if (t === null) {
+		if (e.searchMode === "hybrid") return {
+			kind: "bm25",
+			model: null
+		};
+		throw Error(`corpus "${n}" has no text index (search_mode vector), so it is searched by embedding the query: set search.embedder to its model, ${e.model} (dim ${e.dim}).`);
+	}
+	if (t.model !== e.model || t.dim !== e.dim) throw Error(`corpus "${n}" was built with ${e.model} (dim ${e.dim}) but search.embedder is ${t.model} (dim ${t.dim}); its query vectors would not match the corpus.`);
+	return {
+		kind: e.searchMode === "hybrid" ? "hybrid" : "dense",
+		model: e.model
+	};
+}
+function sa(e, t, n) {
+	if (t.kind === "bm25") return {
+		query: {
+			text: e,
+			model: "bm25"
+		},
+		limit: n,
+		with_payload: !0
+	};
+	if (t.kind === "dense") return {
+		query: {
+			text: e,
+			model: t.model
+		},
+		limit: n,
+		with_payload: !0
+	};
+	let r = n * aa;
+	return {
+		prefetch: [{
+			query: {
+				text: e,
+				model: "bm25"
+			},
+			limit: r
+		}, {
+			query: {
+				text: e,
+				model: t.model
+			},
+			limit: r
+		}],
+		query: { fusion: "rrf" },
+		limit: n,
+		with_payload: !0
+	};
+}
+var ca = (e) => typeof e == "object" && !!e && !Array.isArray(e);
+function la(e, t) {
+	let n = null;
+	try {
+		n = JSON.parse(t);
+	} catch {
+		n = null;
+	}
+	if (e !== 200) {
+		let t = ca(n) && typeof n.message == "string" ? `: ${n.message}` : "";
+		throw Error(`search failed: HTTP ${e}${t}`);
+	}
+	let r = ca(n) && n.status === "ok" && ca(n.result) ? n.result.points : void 0;
+	if (!Array.isArray(r)) throw Error("search failed: the engine answered with no points");
+	return r.filter((e) => ca(e) && ca(e.payload) && (typeof e.id == "number" || typeof e.id == "string") && typeof e.score == "number").map((e) => ({
+		id: e.id,
+		score: e.score,
+		payload: e.payload
+	}));
+}
+function ua(e, t) {
+	return e.flatMap(({ corpus: e, hits: t }, n) => t.map((t, r) => ({
+		corpus: e,
+		hit: t,
+		rank: r + 1,
+		order: n,
+		rrf: 1 / (ia + r + 1)
+	}))).sort((e, t) => t.rrf - e.rrf || e.order - t.order).slice(0, t).map(({ corpus: e, hit: t, rank: n }) => ({
+		corpus: e,
+		hit: t,
+		rank: n
+	}));
+}
+function da(e) {
+	return async (t) => {
+		let n = await e.embed(t);
+		if (!Array.isArray(n) || n.length !== t.length) throw Error(`search.embedder returned ${Array.isArray(n) ? n.length : 0} vectors for ${t.length} text(s)`);
+		for (let t of n) {
+			let n = t instanceof Float32Array || Array.isArray(t) ? t.length : 0;
+			if (n !== e.dim) throw Error(`search.embedder returned ${n} dimensions; ${e.model} is configured with ${e.dim}`);
+		}
+		return n;
+	};
+}
+//#endregion
+//#region src/adapters/lattice-search.js
+var fa = [
+	"importSnapshot",
+	"route",
+	"setEmbedder"
+];
+function pa(e, t) {
+	let n = t instanceof Error ? t.message : String(t);
+	try {
+		let e = JSON.parse(n);
+		e && typeof e.message == "string" && (n = e.message);
+	} catch {}
+	return /* @__PURE__ */ Error(`${e} failed: ${n}`);
+}
+function ma(e) {
+	let t = null;
+	function n() {
+		if (!t) throw Error("LatticeDB wasm not initialized — call init() first");
+		return t;
+	}
+	async function r() {
+		let n = await e.init(), r = fa.filter((e) => typeof n[e] != "function");
+		if (r.length > 0) throw Error(`this LatticeDB build has no ${r.join("/")}; search mode needs lattice-db >= v0.5.0 (config.wasm)`);
+		t = n;
+	}
+	function i(e, t) {
+		let r;
+		try {
+			r = n().importSnapshot(t, e, "replace");
+		} catch (e) {
+			throw pa("snapshot install", e);
+		}
+		if (!r || r.status !== "ok" || !r.result) throw pa("snapshot install", r?.error ?? "unknown wasm error");
+		return r.result;
+	}
+	function a(e, t, r) {
+		try {
+			n().setEmbedder(e, t, r);
+		} catch (e) {
+			throw pa("setEmbedder", e);
+		}
+	}
+	async function o(e, t) {
+		let r;
+		try {
+			r = await n().route("POST", `/collections/${encodeURIComponent(e)}/points/query`, JSON.stringify(t));
+		} catch (e) {
+			throw pa("search", e);
+		}
+		return la(r.status, new TextDecoder().decode(r.body));
+	}
+	return {
+		init: r,
+		install: i,
+		setEmbedder: a,
+		query: o
+	};
+}
+//#endregion
 //#region src/adapters/openrouter.js
-var Yi = class extends Error {
+var ha = class extends Error {
 	constructor(e, t, { quota: n = !1, resetAt: r = null } = {}) {
 		super(e), this.name = "OpenRouterError", this.transient = t, this.quota = n, this.resetAt = r;
 	}
-}, Xi = class extends Yi {
+}, ga = class extends ha {
 	constructor(e) {
 		super(`could not reach OpenRouter: ${e?.message ?? e}`, !0), this.name = "OpenRouterUnreachable", this.network = !0;
 	}
-}, Zi = class extends Yi {
+}, _a = class extends ha {
 	constructor(e) {
 		super(e, !0), this.name = "OpenRouterServiceError", this.service = !0;
 	}
 };
-function Qi(e, t, n) {
-	return t >= 500 ? new Zi(e) : new Yi(e, n);
+function va(e, t, n) {
+	return t >= 500 ? new _a(e) : new ha(e, n);
 }
-var $i = /free-models-per-day|per-?day|daily/i;
-function ea(e, t) {
+var ya = /free-models-per-day|per-?day|daily/i;
+function ba(e, t) {
 	let n = e?.metadata ?? {}, r = String(n.limit_source ?? ""), i = String(e?.message ?? "");
-	if (!$i.test(r) && !$i.test(i)) return null;
+	if (!ya.test(r) && !ya.test(i)) return null;
 	let a = n.headers?.["X-RateLimit-Reset"] ?? t?.headers?.get?.("X-RateLimit-Reset"), o = Number(a);
 	return { resetAt: Number.isFinite(o) && o > 0 ? o : null };
 }
-function ta(e, t, n) {
-	return new Yi(`${e} failed: ${t}`, !1, {
+function xa(e, t, n) {
+	return new ha(`${e} failed: ${t}`, !1, {
 		quota: !0,
 		resetAt: n.resetAt
 	});
 }
-var na = /ResourceExhausted|rate.?limit|overloaded/i;
-async function ra(e, t) {
+var Sa = /ResourceExhausted|rate.?limit|overloaded/i;
+async function Ca(e, t) {
 	let n = await e.text();
 	if (!e.ok) {
 		let r = null;
 		try {
 			r = JSON.parse(n);
 		} catch {}
-		let i = e.status === 429 ? ea(r?.error, e) : null;
-		throw i ? ta(t, r.error.message ?? "daily limit reached", i) : Qi(`${t} failed: ${e.status} - ${n}`, e.status, e.status === 429);
+		let i = e.status === 429 ? ba(r?.error, e) : null;
+		throw i ? xa(t, r.error.message ?? "daily limit reached", i) : va(`${t} failed: ${e.status} - ${n}`, e.status, e.status === 429);
 	}
 	let r;
 	try {
 		r = JSON.parse(n);
 	} catch {
-		throw new Yi(`${t} returned invalid JSON: ${n.slice(0, 200)}`, !1);
+		throw new ha(`${t} returned invalid JSON: ${n.slice(0, 200)}`, !1);
 	}
 	let i = r?.error;
 	if (i) {
-		let n = i.code ?? 0, r = i.message ?? "unknown error", a = ea(i, e);
-		throw a ? ta(t, r, a) : Qi(`${t} failed${n ? ` (${n})` : ""}: ${r}`, n, n === 429 || na.test(r));
+		let n = i.code ?? 0, r = i.message ?? "unknown error", a = ba(i, e);
+		throw a ? xa(t, r, a) : va(`${t} failed${n ? ` (${n})` : ""}: ${r}`, n, n === 429 || Sa.test(r));
 	}
 	return r;
 }
-function ia(e) {
+function wa(e) {
 	if (typeof e.reasoning == "string" && e.reasoning) return e.reasoning;
 	if (Array.isArray(e.reasoning_details)) {
 		let t = "";
@@ -2694,7 +2949,7 @@ function ia(e) {
 		if (t) return t;
 	}
 }
-async function aa(e, t) {
+async function Ta(e, t) {
 	let n = e.getReader(), r = new TextDecoder(), i = "";
 	try {
 		for (;;) {
@@ -2714,12 +2969,12 @@ async function aa(e, t) {
 					continue;
 				}
 				if (r.error) {
-					let e = r.error.message ?? "unknown error", t = ea(r.error, null);
-					throw t ? ta("Chat request", e, t) : Qi(`Chat request failed: ${e}`, r.error.code, r.error.code === 429 || na.test(e));
+					let e = r.error.message ?? "unknown error", t = ba(r.error, null);
+					throw t ? xa("Chat request", e, t) : va(`Chat request failed: ${e}`, r.error.code, r.error.code === 429 || Sa.test(e));
 				}
 				let a = r.choices?.[0]?.delta;
 				if (!a) continue;
-				let s = ia(a), c = typeof a.content == "string" && a.content ? a.content : void 0;
+				let s = wa(a), c = typeof a.content == "string" && a.content ? a.content : void 0;
 				(s || c) && t(s, c);
 			}
 		}
@@ -2727,7 +2982,7 @@ async function aa(e, t) {
 		n.releaseLock?.();
 	}
 }
-function oa(e, t) {
+function Ea(e, t) {
 	let { apiUrl: n, appTitle: r, referer: i, maxAttempts: a, retryBaseMs: o } = e, s = (e) => ({
 		Authorization: `Bearer ${e}`,
 		"Content-Type": "application/json",
@@ -2739,7 +2994,7 @@ function oa(e, t) {
 		for (let n = 1; n <= a; n++) try {
 			return await e();
 		} catch (e) {
-			if (t = e, !(e instanceof Yi && e.transient) || n === a) break;
+			if (t = e, !(e instanceof ha && e.transient) || n === a) break;
 			await c(n);
 		}
 		throw t;
@@ -2749,15 +3004,15 @@ function oa(e, t) {
 		headers: s(r),
 		body: i
 	}).catch((e) => {
-		throw new Xi(e);
+		throw new ga(e);
 	});
 	async function d(e, t, n) {
 		if (e.length === 0) return [];
-		let r = await l(async () => ra(await u("/embeddings", t, JSON.stringify({
+		let r = await l(async () => Ca(await u("/embeddings", t, JSON.stringify({
 			model: n,
 			input: e
 		})), "Embedding request"));
-		if (!Array.isArray(r?.data)) throw new Yi("Embedding request returned no embeddings.", !1);
+		if (!Array.isArray(r?.data)) throw new ha("Embedding request returned no embeddings.", !1);
 		return r.data.slice().sort((e, t) => e.index - t.index).map((e) => e.embedding);
 	}
 	async function f(e, t, n) {
@@ -2780,30 +3035,30 @@ function oa(e, t) {
 		}, f = async () => {
 			let e = await u("/chat/completions", n, o), t = e.headers.get("content-type") ?? "";
 			if (!e.ok || !t.includes("text/event-stream")) {
-				let t = (await ra(e, "Chat request")).choices?.[0]?.message?.content;
+				let t = (await Ca(e, "Chat request")).choices?.[0]?.message?.content;
 				if (t === void 0) throw Error("Chat request returned no message content");
 				d(void 0, t);
 			} else {
-				if (!e.body) throw new Yi("Chat request returned no response stream", !0);
-				await aa(e.body, d);
+				if (!e.body) throw new ha("Chat request returned no response stream", !0);
+				await Ta(e.body, d);
 			}
 		};
 		for (let e = 1;; e++) try {
 			return await f(), s;
 		} catch (t) {
-			if (!(t instanceof Yi && t.transient) || l || e >= a) throw t;
+			if (!(t instanceof ha && t.transient) || l || e >= a) throw t;
 			await c(e);
 		}
 	}
 	async function m(e, t, n, r, i) {
-		let a = await l(async () => ra(await u("/rerank", n, JSON.stringify({
+		let a = await l(async () => Ca(await u("/rerank", n, JSON.stringify({
 			model: i,
 			query: e,
 			documents: t,
 			top_n: r,
 			return_documents: !1
 		})), "Rerank request"));
-		if (!Array.isArray(a?.results)) throw new Yi("Rerank request returned no results.", !1);
+		if (!Array.isArray(a?.results)) throw new ha("Rerank request returned no results.", !1);
 		return a.results.slice().sort((e, t) => t.relevance_score - e.relevance_score).map((e) => ({
 			index: e.index,
 			score: e.relevance_score
@@ -2817,54 +3072,31 @@ function oa(e, t) {
 	};
 }
 //#endregion
-//#region src/core/cache-names.js
-var sa = (e) => e.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-function ca(e, t, n) {
-	return `${e}~${t}@${n}.jsonl`;
-}
-function la(e, t, n) {
-	return `${e}~${t}@${n}.meta.json`;
-}
-function ua(e, t, n) {
-	return `${ca(e, t, n)}.part`;
-}
-function da(e, t, n) {
-	let r = RegExp(`^${sa(`${e}~${t}@`)}([0-9a-f]{7,64})\\.jsonl$`).exec(n);
-	return r ? r[1] : null;
-}
-function fa(e, t, n) {
-	let r = RegExp(`^${sa(`${e}~${t}@`)}([0-9a-f]{7,64})\\.meta\\.json$`).exec(n);
-	return r ? r[1] : null;
-}
-function pa(e, t, n) {
-	let r = RegExp(`^${sa(`${e}~${t}@`)}([0-9a-f]{7,64})\\.jsonl\\.part$`).exec(n);
-	return r ? r[1] : null;
-}
-//#endregion
 //#region src/adapters/opfs.js
-var ma = [
+var Da = [
 	10,
 	25,
 	50,
 	100,
 	200,
 	400
-], ha = class extends Error {
+], Oa = class extends Error {
 	constructor(e, t) {
 		super(`${e}: ${t?.name ?? "Error"}: ${t?.message ?? t}`, { cause: t }), this.name = "CacheCleanupError";
 	}
 };
-function ga(e, t) {
-	async function n(e, n) {
+function ka(e, t, n) {
+	let { corpusFileName: r, metaFileName: i, parseCorpusFileName: a, parseMetaFileName: o, parsePartialFileName: s, partialFileName: c } = t;
+	async function l(e, t) {
 		for (let r = 0;; r++) try {
-			return await n();
-		} catch (n) {
-			if (n?.name !== "NoModificationAllowedError" || r >= ma.length) throw new ha(e, n);
-			await t.sleep(ma[r]);
+			return await t();
+		} catch (t) {
+			if (t?.name !== "NoModificationAllowedError" || r >= Da.length) throw new Oa(e, t);
+			await n.sleep(Da[r]);
 		}
 	}
-	function r(e, t) {
-		return n(`could not remove ${t}`, async () => {
+	function u(e, t) {
+		return l(`could not remove ${t}`, async () => {
 			try {
 				await e.removeEntry(t);
 			} catch (e) {
@@ -2872,61 +3104,61 @@ function ga(e, t) {
 			}
 		});
 	}
-	async function i() {
-		if (!t.getDirectory) return null;
+	async function d() {
+		if (!n.getDirectory) return null;
 		try {
-			return await t.getDirectory();
+			return await n.getDirectory();
 		} catch {
 			return null;
 		}
 	}
-	async function a(t, n, r) {
-		let a = await i();
+	async function f(t, n, i) {
+		let a = await d();
 		if (!a) return null;
 		try {
-			let i = await (await a.getFileHandle(ca(e, t, n))).getFile();
-			return r !== null && i.size !== r ? null : i;
+			let o = await (await a.getFileHandle(r(e, t, n))).getFile();
+			return i !== null && o.size !== i ? null : o;
 		} catch {
 			return null;
 		}
 	}
-	async function o(t, a) {
-		let o = await i();
-		if (!o) return null;
-		let s = ua(e, t, a), c = ca(e, t, a), l, u;
+	async function p(t, n) {
+		let i = await d();
+		if (!i) return null;
+		let a = c(e, t, n), o = r(e, t, n), s, f;
 		try {
-			l = await o.getFileHandle(s, { create: !0 }), u = await l.createWritable({ keepExistingData: !1 });
+			s = await i.getFileHandle(a, { create: !0 }), f = await s.createWritable({ keepExistingData: !1 });
 		} catch {
-			return l && await r(o, s), null;
+			return s && await u(i, a), null;
 		}
-		let d = "open";
+		let p = "open";
 		return {
 			async write(e) {
-				d === "open" && await u.write(e);
+				p === "open" && await f.write(e);
 			},
 			async finalize() {
-				if (d === "open") {
-					if (await u.close(), d = "closed", typeof l.move != "function") throw new ha(`could not commit ${s}`, /* @__PURE__ */ Error("this browser cannot move OPFS files"));
-					await r(o, c), await n(`could not commit ${s}`, () => l.move(c)), d = "done";
+				if (p === "open") {
+					if (await f.close(), p = "closed", typeof s.move != "function") throw new Oa(`could not commit ${a}`, /* @__PURE__ */ Error("this browser cannot move OPFS files"));
+					await u(i, o), await l(`could not commit ${a}`, () => s.move(o)), p = "done";
 				}
 			},
 			async discard() {
-				d !== "done" && (d === "open" && (d = "closed", await u.abort()), await r(o, s), d = "done");
+				p !== "done" && (p === "open" && (p = "closed", await f.abort()), await u(i, a), p = "done");
 			}
 		};
 	}
-	async function s(t, n, r) {
-		let a = await i();
+	async function m(t, n, r) {
+		let a = await d();
 		if (a) try {
-			let i = await (await a.getFileHandle(la(e, t, n), { create: !0 })).createWritable({ keepExistingData: !1 });
-			await i.write(JSON.stringify(r)), await i.close();
+			let o = await (await a.getFileHandle(i(e, t, n), { create: !0 })).createWritable({ keepExistingData: !1 });
+			await o.write(JSON.stringify(r)), await o.close();
 		} catch {}
 	}
-	async function c(t, n) {
+	async function h(t, n) {
 		let r = [], i = [
-			["corpus", da],
-			["meta", fa],
-			["partial", pa]
+			["corpus", a],
+			["meta", o],
+			["partial", s]
 		];
 		try {
 			for await (let [a, o] of t) {
@@ -2948,11 +3180,11 @@ function ga(e, t) {
 		}
 		return r;
 	}
-	async function l(e) {
-		let t = await i();
+	async function g(e) {
+		let t = await d();
 		if (!t) return null;
-		let n = await c(t, e), r = new Map(n.filter((e) => e.kind === "meta").map((e) => [e.sha, e.file])), a = n.filter((e) => e.kind === "corpus" && r.has(e.sha)).sort((e, t) => t.lastModified - e.lastModified);
-		for (let e of a) try {
+		let n = await h(t, e), r = new Map(n.filter((e) => e.kind === "meta").map((e) => [e.sha, e.file])), i = n.filter((e) => e.kind === "corpus" && r.has(e.sha)).sort((e, t) => t.lastModified - e.lastModified);
+		for (let e of i) try {
 			return {
 				sha: e.sha,
 				file: e.file,
@@ -2961,29 +3193,29 @@ function ga(e, t) {
 		} catch {}
 		return null;
 	}
-	async function u(e, t) {
+	async function _(e, t) {
 		if (typeof t != "string" || t === "") return;
-		let n = await i();
+		let n = await d();
 		if (!n) return;
-		let a = [];
-		for (let i of await c(n, e)) if (i.sha !== t || i.kind === "partial") try {
-			await r(n, i.name);
+		let r = [];
+		for (let i of await h(n, e)) if (i.sha !== t || i.kind === "partial") try {
+			await u(n, i.name);
 		} catch (e) {
-			a.push(e);
+			r.push(e);
 		}
-		if (a.length > 0) throw new ha(`could not prune ${a.length} file(s)`, Error(a.map((e) => e.message).join("; ")));
+		if (r.length > 0) throw new Oa(`could not prune ${r.length} file(s)`, Error(r.map((e) => e.message).join("; ")));
 	}
 	return {
-		getCachedCorpus: a,
-		createCorpusWriter: o,
-		writeMeta: s,
-		newestOffline: l,
-		pruneStale: u
+		getCachedCorpus: f,
+		createCorpusWriter: p,
+		writeMeta: m,
+		newestOffline: g,
+		pruneStale: _
 	};
 }
 //#endregion
 //#region src/adapters/storage.js
-function _a(e, t) {
+function Aa(e, t) {
 	let n = `${e}openrouter-key`, r = `${e}openrouter-chat-model`;
 	return {
 		keyName: n,
@@ -2997,8 +3229,83 @@ function _a(e, t) {
 	};
 }
 //#endregion
+//#region src/core/cache-names.js
+var ja = (e) => e.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+function Ma(e) {
+	let t = (t, n, r) => `${t}~${n}@${r}.${e}`, n = (e) => (t, n, r) => {
+		let i = RegExp(`^${ja(`${t}~${n}@`)}([0-9a-f]{7,64})${ja(e)}$`).exec(r);
+		return i ? i[1] : null;
+	};
+	return Object.freeze({
+		corpusFileName: t,
+		metaFileName: (e, t, n) => `${e}~${t}@${n}.meta.json`,
+		partialFileName: (e, n, r) => `${t(e, n, r)}.part`,
+		parseCorpusFileName: n(`.${e}`),
+		parseMetaFileName: n(".meta.json"),
+		parsePartialFileName: n(`.${e}.part`)
+	});
+}
+var Na = Ma("jsonl"), Pa = Ma("lattice"), { corpusFileName: Fa, metaFileName: Ia, partialFileName: La, parseCorpusFileName: Ra, parseMetaFileName: za, parsePartialFileName: Ba } = Na, Va = 200, Ha = "…";
+function Ua(e) {
+	if (typeof e != "string") return null;
+	try {
+		let t = new URL(e);
+		return t.protocol === "http:" || t.protocol === "https:" ? t.href : null;
+	} catch {
+		return null;
+	}
+}
+var Wa = (e) => typeof e == "string" ? e.trim() : "";
+function Ga(e) {
+	let t = e.split("\n"), n = t.filter((e) => !/^\s{0,3}#{1,6}\s/.test(e));
+	return (n.some((e) => e.trim() !== "") ? n : t).map((e) => e.replace(/^\s{0,3}#{1,6}\s+/, "").replace(/^\s*(?:[-*+]|\d+[.)]|>)\s+/, "")).join(" ").replace(/```\w*/g, " ").replace(/!?\[([^\]]*)\]\([^)]*\)/g, "$1").replace(/(\*\*|__|`)/g, "").replace(/\s+/g, " ").trim();
+}
+function Ka(e) {
+	let t = String(e).toLowerCase().match(/[\p{L}\p{N}]{2,}/gu) ?? [];
+	return [...new Set(t)].sort((e, t) => t.length - e.length);
+}
+var qa = (e) => e.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+function Ja(e, t, n) {
+	let r = Ga(e);
+	if (r === "") return [];
+	let i = Ka(t), a = r.toLowerCase(), o = Math.min(...i.map((e) => a.indexOf(e)).filter((e) => e >= 0), Infinity), s = o === Infinity ? 0 : Math.max(0, o - Math.floor(n / 3));
+	s > 0 && (s = r.indexOf(" ", s) + 1 || s);
+	let c = Math.min(r.length, s + n);
+	if (c < r.length) {
+		let e = r.lastIndexOf(" ", c);
+		e > s && (c = e);
+	}
+	let l = (s > 0 ? Ha : "") + r.slice(s, c).trim() + (c < r.length ? Ha : "");
+	if (i.length === 0) return [{
+		text: l,
+		hit: !1
+	}];
+	let u = RegExp(`(${i.map(qa).join("|")})`, "giu");
+	return l.split(u).filter((e) => e !== "").map((e) => ({
+		text: e,
+		hit: i.includes(e.toLowerCase())
+	}));
+}
+function Ya({ corpus: e, hit: t }, n, r) {
+	let i = t.payload, a = Array.isArray(i.heading_path) ? i.heading_path.map(Wa).filter((e) => e !== "") : [], o = Wa(i.title) || a.at(-1) || Wa(i.path) || `#${t.id}`;
+	return {
+		key: `${e.id}:${t.id}`,
+		corpusId: e.id,
+		url: Ua(i.url),
+		title: o.length > Va ? `${o.slice(0, Va)}${Ha}` : o,
+		crumbs: a,
+		snippet: typeof i.text == "string" ? Ja(i.text, n, r) : []
+	};
+}
+async function Xa(e, { query: t, corpora: n, topK: r, snippetChars: i }) {
+	return ua(await Promise.all(n.map(async (n) => ({
+		corpus: n,
+		hits: await t(n.collection, sa(e, n.plan, r))
+	}))), r).map((t) => Ya(t, e, i));
+}
+//#endregion
 //#region src/core/ask-errors.js
-function va(e) {
+function Za(e) {
 	let t = String(e?.message ?? e);
 	return e?.quota ? {
 		kind: "quota",
@@ -3023,36 +3330,357 @@ function va(e) {
 		resetAt: null
 	};
 }
-function ya(e) {
+function Qa(e) {
 	return /gzip|decompress|inflate|corrupt/i.test(String(e?.message)) ? "decompress" : "corpus";
 }
-function ba(e) {
+function $a(e) {
 	return e?.network === !0 ? "manifest" : "unavailable";
 }
-function xa(e) {
+function eo(e) {
 	return Number.isInteger(e?.status) ? "unavailable" : "corpus";
 }
 //#endregion
+//#region src/core/template.js
+function $(e, t) {
+	return e.replace(/\{(\w+)\}/g, (n, r) => {
+		if (!Object.hasOwn(t, r)) throw Error(`copy template ${JSON.stringify(e)} names {${r}} but no value was given`);
+		return String(t[r]);
+	});
+}
+//#endregion
+//#region src/core/consent.js
+function to(e, t) {
+	let n = e.filter((e) => !e.file);
+	if (n.length === 0) return null;
+	let r = n.map((e) => ({
+		id: e.corpus.id,
+		bytes: e.meta.gzBytes
+	}));
+	return {
+		corpora: r,
+		wasmBytes: t,
+		totalBytes: r.reduce((e, t) => e + t.bytes, 0) + (t ?? 0),
+		storedBytes: n.reduce((e, t) => e + t.meta.bytes, 0)
+	};
+}
+function no(e, t) {
+	return e < 999950 ? $(t.size.kb, { n: (e / 1e3).toFixed(1) }) : $(t.size.mb, { n: (e / 1e6).toFixed(1) });
+}
+//#endregion
+//#region src/core/search-meta.js
+var ro = /^[0-9a-f]{7,64}$/, io = /^[0-9a-f]{64}$/, ao = /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/, oo = [
+	"lexical",
+	"vector",
+	"hybrid"
+], so = (e) => Number.isSafeInteger(e) && e >= 0;
+function co(e, t) {
+	let n = (e) => /* @__PURE__ */ Error(`corpus "${t}" manifest: ${e}`);
+	if (typeof e != "object" || !e || Array.isArray(e)) throw n("is not a JSON object");
+	let r = e;
+	if (typeof r.commit_sha != "string" || !ro.test(r.commit_sha)) throw n("commit_sha must be a hex commit string");
+	if (typeof r.repo != "string" || !ao.test(r.repo)) throw n("repo must be \"owner/name\"");
+	for (let e of ["points", "files"]) if (!so(r[e])) throw n(`${e} must be a non-negative integer`);
+	if (typeof r.generated_at != "string") throw n("generated_at must be a string");
+	if (!oo.includes(r.search_mode)) throw n(`search_mode must be one of ${oo.join(", ")}`);
+	let i = r.search_mode, a = i !== "lexical";
+	if (a && (typeof r.model != "string" || r.model.trim() === "")) throw n(`model must name the embedding model of a ${i} corpus`);
+	if (!so(r.dim) || a && r.dim < 1) throw n(`dim must be ${a ? "a positive" : "a non-negative"} integer`);
+	return {
+		commitSha: r.commit_sha,
+		repo: r.repo,
+		points: r.points,
+		files: r.files,
+		generatedAt: r.generated_at,
+		searchMode: i,
+		model: a ? r.model : null,
+		dim: r.dim,
+		snapshot: lo(r, n)
+	};
+}
+function lo(e, t) {
+	if ([
+		e.snapshot_bytes,
+		e.snapshot_sha256,
+		e.snapshot_format
+	].every((e) => e == null)) return null;
+	if (!Number.isSafeInteger(e.snapshot_bytes) || e.snapshot_bytes < 1) throw t("snapshot_bytes must be a positive integer");
+	if (typeof e.snapshot_sha256 != "string" || !io.test(e.snapshot_sha256)) throw t("snapshot_sha256 must be 64 lowercase hex characters");
+	if (!Number.isSafeInteger(e.snapshot_format) || e.snapshot_format < 1) throw t("snapshot_format must be a positive integer");
+	return {
+		bytes: e.snapshot_bytes,
+		sha256: e.snapshot_sha256,
+		format: e.snapshot_format
+	};
+}
+//#endregion
+//#region src/state/load-gate.js
+var uo = class extends Error {
+	constructor() {
+		super("load aborted"), this.name = "AbortError";
+	}
+}, fo = class extends Error {
+	constructor() {
+		super("load failed"), this.name = "FailedError";
+	}
+};
+function po(e, t) {
+	let n = null, r = null, i = !1, a = null, o = (e) => {
+		if (e.aborted) throw new uo();
+	};
+	function s() {
+		e.progress.loadedBytes = 0, e.progress.totalBytes = 0, e.progress.indexed = 0, e.progress.totalPoints = 0;
+	}
+	function c(t, n) {
+		return e.status = "error", e.error = {
+			kind: t,
+			message: n?.message ? String(n.message) : String(n)
+		}, new fo();
+	}
+	function l(i) {
+		if (e.status === "ready") return Promise.resolve();
+		if (n) return n;
+		let a = { aborted: !1 };
+		return r = a, e.error = null, e.offline = !1, s(), n = i(a).catch((t) => {
+			a.aborted || t?.name === "AbortError" || t instanceof fo || e.error || c("corpus", t);
+		}).finally(() => {
+			e.status !== "ready" && (n = null), r === a && (r = null), t.settled();
+		}), n;
+	}
+	function u() {
+		e.status !== "ready" && e.status !== "idle" && (r && (r.aborted = !0), i = !1, a?.reject(new uo()), a = null, e.consent = null, t.cancelIo(), n = null, e.error = null, e.offline = !1, s(), e.status = "idle");
+	}
+	function d() {
+		a &&= (i = !0, e.consent = null, a.resolve(), null);
+	}
+	async function f(t, n) {
+		if (i) return;
+		let r = await n();
+		o(t), r !== null && (e.consent = r, e.status = "consent", await new Promise((e, t) => {
+			a = {
+				resolve: e,
+				reject: t
+			};
+		}), o(t));
+	}
+	return {
+		ensureReady: l,
+		abortLoad: u,
+		accept: d,
+		consentTo: f,
+		fail: c,
+		throwIfAborted: o
+	};
+}
+async function mo({ chat: e, net: t, cache: n, gate: r, validate: i }, a, o) {
+	try {
+		let e = await t.fetchMeta(o.metaUrl);
+		return {
+			corpus: o,
+			raw: e,
+			meta: i(e, o.id),
+			file: null
+		};
+	} catch (t) {
+		r.throwIfAborted(a);
+		let s = await n.newestOffline(o.id);
+		if (r.throwIfAborted(a), !s) throw r.fail($a(t), t);
+		let c;
+		try {
+			c = i(s.rawMeta, o.id);
+		} catch {
+			throw r.fail($a(t), t);
+		}
+		if (c.commitSha !== s.sha) throw r.fail($a(t), t);
+		return e.offline = !0, {
+			corpus: o,
+			raw: s.rawMeta,
+			meta: c,
+			file: s.file
+		};
+	}
+}
+//#endregion
+//#region src/state/search-loader.js
+function ho({ chat: e, corpora: t, embedder: n, ports: r }) {
+	let { search: i, cache: a, net: o, wasmBytes: s, sha256: c, reportCacheFault: l } = r, u = null, d = null, f = !1, p = po(e, {
+		cancelIo() {
+			u?.abort();
+			let e = d;
+			d = null, e && e.discard().catch(l);
+		},
+		settled() {
+			u = null, d = null;
+		}
+	}), { fail: m, throwIfAborted: h } = p, g = (t, n) => mo({
+		chat: e,
+		net: o,
+		cache: a,
+		gate: p,
+		validate: co
+	}, t, n), _ = async (e, t) => await c(t) === e.meta.snapshot.sha256;
+	async function v(r) {
+		e.status = "manifest";
+		let o = [];
+		for (let e of t) o.push(await g(r, e));
+		let c;
+		try {
+			c = o.map((e) => oa(e.meta, n, e.corpus.id));
+		} catch (e) {
+			throw m("config", e);
+		}
+		for (let e of o) e.file ||= await a.getCachedCorpus(e.corpus.id, e.meta.commitSha, e.meta.snapshot.bytes), e.bytes = e.file ? new Uint8Array(await e.file.arrayBuffer()) : null, e.bytes && !await _(e, e.bytes) && (l(/* @__PURE__ */ Error(`cached snapshot of "${e.corpus.id}" at ${e.meta.commitSha} failed its checksum; downloading it again`)), e.file = null, e.bytes = null), h(r);
+		let u = (e) => ({
+			corpus: e.corpus,
+			file: e.file,
+			meta: {
+				gzBytes: e.meta.snapshot.bytes,
+				bytes: e.meta.snapshot.bytes
+			}
+		});
+		await p.consentTo(r, async () => o.some((e) => !e.file) ? to(o.map(u), f ? 0 : await s()) : null), e.status = "wasm-init";
+		try {
+			await i.init(), !f && n !== null && c.some((e) => e.kind !== "bm25") && i.setEmbedder(n.model, n.dim, da(n));
+		} catch (e) {
+			throw m("wasm", e);
+		}
+		f = !0, h(r), e.progress.totalBytes = o.reduce((e, t) => e + t.meta.snapshot.bytes, 0), e.progress.totalPoints = o.reduce((e, t) => e + t.meta.points, 0);
+		let d = [];
+		for (let [t, n] of o.entries()) {
+			let o = n.bytes !== null, s = o ? y(n) : await b(r, n);
+			h(r), e.status = "indexing";
+			try {
+				i.install(n.corpus.id, s);
+			} catch (e) {
+				throw m("corpus", e);
+			}
+			n.bytes = null, e.progress.indexed += n.meta.points, o || await x(r, n, s), await a.writeMeta(n.corpus.id, n.meta.commitSha, n.raw), await a.pruneStale(n.corpus.id, n.meta.commitSha).catch(l), h(r), d.push({
+				id: n.corpus.id,
+				collection: n.corpus.id,
+				commit: n.meta.commitSha,
+				repo: n.meta.repo,
+				files: n.meta.files,
+				chunks: n.meta.points,
+				plan: c[t],
+				generatedAt: n.meta.generatedAt
+			});
+		}
+		e.corpora = d, e.status = "ready";
+	}
+	function y(t) {
+		return e.status = "loading-cached", e.progress.loadedBytes += t.bytes.byteLength, t.bytes;
+	}
+	async function b(t, n) {
+		e.status = "downloading", u = new AbortController();
+		let r;
+		try {
+			r = await o.readSnapshot(n.corpus.snapshotUrl, {
+				signal: u.signal,
+				maxBytes: n.meta.snapshot.bytes,
+				onBytes: (t) => {
+					e.progress.loadedBytes += t;
+				}
+			});
+		} catch (e) {
+			throw h(t), e?.name === "AbortError" ? e : m(eo(e), e);
+		}
+		if (h(t), !await _(n, r)) throw m("corpus", /* @__PURE__ */ Error(`the snapshot of "${n.corpus.id}" does not match its manifest's snapshot_sha256, so it was not installed`));
+		return r;
+	}
+	async function x(e, t, n) {
+		d = await a.createCorpusWriter(t.corpus.id, t.meta.commitSha).catch((e) => (l(e), null));
+		let r = d;
+		if (r) try {
+			await r.write(n), h(e), await r.finalize();
+		} catch (t) {
+			if (d === r && await r.discard().catch(l), e.aborted) throw t;
+			l(t);
+		} finally {
+			d = null;
+		}
+	}
+	return {
+		ensureReady: () => p.ensureReady(v),
+		abortLoad: p.abortLoad,
+		accept: p.accept
+	};
+}
+//#endregion
+//#region src/state/search-session.svelte.js
+function go(e, t) {
+	let n = Xt({
+		status: "idle",
+		consent: null,
+		progress: {
+			loadedBytes: 0,
+			totalBytes: 0,
+			indexed: 0,
+			totalPoints: 0
+		},
+		corpora: [],
+		offline: !1,
+		error: null,
+		draft: "",
+		searching: !1,
+		results: null,
+		searchError: null
+	}), r = ho({
+		chat: n,
+		corpora: e.corpora,
+		embedder: e.search.embedder,
+		ports: t
+	}), i = 0;
+	async function a(r) {
+		let a = String(r ?? "").trim();
+		if (a === "" || n.status !== "ready") return !1;
+		let o = ++i;
+		n.searching = !0, n.searchError = null;
+		try {
+			let r = await Xa(a, {
+				query: t.search.query,
+				corpora: n.corpora,
+				topK: e.search.topK,
+				snippetChars: e.search.snippetChars
+			});
+			o === i && (n.results = {
+				query: a,
+				items: r
+			});
+		} catch (e) {
+			o === i && (n.searchError = { message: e?.message ? String(e.message) : String(e) });
+		} finally {
+			o === i && (n.searching = !1);
+		}
+		return !0;
+	}
+	return {
+		chat: n,
+		search: a,
+		ensureReady: r.ensureReady,
+		abortLoad: r.abortLoad,
+		acceptDownload: r.accept
+	};
+}
+//#endregion
 //#region src/core/prompt.js
-function Sa(e) {
+function _o(e) {
 	return Math.max(0, Math.min(100, (1 - e) * 100));
 }
-function Ca(e, t, n, r, i) {
+function vo(e, t, n, r, i) {
 	return `https://github.com/${e}/blob/${t}/${n}#L${r}-L${i}`;
 }
-function wa(e, { repo: t, path: n, startLine: r, endLine: i, language: a, text: o }) {
+function yo(e, { repo: t, path: n, startLine: r, endLine: i, language: a, text: o }) {
 	return `[${e}] ${t} ${n} lines ${r}–${i}\n\`\`\`${a || ""}\n${o}\n\`\`\``;
 }
-function Ta(e) {
+function bo(e) {
 	return e.map((e) => `GitHub repository ${e.repo}, commit ${e.commit}`).join("; ");
 }
-function Ea(e, t, n) {
-	return `You are the code assistant for the ${e} codebase (${Ta(t)}). Answer questions about this codebase using ONLY the numbered code context below.\n\nRules:\n- Cite the context blocks you draw from inline with bracketed numbers, e.g. [1] or [2].\n- If the context does not contain what is needed to answer, say plainly that the retrieved code does not cover it. Never invent file names, functions, or behavior.\n- Be concise and technical. Prefer short code excerpts over prose when they answer better.\n\nContext:\n${n}`;
+function xo(e, t, n) {
+	return `You are the code assistant for the ${e} codebase (${bo(t)}). Answer questions about this codebase using ONLY the numbered code context below.\n\nRules:\n- Cite the context blocks you draw from inline with bracketed numbers, e.g. [1] or [2].\n- If the context does not contain what is needed to answer, say plainly that the retrieved code does not cover it. Never invent file names, functions, or behavior.\n- Be concise and technical. Prefer short code excerpts over prose when they answer better.\n\nContext:\n${n}`;
 }
-var Da = "No relevant code was found in the corpus for this question.";
+var So = "No relevant code was found in the corpus for this question.";
 //#endregion
 //#region src/core/rag.js
-function Oa(e, t) {
+function Co(e, t) {
 	return e.flatMap(({ corpus: e, hits: t }) => t.map((t) => ({
 		corpus: e,
 		id: Number(t.id),
@@ -3060,10 +3688,10 @@ function Oa(e, t) {
 		payload: t.payload ?? {}
 	})).filter((e) => typeof e.payload.text == "string")).sort((e, t) => e.score - t.score).slice(0, t);
 }
-function ka(e, t, n) {
+function wo(e, t, n) {
 	return e.slice(0, n).filter(({ index: e }) => Number.isInteger(e) && e >= 0 && e < t.length).map(({ index: e }) => t[e]);
 }
-function Aa(e, t) {
+function To(e, t) {
 	let n = e.payload, r = Number(n.start_line), i = Number(n.end_line);
 	return {
 		n: t,
@@ -3073,33 +3701,33 @@ function Aa(e, t) {
 		startLine: r,
 		endLine: i,
 		score: e.score,
-		relevancePct: Sa(e.score),
-		url: Ca(e.corpus.repo, e.corpus.commit, n.path, r, i)
+		relevancePct: _o(e.score),
+		url: vo(e.corpus.repo, e.corpus.commit, n.path, r, i)
 	};
 }
-async function ja(e, t, n) {
+async function Eo(e, t, n) {
 	let { openrouter: r, lattice: i, corpora: a, embedding: o, retrieval: s, productName: c, rerankModel: l, chatModel: u, apiKey: d, onPhase: f, onDelta: p } = n;
 	f("retrieving");
 	let m = await r.getEmbedding(e, d, o.model);
 	if (!Array.isArray(m) || m.length !== o.dim) throw Error(`The embedding model returned ${m?.length ?? 0} dimensions but this corpus was built with ${o.dim}. The site's embedding model and the published corpus are out of sync — the corpus needs a rebuild against the current model.`);
-	let h = s.topK * s.rerankMultiplier, g = Oa(a.map((e) => ({
+	let h = s.topK * s.rerankMultiplier, g = Co(a.map((e) => ({
 		corpus: e,
 		hits: i.search(e.collection, m, h)
 	})), h), _;
-	g.length > 1 ? (f("reranking"), _ = ka(await r.rerank(e, g.map((e) => e.payload.text), d, s.topK, l), g, s.topK)) : _ = g.slice(0, s.topK);
-	let v = _.map((e, t) => Aa(e, t + 1)), y = _.length > 0 ? _.map((e, t) => wa(t + 1, {
+	g.length > 1 ? (f("reranking"), _ = wo(await r.rerank(e, g.map((e) => e.payload.text), d, s.topK, l), g, s.topK)) : _ = g.slice(0, s.topK);
+	let v = _.map((e, t) => To(e, t + 1)), y = _.length > 0 ? _.map((e, t) => yo(t + 1, {
 		repo: e.corpus.repo,
 		path: e.payload.path,
 		startLine: Number(e.payload.start_line),
 		endLine: Number(e.payload.end_line),
 		language: e.payload.language,
 		text: e.payload.text
-	})).join("\n\n") : Da;
+	})).join("\n\n") : So;
 	return f("thinking"), {
 		answer: await r.chat([...t, {
 			role: "user",
 			content: e
-		}], Ea(c, a, y), d, {
+		}], xo(c, a, y), d, {
 			onDelta: p,
 			model: u
 		}),
@@ -3108,14 +3736,14 @@ async function ja(e, t, n) {
 }
 //#endregion
 //#region src/state/conversation.svelte.js
-var Ma = [
+var Do = [
 	"rate",
 	"quota",
 	"key",
 	"network",
 	"service"
 ];
-function Na(e) {
+function Oo(e) {
 	let { chat: t } = e, n = Xt({
 		messages: [],
 		nextId: 0,
@@ -3143,7 +3771,7 @@ function Na(e) {
 		} catch {
 			let e = t.error?.kind;
 			n.askError = {
-				kind: Ma.includes(e) ? e : "generic",
+				kind: Do.includes(e) ? e : "generic",
 				resetAt: e === "quota" ? t.error?.resetAt ?? null : null,
 				detail: e === "corpus" ? t.error?.message : null
 			};
@@ -3196,7 +3824,7 @@ function Na(e) {
 }
 //#endregion
 //#region src/core/jsonl.js
-function Pa(e, t) {
+function ko(e, t) {
 	let n;
 	try {
 		n = JSON.parse(e);
@@ -3208,7 +3836,7 @@ function Pa(e, t) {
 	if (t !== null && n.dim !== t) throw Error(`corpus header says ${n.dim} dimensions but the manifest says ${t} — the published corpus and manifest disagree`);
 	return n;
 }
-function Fa(e) {
+function Ao(e) {
 	let t = JSON.parse(e);
 	return t?.t === "point" ? {
 		id: t.id,
@@ -3216,7 +3844,7 @@ function Fa(e) {
 		payload: t.payload
 	} : null;
 }
-function Ia(e) {
+function jo(e) {
 	let t = "";
 	return {
 		async push(n) {
@@ -3234,48 +3862,21 @@ function Ia(e) {
 	};
 }
 //#endregion
-//#region src/core/template.js
-function La(e, t) {
-	return e.replace(/\{(\w+)\}/g, (n, r) => {
-		if (!Object.hasOwn(t, r)) throw Error(`copy template ${JSON.stringify(e)} names {${r}} but no value was given`);
-		return String(t[r]);
-	});
-}
-//#endregion
-//#region src/core/consent.js
-function Ra(e, t) {
-	let n = e.filter((e) => !e.file);
-	if (n.length === 0) return null;
-	let r = n.map((e) => ({
-		id: e.corpus.id,
-		bytes: e.meta.gzBytes
-	}));
-	return {
-		corpora: r,
-		wasmBytes: t,
-		totalBytes: r.reduce((e, t) => e + t.bytes, 0) + (t ?? 0),
-		storedBytes: n.reduce((e, t) => e + t.meta.bytes, 0)
-	};
-}
-function za(e, t) {
-	return e < 999950 ? La(t.size.kb, { n: (e / 1e3).toFixed(1) }) : La(t.size.mb, { n: (e / 1e6).toFixed(1) });
-}
-//#endregion
 //#region src/core/manifest.js
-var Ba = /^[0-9a-f]{7,64}$/, Va = /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/, Ha = (e) => Number.isSafeInteger(e) && e >= 0;
-function Ua(e, t) {
+var Mo = /^[0-9a-f]{7,64}$/, No = /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/, Po = (e) => Number.isSafeInteger(e) && e >= 0;
+function Fo(e, t) {
 	let n = (e) => /* @__PURE__ */ Error(`corpus "${t}" manifest: ${e}`);
 	if (typeof e != "object" || !e || Array.isArray(e)) throw n("is not a JSON object");
-	if (typeof e.commit_sha != "string" || !Ba.test(e.commit_sha)) throw n("commit_sha must be a hex commit string");
+	if (typeof e.commit_sha != "string" || !Mo.test(e.commit_sha)) throw n("commit_sha must be a hex commit string");
 	if (!Number.isSafeInteger(e.dim) || e.dim < 1) throw n("dim must be a positive integer");
 	if (typeof e.model != "string" || e.model.trim() === "") throw n("model must name the embedding model");
-	if (typeof e.repo != "string" || !Va.test(e.repo)) throw n("repo must be \"owner/name\"");
+	if (typeof e.repo != "string" || !No.test(e.repo)) throw n("repo must be \"owner/name\"");
 	for (let t of [
 		"points",
 		"files",
 		"bytes",
 		"gz_bytes"
-	]) if (!Ha(e[t])) throw n(`${t} must be a non-negative integer`);
+	]) if (!Po(e[t])) throw n(`${t} must be a non-negative integer`);
 	if (typeof e.generated_at != "string") throw n("generated_at must be a string");
 	return {
 		commitSha: e.commit_sha,
@@ -3289,7 +3890,7 @@ function Ua(e, t) {
 		generatedAt: e.generated_at
 	};
 }
-function Wa(e) {
+function Io(e) {
 	if (e.length === 0) throw Error("no corpora to load");
 	let [t, ...n] = e;
 	for (let e of n) {
@@ -3303,88 +3904,52 @@ function Wa(e) {
 }
 //#endregion
 //#region src/state/loader.js
-var Ga = class extends Error {
-	constructor() {
-		super("load aborted"), this.name = "AbortError";
+function Lo({ chat: e, corpora: t, upsertBatch: n, ports: r }) {
+	let { lattice: i, cache: a, net: o, idleYield: s, wasmBytes: c, reportCacheFault: l } = r, u = null, d = null, f = !1, p = po(e, {
+		cancelIo() {
+			u?.abort();
+			let e = d;
+			d = null, e && e.discard().catch(l);
+		},
+		settled() {
+			u = null, d = null;
+		}
+	}), { fail: m, throwIfAborted: h } = p, g = (t, n) => mo({
+		chat: e,
+		net: o,
+		cache: a,
+		gate: p,
+		validate: Fo
+	}, t, n);
+	async function _() {
+		let e = d;
+		d = null, e && await e.discard().catch(l);
 	}
-}, Ka = class extends Error {
-	constructor() {
-		super("load failed"), this.name = "FailedError";
-	}
-};
-function qa({ chat: e, corpora: t, upsertBatch: n, ports: r }) {
-	let { lattice: i, cache: a, net: o, idleYield: s, wasmBytes: c, reportCacheFault: l } = r, u = null, d = null, f = null, p = null, m = !1, h = null, g = !1, _ = (e) => {
-		if (e.aborted) throw new Ga();
-	};
-	function v() {
-		e.progress.loadedBytes = 0, e.progress.totalBytes = 0, e.progress.indexed = 0, e.progress.totalPoints = 0;
-	}
-	function y(t, n) {
-		return e.status = "error", e.error = {
-			kind: t,
-			message: n?.message ? String(n.message) : String(n)
-		}, new Ka();
-	}
-	async function b() {
-		let e = f;
-		f = null, e && await e.discard().catch(l);
-	}
-	function x() {
-		if (e.status === "ready") return Promise.resolve();
-		if (u) return u;
-		let t = { aborted: !1 };
-		return p = t, u = C(t).catch((n) => {
-			t.aborted || n?.name === "AbortError" || n instanceof Ka || e.error || y("corpus", n);
-		}).finally(() => {
-			e.status !== "ready" && (u = null), p === t && (p = null), d = null, f = null;
-		}), u;
-	}
-	function S() {
-		if (e.status === "ready" || e.status === "idle") return;
-		p && (p.aborted = !0), m = !1, h?.reject(new Ga()), h = null, e.consent = null, d?.abort();
-		let t = f;
-		f = null, t && t.discard().catch(l), u = null, e.error = null, e.offline = !1, v(), e.status = "idle";
-	}
-	function ee() {
-		h &&= (m = !0, e.consent = null, h.resolve(), null);
-	}
-	function te(t) {
-		return e.consent = t, e.status = "consent", new Promise((e, t) => {
-			h = {
-				resolve: e,
-				reject: t
-			};
-		});
-	}
-	async function C(n) {
-		e.error = null, e.offline = !1, v(), e.status = "manifest";
+	async function v(n) {
+		e.status = "manifest";
 		let r = [];
-		for (let e of t) r.push(await w(n, e));
+		for (let e of t) r.push(await g(n, e));
 		let o;
 		try {
-			o = Wa(r.map((e) => ({
+			o = Io(r.map((e) => ({
 				id: e.corpus.id,
 				meta: e.meta
 			})));
 		} catch (e) {
-			throw y("config", e);
+			throw m("config", e);
 		}
-		for (let e of r) e.file ||= await a.getCachedCorpus(e.corpus.id, e.meta.commitSha, e.meta.bytes), _(n);
-		if (!m && r.some((e) => !e.file)) {
-			let e = g ? 0 : await c();
-			_(n), await te(Ra(r, e)), _(n);
-		}
-		e.status = "wasm-init";
+		for (let e of r) e.file ||= await a.getCachedCorpus(e.corpus.id, e.meta.commitSha, e.meta.bytes), h(n);
+		await p.consentTo(n, async () => r.some((e) => !e.file) ? to(r, f ? 0 : await c()) : null), e.status = "wasm-init";
 		try {
 			await i.init();
 		} catch (e) {
-			throw y("wasm", e);
+			throw m("wasm", e);
 		}
-		g = !0, _(n), e.progress.totalBytes = r.reduce((e, t) => e + (t.file ? t.file.size : t.meta.gzBytes), 0), e.progress.totalPoints = r.reduce((e, t) => e + t.meta.points, 0);
+		f = !0, h(n), e.progress.totalBytes = r.reduce((e, t) => e + (t.file ? t.file.size : t.meta.gzBytes), 0), e.progress.totalPoints = r.reduce((e, t) => e + t.meta.points, 0);
 		let s = [];
 		for (let e of r) {
-			let t = e.file ? await ne(n, e) : await re(n, e);
-			_(n), s.push({
+			let t = e.file ? await y(n, e) : await b(n, e);
+			h(n), s.push({
 				id: e.corpus.id,
 				collection: e.corpus.id,
 				commit: e.meta.commitSha,
@@ -3397,36 +3962,8 @@ function qa({ chat: e, corpora: t, upsertBatch: n, ports: r }) {
 		}
 		e.corpora = s, e.embedding = o, e.status = "ready";
 	}
-	async function w(t, n) {
-		let r;
-		try {
-			return r = await o.fetchMeta(n.metaUrl), {
-				corpus: n,
-				raw: r,
-				meta: Ua(r, n.id),
-				file: null
-			};
-		} catch (r) {
-			_(t);
-			let i = await a.newestOffline(n.id);
-			if (_(t), !i) throw y(ba(r), r);
-			let o;
-			try {
-				o = Ua(i.rawMeta, n.id);
-			} catch {
-				throw y(ba(r), r);
-			}
-			if (o.commitSha !== i.sha) throw y(ba(r), r);
-			return e.offline = !0, {
-				corpus: n,
-				raw: i.rawMeta,
-				meta: o,
-				file: i.file
-			};
-		}
-	}
-	async function ne(t, n) {
-		return e.status = "loading-cached", ie(t, n.file.stream(), {
+	async function y(t, n) {
+		return e.status = "loading-cached", x(t, n.file.stream(), {
 			collection: n.corpus.id,
 			expectedDim: n.meta.dim,
 			tee: null,
@@ -3436,25 +3973,25 @@ function qa({ chat: e, corpora: t, upsertBatch: n, ports: r }) {
 			}
 		});
 	}
-	async function re(t, n) {
+	async function b(t, n) {
 		let { id: r } = n.corpus, i = n.meta.commitSha;
-		e.status = "downloading", d = new AbortController();
+		e.status = "downloading", u = new AbortController();
 		let s;
 		try {
-			s = await o.openCorpus(n.corpus.gzUrl, d.signal);
+			s = await o.openCorpus(n.corpus.gzUrl, u.signal);
 		} catch (e) {
-			throw _(t), e?.name === "AbortError" ? e : y(xa(e), e);
+			throw h(t), e?.name === "AbortError" ? e : m(eo(e), e);
 		}
 		s.contentLength !== null && (e.progress.totalBytes += s.contentLength - n.meta.gzBytes);
 		let c = s.body.pipeThrough(new TransformStream({ transform(t, n) {
 			e.progress.loadedBytes += t.byteLength, n.enqueue(t);
-		} })), u = o.gunzip(c);
-		if (u === null) throw y("decompress", /* @__PURE__ */ Error("this browser lacks DecompressionStream (gzip) support"));
-		if (f = await a.createCorpusWriter(r, i).catch((e) => (l(e), null)), t.aborted) throw await b(), new Ga();
+		} })), f = o.gunzip(c);
+		if (f === null) throw m("decompress", /* @__PURE__ */ Error("this browser lacks DecompressionStream (gzip) support"));
+		if (d = await a.createCorpusWriter(r, i).catch((e) => (l(e), null)), t.aborted) throw await _(), new uo();
 		let p = async () => {
 			e.status = "caching";
-			let t = f;
-			if (f = null, t) try {
+			let t = d;
+			if (d = null, t) try {
 				await t.finalize(), await a.writeMeta(r, i, n.raw);
 			} catch (e) {
 				l(e), await t.discard().catch(l);
@@ -3462,51 +3999,51 @@ function qa({ chat: e, corpora: t, upsertBatch: n, ports: r }) {
 			await a.pruneStale(r, i).catch(l);
 		};
 		try {
-			return await ie(t, u, {
+			return await x(t, f, {
 				collection: r,
 				expectedDim: n.meta.dim,
-				tee: f,
+				tee: d,
 				countBytes: !1,
 				onDrained: p
 			});
 		} catch (e) {
-			throw await b(), t.aborted || e?.name === "AbortError" ? e : y(ya(e), e);
+			throw await _(), t.aborted || e?.name === "AbortError" ? e : m(Qa(e), e);
 		}
 	}
-	async function ie(t, r, { collection: a, expectedDim: o, tee: c, countBytes: l, onDrained: u }) {
-		let d = r.getReader(), f = new TextDecoder(), p = null, m = [], h = async () => {
-			m.length !== 0 && (i.upsert(a, m), e.progress.indexed += m.length, m = [], await s(), _(t));
-		}, g = Ia(async (e) => {
+	async function x(t, r, { collection: a, expectedDim: o, tee: c, countBytes: l, onDrained: u }) {
+		let d = r.getReader(), f = new TextDecoder(), p = null, m = [], g = async () => {
+			m.length !== 0 && (i.upsert(a, m), e.progress.indexed += m.length, m = [], await s(), h(t));
+		}, _ = jo(async (e) => {
 			if (!p) {
-				p = Pa(e, o), i.createCollection(a, p.dim);
+				p = ko(e, o), i.createCollection(a, p.dim);
 				return;
 			}
-			let t = Fa(e);
-			t && m.push(t), m.length >= n && await h();
+			let t = Ao(e);
+			t && m.push(t), m.length >= n && await g();
 		});
 		try {
 			for (;;) {
-				_(t);
+				h(t);
 				let { done: n, value: r } = await d.read();
 				if (n) break;
-				c && await c.write(r), l && (e.progress.loadedBytes += r.byteLength), await g.push(f.decode(r, { stream: !0 }));
+				c && await c.write(r), l && (e.progress.loadedBytes += r.byteLength), await _.push(f.decode(r, { stream: !0 }));
 			}
-			await g.push(f.decode()), await g.end();
+			await _.push(f.decode()), await _.end();
 		} finally {
 			d.releaseLock?.();
 		}
 		if (!p) throw Error("corpus stream ended before a header line");
-		return _(t), await u(), _(t), e.status = "indexing", await h(), p;
+		return h(t), await u(), h(t), e.status = "indexing", await g(), p;
 	}
 	return {
-		ensureReady: x,
-		abortLoad: S,
-		accept: ee
+		ensureReady: () => p.ensureReady(v),
+		abortLoad: p.abortLoad,
+		accept: p.accept
 	};
 }
 //#endregion
 //#region src/state/session.svelte.js
-function Ja(e, t) {
+function Ro(e, t) {
 	let { keys: n, clock: r } = t, i = e.provider.chatModel, a = Xt({
 		status: "idle",
 		consent: null,
@@ -3525,7 +4062,7 @@ function Ja(e, t) {
 		chatModel: n.getChatModel() || i,
 		msgPhase: null,
 		stream: null
-	}), o = qa({
+	}), o = Lo({
 		chat: a,
 		corpora: e.corpora,
 		upsertBatch: e.retrieval.upsertBatch,
@@ -3577,7 +4114,7 @@ function Ja(e, t) {
 			e && (f ||= r.now(), c += e, l += e, h()), t && (a.msgPhase !== "writing" && (a.msgPhase = "writing", f && a.stream && a.stream.reasoningMs === 0 && (a.stream.reasoningMs = r.now() - f)), u += t, h());
 		};
 		try {
-			let n = await ja(i, o, {
+			let n = await Eo(i, o, {
 				openrouter: t.openrouter,
 				lattice: t.lattice,
 				corpora: a.corpora,
@@ -3607,7 +4144,7 @@ function Ja(e, t) {
 				reasoningMs: l
 			};
 		} catch (e) {
-			let { kind: t, resetAt: n } = va(e);
+			let { kind: t, resetAt: n } = Za(e);
 			throw p(t, e, t === "quota" ? { resetAt: n } : {}), e;
 		} finally {
 			d && r.cancelFrame(d), a.msgPhase = null, a.stream = null;
@@ -3615,7 +4152,7 @@ function Ja(e, t) {
 	}
 	return {
 		chat: a,
-		conversation: Na({
+		conversation: Oo({
 			chat: a,
 			ask: m,
 			setChatModel: s
@@ -3637,27 +4174,27 @@ function Ja(e, t) {
 typeof window < "u" && ((window.__svelte ??= {}).v ??= /* @__PURE__ */ new Set()).add("5");
 //#endregion
 //#region src/core/markdown.js
-function Ya(e) {
+function zo(e) {
 	return e.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 }
-function Xa(e) {
+function Bo(e) {
 	let t = e;
 	return t = t.replace(/\[([^\]]+)\]\((https?:\/\/[^)\s*[\]]+)\)/g, "<a href=\"$2\" rel=\"noopener nofollow\" target=\"_blank\">$1</a>"), t = t.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>"), t = t.replace(/\[(\d{1,3})\](?!\()/g, "<sup class=\"cc-cite\">[$1]</sup>"), t;
 }
-function Za(e) {
-	return Ya(e).split(/(`[^`\n]+`)/).map((e) => e.length > 2 && e.startsWith("`") && e.endsWith("`") ? `<code>${e.slice(1, -1)}</code>` : Xa(e)).join("");
+function Vo(e) {
+	return zo(e).split(/(`[^`\n]+`)/).map((e) => e.length > 2 && e.startsWith("`") && e.endsWith("`") ? `<code>${e.slice(1, -1)}</code>` : Bo(e)).join("");
 }
-function Qa(e, t) {
-	let n = t ? /^\s*\d+[.)]\s+/ : /^\s*[-*]\s+/, r = e.map((e) => `<li>${Za(e.replace(n, ""))}</li>`).join("");
+function Ho(e, t) {
+	let n = t ? /^\s*\d+[.)]\s+/ : /^\s*[-*]\s+/, r = e.map((e) => `<li>${Vo(e.replace(n, ""))}</li>`).join("");
 	return t ? `<ol>${r}</ol>` : `<ul>${r}</ul>`;
 }
-function $a(e, t) {
+function Uo(e, t) {
 	if (typeof t != "string" || t.trim() === "") throw Error("renderMarkdown: codeLabel must be a non-empty string");
 	if (typeof e != "string" || e.length === 0) return "";
-	let n = `<pre class="cc-fence" tabindex="0" role="region" aria-label="${Ya(t)}">`, r = e.replace(/\r\n?/g, "\n").split("\n"), i = [], a = [], o = () => {
+	let n = `<pre class="cc-fence" tabindex="0" role="region" aria-label="${zo(t)}">`, r = e.replace(/\r\n?/g, "\n").split("\n"), i = [], a = [], o = () => {
 		if (a.length === 0) return;
 		let e = a.every((e) => /^\s*[-*]\s+/.test(e)), t = a.every((e) => /^\s*\d+[.)]\s+/.test(e));
-		e ? i.push(Qa(a, !1)) : t ? i.push(Qa(a, !0)) : i.push(`<p>${a.map(Za).join("<br>")}</p>`), a = [];
+		e ? i.push(Ho(a, !1)) : t ? i.push(Ho(a, !0)) : i.push(`<p>${a.map(Vo).join("<br>")}</p>`), a = [];
 	};
 	for (let e = 0; e < r.length; e++) {
 		let t = r[e], s = t.match(/^```([\w+-]*)\s*$/);
@@ -3666,74 +4203,74 @@ function $a(e, t) {
 			let t = s[1], a = [];
 			for (e++; e < r.length && !/^```\s*$/.test(r[e]);) a.push(r[e]), e++;
 			let c = t ? ` class="language-${t}"` : "";
-			i.push(`${n}<code${c}>${Ya(a.join("\n"))}</code></pre>`);
+			i.push(`${n}<code${c}>${zo(a.join("\n"))}</code></pre>`);
 		} else t.trim() === "" ? o() : a.push(t);
 	}
 	return o(), i.join("");
 }
 //#endregion
 //#region src/ui/ChatMessage.svelte
-var eo = /* @__PURE__ */ J("<p class=\"cm-user\"><span class=\"cm-prompt\" aria-hidden=\"true\">❯</span> </p>"), to = /* @__PURE__ */ J("<span class=\"cm-count\"> </span>"), no = /* @__PURE__ */ J("<button type=\"button\" class=\"cm-think-toggle\"><span class=\"cm-think-time\"> </span> <span class=\"cm-think-sep\" aria-hidden=\"true\">·</span> <span class=\"cm-think-act\"> </span></button>"), ro = /* @__PURE__ */ J("<span class=\"cm-think-label\"> </span>"), io = /* @__PURE__ */ J("<div class=\"cm-think\"><!> <div class=\"cm-think-clip\"><p class=\"cm-think-text\"> </p></div></div>"), ao = /* @__PURE__ */ J("<div class=\"cm-body\"></div>"), oo = /* @__PURE__ */ J("<span class=\"cm-src-corpus\"> </span>"), so = /* @__PURE__ */ J("<a class=\"cm-src\" target=\"_blank\" rel=\"noopener\"><span class=\"cm-src-n\"> </span> <!> <span class=\"cm-src-path\"> </span> <span class=\"cm-src-lines\"> </span> <span class=\"cm-src-pct\"> </span></a>"), co = /* @__PURE__ */ J("<details class=\"cm-sources\"><summary> </summary> <!></details>"), lo = /* @__PURE__ */ J("<article class=\"cm-card cm-print\"><header class=\"cm-head\"><span class=\"cm-title\"> </span> <!></header> <!> <!> <!></article>");
-function uo(e, t) {
+var Wo = /* @__PURE__ */ q("<p class=\"cm-user\"><span class=\"cm-prompt\" aria-hidden=\"true\">❯</span> </p>"), Go = /* @__PURE__ */ q("<span class=\"cm-count\"> </span>"), Ko = /* @__PURE__ */ q("<button type=\"button\" class=\"cm-think-toggle\"><span class=\"cm-think-time\"> </span> <span class=\"cm-think-sep\" aria-hidden=\"true\">·</span> <span class=\"cm-think-act\"> </span></button>"), qo = /* @__PURE__ */ q("<span class=\"cm-think-label\"> </span>"), Jo = /* @__PURE__ */ q("<div class=\"cm-think\"><!> <div class=\"cm-think-clip\"><p class=\"cm-think-text\"> </p></div></div>"), Yo = /* @__PURE__ */ q("<div class=\"cm-body\"></div>"), Xo = /* @__PURE__ */ q("<span class=\"cm-src-corpus\"> </span>"), Zo = /* @__PURE__ */ q("<a class=\"cm-src\" target=\"_blank\" rel=\"noopener\"><span class=\"cm-src-n\"> </span> <!> <span class=\"cm-src-path\"> </span> <span class=\"cm-src-lines\"> </span> <span class=\"cm-src-pct\"> </span></a>"), Qo = /* @__PURE__ */ q("<details class=\"cm-sources\"><summary> </summary> <!></details>"), $o = /* @__PURE__ */ q("<article class=\"cm-card cm-print\"><header class=\"cm-head\"><span class=\"cm-title\"> </span> <!></header> <!> <!> <!></article>");
+function es(e, t) {
 	Ve(t, !0);
 	let n = /* @__PURE__ */ M(() => t.live ? t.live.reasoningText : t.message?.reasoning ?? ""), r = /* @__PURE__ */ M(() => t.live ? t.live.answerText : t.message?.text ?? ""), i = /* @__PURE__ */ M(() => t.live ? t.live.reasoningMs : t.message?.reasoningMs ?? 0), a = /* @__PURE__ */ M(() => (G(i) / 1e3).toFixed(1)), o = /* @__PURE__ */ M(() => G(r).length > 0), s = /* @__PURE__ */ P(null), c = /* @__PURE__ */ M(() => G(s) ?? !G(o)), l = /* @__PURE__ */ P(null);
 	mn(() => {
 		G(n), t.live && G(l) && (G(l).scrollTop = G(l).scrollHeight);
 	});
-	var u = xr(), d = rn(u), f = (e) => {
-		var n = eo(), r = z(R(n), 1, !0);
-		k(n), B(() => X(r, t.message.text)), Y(e, n);
+	var u = Sr(), d = rn(u), f = (e) => {
+		var n = Wo(), r = z(R(n), 1, !0);
+		k(n), B(() => Y(r, t.message.text)), J(e, n);
 	}, p = (e) => {
-		var i = lo(), u = R(i), d = R(u), f = R(d, !0);
+		var i = $o(), u = R(i), d = R(u), f = R(d, !0);
 		k(d);
 		var p = z(d, 2), m = (e) => {
-			var n = to(), r = R(n);
-			k(n), B(() => X(r, `${t.message.sources.length ?? ""}
-          ${(t.message.sources.length === 1 ? t.copy.sourcesOne : t.copy.sourcesMany) ?? ""}`)), Y(e, n);
+			var n = Go(), r = R(n);
+			k(n), B(() => Y(r, `${t.message.sources.length ?? ""}
+          ${(t.message.sources.length === 1 ? t.copy.sourcesOne : t.copy.sourcesMany) ?? ""}`)), J(e, n);
 		};
-		Z(p, (e) => {
+		X(p, (e) => {
 			t.message?.sources?.length && e(m);
 		}), k(u);
 		var h = z(u, 2), g = (e) => {
-			var r = io(), i = R(r), u = (e) => {
-				var n = no(), r = R(n), i = R(r);
+			var r = Jo(), i = R(r), u = (e) => {
+				var n = Ko(), r = R(n), i = R(r);
 				k(r);
 				var o = z(r, 4), l = R(o, !0);
 				k(o), k(n), B(() => {
-					Q(n, "aria-expanded", G(c)), X(i, `${t.copy.trace.reasonedPrefix ?? ""} ${G(a) ?? ""}s`), X(l, G(c) ? t.copy.trace.hide : t.copy.trace.show);
-				}), K("click", n, () => F(s, !G(c))), Y(e, n);
+					Z(n, "aria-expanded", G(c)), Y(i, `${t.copy.trace.reasonedPrefix ?? ""} ${G(a) ?? ""}s`), Y(l, G(c) ? t.copy.trace.hide : t.copy.trace.show);
+				}), K("click", n, () => F(s, !G(c))), J(e, n);
 			}, d = (e) => {
-				var n = ro(), r = R(n, !0);
-				k(n), B(() => X(r, t.copy.trace.label)), Y(e, n);
+				var n = qo(), r = R(n, !0);
+				k(n), B(() => Y(r, t.copy.trace.label)), J(e, n);
 			};
-			Z(i, (e) => {
+			X(i, (e) => {
 				G(o) ? e(u) : e(d, -1);
 			});
 			var f = z(i, 2), p = R(f), m = R(p, !0);
-			k(p), ai(p, (e) => F(l, e), () => G(l)), k(f), k(r), B(() => {
-				Q(r, "data-open", G(c)), X(m, G(n));
-			}), Y(e, r);
+			k(p), oi(p, (e) => F(l, e), () => G(l)), k(f), k(r), B(() => {
+				Z(r, "data-open", G(c)), Y(m, G(n));
+			}), J(e, r);
 		};
-		Z(h, (e) => {
+		X(h, (e) => {
 			G(n) && e(g);
 		});
 		var _ = z(h, 2), v = (e) => {
-			var n = ao();
-			zr(n, () => $a(G(r), t.copy.codeLabel), !0), k(n), Y(e, n);
+			var n = Yo();
+			Br(n, () => Uo(G(r), t.copy.codeLabel), !0), k(n), J(e, n);
 		};
-		Z(_, (e) => {
+		X(_, (e) => {
 			(G(r) || !t.live) && e(v);
 		});
 		var y = z(_, 2), b = (e) => {
-			var n = co(), r = R(n), i = R(r, !0);
-			k(r), Nr(z(r, 2), 17, () => t.message.sources, (e) => e.n, (e, n) => {
-				var r = so(), i = R(r), a = R(i);
+			var n = Qo(), r = R(n), i = R(r, !0);
+			k(r), Pr(z(r, 2), 17, () => t.message.sources, (e) => e.n, (e, n) => {
+				var r = Zo(), i = R(r), a = R(i);
 				k(i);
 				var o = z(i, 2), s = (e) => {
-					var t = oo(), r = R(t, !0);
-					k(t), B(() => X(r, G(n).corpusId)), Y(e, t);
+					var t = Xo(), r = R(t, !0);
+					k(t), B(() => Y(r, G(n).corpusId)), J(e, t);
 				};
-				Z(o, (e) => {
+				X(o, (e) => {
 					t.showCorpus && e(s);
 				});
 				var c = z(o, 2), l = R(c, !0);
@@ -3742,55 +4279,55 @@ function uo(e, t) {
 				k(u);
 				var f = z(u, 2), p = R(f);
 				k(f), k(r), B((e) => {
-					Q(r, "href", G(n).url), X(a, `[${G(n).n ?? ""}]`), X(l, G(n).path), X(d, `L${G(n).startLine ?? ""}–${G(n).endLine ?? ""}`), X(p, `${e ?? ""}%`);
-				}, [() => Math.round(G(n).relevancePct)]), Y(e, r);
+					Z(r, "href", G(n).url), Y(a, `[${G(n).n ?? ""}]`), Y(l, G(n).path), Y(d, `L${G(n).startLine ?? ""}–${G(n).endLine ?? ""}`), Y(p, `${e ?? ""}%`);
+				}, [() => Math.round(G(n).relevancePct)]), J(e, r);
 			}), k(n), B(() => {
-				n.open = t.sourcesOpen, X(i, t.copy.sourcesHeading);
-			}), Y(e, n);
+				n.open = t.sourcesOpen, Y(i, t.copy.sourcesHeading);
+			}), J(e, n);
 		};
-		Z(y, (e) => {
+		X(y, (e) => {
 			t.message?.sources?.length && e(b);
 		}), k(i), B(() => {
-			Q(i, "data-streaming", t.live ? G(o) ? "writing" : "thinking" : void 0), X(f, t.copy.answerTag);
-		}), Y(e, i);
+			Z(i, "data-streaming", t.live ? G(o) ? "writing" : "thinking" : void 0), Y(f, t.copy.answerTag);
+		}), J(e, i);
 	};
-	Z(d, (e) => {
+	X(d, (e) => {
 		t.message?.role === "user" ? e(f) : e(p, -1);
-	}), Y(e, u), He();
+	}), J(e, u), He();
 }
 fr(["click"]);
 //#endregion
 //#region src/ui/ConsentPanel.svelte
-var fo = /* @__PURE__ */ J("<li class=\"cc-consent-corpus\"><span class=\"cc-consent-name\"> </span><span class=\"cc-consent-size\"> </span></li>"), po = /* @__PURE__ */ J("<li class=\"cc-consent-engine\"><span class=\"cc-consent-name\"> </span><span class=\"cc-consent-size\"> </span></li>"), mo = /* @__PURE__ */ J("<div class=\"cc-panel cc-consent\" role=\"group\" tabindex=\"-1\"><p class=\"cc-load-title\"> </p> <p class=\"cc-consent-lead\"> </p> <ul class=\"cc-consent-list\"><!> <!></ul> <p class=\"cc-consent-total\"> </p> <div class=\"cc-consent-actions\"><button type=\"button\" class=\"cc-consent-accept\"> </button> <button type=\"button\" class=\"cc-consent-decline\"> </button></div></div>");
-function ho(e, t) {
-	let n = Sr();
+var ts = /* @__PURE__ */ q("<li class=\"cc-consent-corpus\"><span class=\"cc-consent-name\"> </span><span class=\"cc-consent-size\"> </span></li>"), ns = /* @__PURE__ */ q("<li class=\"cc-consent-engine\"><span class=\"cc-consent-name\"> </span><span class=\"cc-consent-size\"> </span></li>"), rs = /* @__PURE__ */ q("<div class=\"cc-panel cc-consent\" role=\"group\" tabindex=\"-1\"><p class=\"cc-load-title\"> </p> <p class=\"cc-consent-lead\"> </p> <ul class=\"cc-consent-list\"><!> <!></ul> <p class=\"cc-consent-total\"> </p> <div class=\"cc-consent-actions\"><button type=\"button\" class=\"cc-consent-accept\"> </button> <button type=\"button\" class=\"cc-consent-decline\"> </button></div></div>");
+function is(e, t) {
+	let n = Cr();
 	Ve(t, !0);
-	let r = /* @__PURE__ */ P(null), i = /* @__PURE__ */ M(() => za(t.consent.totalBytes, t.copy)), a = /* @__PURE__ */ M(() => za(t.consent.storedBytes, t.copy));
+	let r = /* @__PURE__ */ P(null), i = /* @__PURE__ */ M(() => no(t.consent.totalBytes, t.copy)), a = /* @__PURE__ */ M(() => no(t.consent.storedBytes, t.copy));
 	mn(() => {
 		G(r)?.focus();
 	});
-	var o = mo(), s = R(o), c = R(s, !0);
+	var o = rs(), s = R(o), c = R(s, !0);
 	k(s);
 	var l = z(s, 2), u = R(l, !0);
 	k(l);
 	var d = z(l, 2), f = R(d);
-	Nr(f, 17, () => t.consent.corpora, (e) => e.id, (e, n) => {
-		var r = fo(), i = R(r), a = R(i, !0);
+	Pr(f, 17, () => t.consent.corpora, (e) => e.id, (e, n) => {
+		var r = ts(), i = R(r), a = R(i, !0);
 		k(i);
 		var o = z(i), s = R(o, !0);
 		k(o), k(r), B((e) => {
-			X(a, G(n).id), X(s, e);
-		}, [() => za(G(n).bytes, t.copy)]), Y(e, r);
+			Y(a, G(n).id), Y(s, e);
+		}, [() => no(G(n).bytes, t.copy)]), J(e, r);
 	});
 	var p = z(f, 2), m = (e) => {
-		var n = po(), r = R(n), i = R(r, !0);
+		var n = ns(), r = R(n), i = R(r, !0);
 		k(r);
 		var a = z(r), o = R(a, !0);
 		k(a), k(n), B((e) => {
-			X(i, t.copy.consent.engine), X(o, e);
-		}, [() => za(t.consent.wasmBytes, t.copy)]), Y(e, n);
+			Y(i, t.copy.consent.engine), Y(o, e);
+		}, [() => no(t.consent.wasmBytes, t.copy)]), J(e, n);
 	};
-	Z(p, (e) => {
+	X(p, (e) => {
 		t.consent.wasmBytes && e(m);
 	}), k(d);
 	var h = z(d, 2), g = R(h, !0);
@@ -3798,57 +4335,57 @@ function ho(e, t) {
 	var _ = z(h, 2), v = R(_), y = R(v, !0);
 	k(v);
 	var b = z(v, 2), x = R(b, !0);
-	k(b), k(_), k(o), ai(o, (e) => F(r, e), () => G(r)), B((e, r) => {
-		Q(o, "aria-labelledby", `${n}-title`), Q(o, "aria-describedby", `${n}-total`), Q(o, "data-total-bytes", t.consent.totalBytes), Q(s, "id", `${n}-title`), X(c, t.copy.consent.title), X(u, t.copy.consent.lead), Q(h, "id", `${n}-total`), X(g, e), X(y, r), X(x, t.copy.consent.decline);
-	}, [() => La(t.copy.consent.total, {
+	k(b), k(_), k(o), oi(o, (e) => F(r, e), () => G(r)), B((e, r) => {
+		Z(o, "aria-labelledby", `${n}-title`), Z(o, "aria-describedby", `${n}-total`), Z(o, "data-total-bytes", t.consent.totalBytes), Z(s, "id", `${n}-title`), Y(c, t.copy.consent.title), Y(u, t.copy.consent.lead), Z(h, "id", `${n}-total`), Y(g, e), Y(y, r), Y(x, t.copy.consent.decline);
+	}, [() => $(t.copy.consent.total, {
 		download: G(i),
 		stored: G(a)
-	}), () => La(t.copy.consent.accept, { size: G(i) })]), K("click", v, function(...e) {
+	}), () => $(t.copy.consent.accept, { size: G(i) })]), K("click", v, function(...e) {
 		t.onaccept?.apply(this, e);
 	}), K("click", b, function(...e) {
 		t.ondecline?.apply(this, e);
-	}), Y(e, o), He();
+	}), J(e, o), He();
 }
 fr(["click"]);
 //#endregion
 //#region src/ui/ErrorCard.svelte
-var go = /* @__PURE__ */ J("<p class=\"cc-error-reset\"> </p>"), _o = /* @__PURE__ */ J("<button type=\"button\" class=\"cc-error-paid\"> </button>"), vo = /* @__PURE__ */ J("<div class=\"cc-error\" role=\"alert\"><span class=\"cc-error-tag\"> </span> <p class=\"cc-error-body\"> </p> <!> <div class=\"cc-error-actions\"><!> <button type=\"button\" class=\"cc-error-retry\"> </button></div></div>");
-function yo(e, t) {
+var as = /* @__PURE__ */ q("<p class=\"cc-error-reset\"> </p>"), os = /* @__PURE__ */ q("<button type=\"button\" class=\"cc-error-paid\"> </button>"), ss = /* @__PURE__ */ q("<div class=\"cc-error\" role=\"alert\"><span class=\"cc-error-tag\"> </span> <p class=\"cc-error-body\"> </p> <!> <div class=\"cc-error-actions\"><!> <button type=\"button\" class=\"cc-error-retry\"> </button></div></div>");
+function cs(e, t) {
 	Ve(t, !0);
-	var n = vo(), r = R(n), i = R(r, !0);
+	var n = ss(), r = R(n), i = R(r, !0);
 	k(r);
 	var a = z(r, 2), o = R(a, !0);
 	k(a);
 	var s = z(a, 2), c = (e) => {
-		var n = go(), r = R(n, !0);
-		k(n), B(() => X(r, t.resetText)), Y(e, n);
+		var n = as(), r = R(n, !0);
+		k(n), B(() => Y(r, t.resetText)), J(e, n);
 	};
-	Z(s, (e) => {
+	X(s, (e) => {
 		t.resetText && e(c);
 	});
 	var l = z(s, 2), u = R(l), d = (e) => {
-		var n = _o(), r = R(n, !0);
-		k(n), B(() => X(r, t.paidLabel)), K("click", n, function(...e) {
+		var n = os(), r = R(n, !0);
+		k(n), B(() => Y(r, t.paidLabel)), K("click", n, function(...e) {
 			t.onpaid?.apply(this, e);
-		}), Y(e, n);
+		}), J(e, n);
 	};
-	Z(u, (e) => {
+	X(u, (e) => {
 		t.paidLabel && e(d);
 	});
 	var f = z(u, 2), p = R(f, !0);
 	k(f), k(l), k(n), B(() => {
-		X(i, t.entry.tag), X(o, t.detail ?? t.entry.body), X(p, t.entry.retry);
+		Y(i, t.entry.tag), Y(o, t.detail ?? t.entry.body), Y(p, t.entry.retry);
 	}), K("click", f, function(...e) {
 		t.onretry?.apply(this, e);
-	}), Y(e, n), He();
+	}), J(e, n), He();
 }
 fr(["click"]);
 //#endregion
 //#region src/ui/KeyRow.svelte
-var bo = /* @__PURE__ */ J("<span class=\"cc-key-back\"><button type=\"button\" class=\"cc-key-keep\"> </button> <button type=\"button\" class=\"cc-key-forget\"> </button></span>"), xo = /* @__PURE__ */ J("<p class=\"cc-key-forgotten\" role=\"status\"> <button type=\"button\" class=\"cc-key-undo\"> </button></p>"), So = /* @__PURE__ */ J(" <a class=\"cc-link\" target=\"_blank\" rel=\"noopener\"> </a>", 1), Co = /* @__PURE__ */ J("<div class=\"cc-key\"><div class=\"cc-key-top\"><span class=\"cc-key-tag\"> </span> <!></div> <!> <p class=\"cc-key-lead\"><!></p> <form class=\"cc-key-form\"><input class=\"cc-key-input\" autocomplete=\"off\" spellcheck=\"false\"/> <button type=\"button\" class=\"cc-key-toggle\"> </button> <button type=\"submit\" class=\"cc-key-save\"> </button></form></div>"), wo = /* @__PURE__ */ J("<button type=\"button\" class=\"cc-model-reset\"> </button>"), To = /* @__PURE__ */ J("<div class=\"cc-keyrow\"><span class=\"cc-connected\"><span class=\"cc-connected-dot\" aria-hidden=\"true\"></span> </span> <span class=\"cc-keyrow-note\"> </span> <button type=\"button\" class=\"cc-keyrow-swap\"> </button> <span class=\"cc-model\"><span class=\"cc-model-label\"> </span> <span class=\"cc-model-id\"> </span> <!></span></div>");
-function Eo(e, t) {
+var ls = /* @__PURE__ */ q("<span class=\"cc-key-back\"><button type=\"button\" class=\"cc-key-keep\"> </button> <button type=\"button\" class=\"cc-key-forget\"> </button></span>"), us = /* @__PURE__ */ q("<p class=\"cc-key-forgotten\" role=\"status\"> <button type=\"button\" class=\"cc-key-undo\"> </button></p>"), ds = /* @__PURE__ */ q(" <a class=\"cc-link\" target=\"_blank\" rel=\"noopener\"> </a>", 1), fs = /* @__PURE__ */ q("<div class=\"cc-key\"><div class=\"cc-key-top\"><span class=\"cc-key-tag\"> </span> <!></div> <!> <p class=\"cc-key-lead\"><!></p> <form class=\"cc-key-form\"><input class=\"cc-key-input\" autocomplete=\"off\" spellcheck=\"false\"/> <button type=\"button\" class=\"cc-key-toggle\"> </button> <button type=\"submit\" class=\"cc-key-save\"> </button></form></div>"), ps = /* @__PURE__ */ q("<button type=\"button\" class=\"cc-model-reset\"> </button>"), ms = /* @__PURE__ */ q("<div class=\"cc-keyrow\"><span class=\"cc-connected\"><span class=\"cc-connected-dot\" aria-hidden=\"true\"></span> </span> <span class=\"cc-keyrow-note\"> </span> <button type=\"button\" class=\"cc-keyrow-swap\"> </button> <span class=\"cc-model\"><span class=\"cc-model-label\"> </span> <span class=\"cc-model-id\"> </span> <!></span></div>");
+function hs(e, t) {
 	Ve(t, !0);
-	let n = oi(t, "convo", 7), r = oi(t, "swapping", 15), i = /* @__PURE__ */ M(() => t.session.chat), a = /* @__PURE__ */ P(!1), o = /* @__PURE__ */ P(null), s = /* @__PURE__ */ P(null), c = /* @__PURE__ */ P(null), l = /* @__PURE__ */ M(() => G(i).chatModel === t.session.defaultChatModel), u = /* @__PURE__ */ M(() => r() && G(i).keyState === "set"), d = /* @__PURE__ */ M(() => G(i).keyState === "missing" || G(u));
+	let n = si(t, "convo", 7), r = si(t, "swapping", 15), i = /* @__PURE__ */ M(() => t.session.chat), a = /* @__PURE__ */ P(!1), o = /* @__PURE__ */ P(null), s = /* @__PURE__ */ P(null), c = /* @__PURE__ */ P(null), l = /* @__PURE__ */ M(() => G(i).chatModel === t.session.defaultChatModel), u = /* @__PURE__ */ M(() => r() && G(i).keyState === "set"), d = /* @__PURE__ */ M(() => G(i).keyState === "missing" || G(u));
 	mn(() => {
 		G(u) && G(o)?.focus();
 	});
@@ -3866,228 +4403,228 @@ function Eo(e, t) {
 	async function h() {
 		t.session.undoForgetKey(), await tr(), G(s)?.focus();
 	}
-	var g = xr(), _ = rn(g), v = (e) => {
-		var r = Co(), s = R(r), l = R(s), d = R(l, !0);
+	var g = Sr(), _ = rn(g), v = (e) => {
+		var r = fs(), s = R(r), l = R(s), d = R(l, !0);
 		k(l);
 		var g = z(l, 2), _ = (e) => {
-			var n = bo(), r = R(n), i = R(r, !0);
+			var n = ls(), r = R(n), i = R(r, !0);
 			k(r);
 			var a = z(r, 2), o = R(a, !0);
 			k(a), k(n), B(() => {
-				X(i, t.copy.key.keep), X(o, t.copy.key.forget);
-			}), K("click", r, p), K("click", a, m), Y(e, n);
+				Y(i, t.copy.key.keep), Y(o, t.copy.key.forget);
+			}), K("click", r, p), K("click", a, m), J(e, n);
 		};
-		Z(g, (e) => {
+		X(g, (e) => {
 			G(u) && e(_);
 		}), k(s);
 		var v = z(s, 2), y = (e) => {
-			var n = xo(), r = R(n), i = z(r), a = R(i, !0);
-			k(i), ai(i, (e) => F(c, e), () => G(c)), k(n), B(() => {
-				X(r, `${t.copy.key.forgotten ?? ""} `), X(a, t.copy.key.undo);
-			}), K("click", i, h), Y(e, n);
+			var n = us(), r = R(n), i = z(r), a = R(i, !0);
+			k(i), oi(i, (e) => F(c, e), () => G(c)), k(n), B(() => {
+				Y(r, `${t.copy.key.forgotten ?? ""} `), Y(a, t.copy.key.undo);
+			}), K("click", i, h), J(e, n);
 		};
-		Z(v, (e) => {
+		X(v, (e) => {
 			G(i).keyForgotten && !G(u) && e(y);
 		});
 		var b = z(v, 2), x = R(b), S = (e) => {
-			var n = br();
-			B(() => X(n, t.copy.key.swapLead)), Y(e, n);
+			var n = xr();
+			B(() => Y(n, t.copy.key.swapLead)), J(e, n);
 		}, ee = (e) => {
-			var n = So(), r = rn(n), i = z(r), a = R(i, !0);
+			var n = ds(), r = rn(n), i = z(r), a = R(i, !0);
 			k(i), B(() => {
-				X(r, `${t.copy.key.lead ?? ""} `), Q(i, "href", t.copy.key.url), X(a, t.copy.key.linkText);
-			}), Y(e, n);
+				Y(r, `${t.copy.key.lead ?? ""} `), Z(i, "href", t.copy.key.url), Y(a, t.copy.key.linkText);
+			}), J(e, n);
 		};
-		Z(x, (e) => {
+		X(x, (e) => {
 			G(u) ? e(S) : e(ee, -1);
 		}), k(b);
 		var te = z(b, 2), C = R(te);
-		Zr(C), ai(C, (e) => F(o, e), () => G(o));
+		Qr(C), oi(C, (e) => F(o, e), () => G(o));
 		var w = z(C, 2), ne = R(w, !0);
 		k(w);
 		var re = z(w, 2), ie = R(re, !0);
 		k(re), k(te), k(r), B((e) => {
-			Q(r, "data-mode", G(u) ? "swap" : "new"), X(d, G(u) ? t.copy.key.swapTag : t.copy.key.tag), Q(C, "type", G(a) ? "text" : "password"), Q(C, "placeholder", t.copy.key.placeholder), Q(C, "aria-label", t.copy.key.inputLabel), Q(w, "aria-pressed", G(a)), X(ne, G(a) ? t.copy.key.conceal : t.copy.key.reveal), re.disabled = e, X(ie, t.copy.key.save);
-		}, [() => !n().keyDraft.trim()]), dr("submit", te, f), ti(C, () => n().keyDraft, (e) => n().keyDraft = e), K("click", w, () => F(a, !G(a))), Y(e, r);
+			Z(r, "data-mode", G(u) ? "swap" : "new"), Y(d, G(u) ? t.copy.key.swapTag : t.copy.key.tag), Z(C, "type", G(a) ? "text" : "password"), Z(C, "placeholder", t.copy.key.placeholder), Z(C, "aria-label", t.copy.key.inputLabel), Z(w, "aria-pressed", G(a)), Y(ne, G(a) ? t.copy.key.conceal : t.copy.key.reveal), re.disabled = e, Y(ie, t.copy.key.save);
+		}, [() => !n().keyDraft.trim()]), dr("submit", te, f), ni(C, () => n().keyDraft, (e) => n().keyDraft = e), K("click", w, () => F(a, !G(a))), J(e, r);
 	}, y = (e) => {
-		var n = To(), a = R(n), o = z(R(a), 1, !0);
+		var n = ms(), a = R(n), o = z(R(a), 1, !0);
 		k(a);
 		var c = z(a, 2), u = R(c, !0);
 		k(c);
 		var d = z(c, 2), f = R(d, !0);
-		k(d), ai(d, (e) => F(s, e), () => G(s));
+		k(d), oi(d, (e) => F(s, e), () => G(s));
 		var p = z(d, 2), m = R(p), h = R(m, !0);
 		k(m);
 		var g = z(m, 2), _ = R(g, !0);
 		k(g);
 		var v = z(g, 2), y = (e) => {
-			var n = wo(), r = R(n, !0);
-			k(n), B(() => X(r, t.copy.model.reset)), K("click", n, () => t.session.resetChatModel()), Y(e, n);
+			var n = ps(), r = R(n, !0);
+			k(n), B(() => Y(r, t.copy.model.reset)), K("click", n, () => t.session.resetChatModel()), J(e, n);
 		};
-		Z(v, (e) => {
+		X(v, (e) => {
 			G(l) || e(y);
 		}), k(p), k(n), B(() => {
-			X(o, t.copy.key.connectedTag), X(u, t.copy.key.connectedNote), X(f, t.copy.key.change), Q(p, "title", G(i).chatModel), X(h, t.copy.model.label), X(_, G(i).chatModel);
-		}), K("click", d, () => r(!0)), Y(e, n);
+			Y(o, t.copy.key.connectedTag), Y(u, t.copy.key.connectedNote), Y(f, t.copy.key.change), Z(p, "title", G(i).chatModel), Y(h, t.copy.model.label), Y(_, G(i).chatModel);
+		}), K("click", d, () => r(!0)), J(e, n);
 	};
-	Z(_, (e) => {
+	X(_, (e) => {
 		G(d) ? e(v) : e(y, -1);
-	}), Y(e, g), He();
+	}), J(e, g), He();
 }
 fr(["click"]);
 //#endregion
 //#region src/ui/LatticeIcon.svelte
-var Do = /* @__PURE__ */ yr("<svg class=\"cc-icon\" viewBox=\"0 0 24 24\" fill=\"none\" aria-hidden=\"true\" focusable=\"false\"><path d=\"M4.5 7.5 12 4M4.5 7.5 12 12M4.5 7.5 12 20M4.5 16.5 12 4M4.5 16.5 12 12M4.5 16.5 12 20M12 4 19.5 7.5M12 12 19.5 7.5M12 20 19.5 7.5M12 4 19.5 16.5M12 12 19.5 16.5M12 20 19.5 16.5\" stroke=\"currentColor\" stroke-width=\"1.2\" stroke-linecap=\"round\" opacity=\"0.6\"></path><g fill=\"currentColor\"><circle cx=\"4.5\" cy=\"7.5\" r=\"2\"></circle><circle cx=\"4.5\" cy=\"16.5\" r=\"2\"></circle><circle cx=\"12\" cy=\"4\" r=\"2\"></circle><circle cx=\"12\" cy=\"12\" r=\"2\"></circle><circle cx=\"12\" cy=\"20\" r=\"2\"></circle><circle cx=\"19.5\" cy=\"7.5\" r=\"2\"></circle><circle cx=\"19.5\" cy=\"16.5\" r=\"2\"></circle></g></svg>");
-function Oo(e, t) {
-	var n = Do();
+var gs = /* @__PURE__ */ br("<svg class=\"cc-icon\" viewBox=\"0 0 24 24\" fill=\"none\" aria-hidden=\"true\" focusable=\"false\"><path d=\"M4.5 7.5 12 4M4.5 7.5 12 12M4.5 7.5 12 20M4.5 16.5 12 4M4.5 16.5 12 12M4.5 16.5 12 20M12 4 19.5 7.5M12 12 19.5 7.5M12 20 19.5 7.5M12 4 19.5 16.5M12 12 19.5 16.5M12 20 19.5 16.5\" stroke=\"currentColor\" stroke-width=\"1.2\" stroke-linecap=\"round\" opacity=\"0.6\"></path><g fill=\"currentColor\"><circle cx=\"4.5\" cy=\"7.5\" r=\"2\"></circle><circle cx=\"4.5\" cy=\"16.5\" r=\"2\"></circle><circle cx=\"12\" cy=\"4\" r=\"2\"></circle><circle cx=\"12\" cy=\"12\" r=\"2\"></circle><circle cx=\"12\" cy=\"20\" r=\"2\"></circle><circle cx=\"19.5\" cy=\"7.5\" r=\"2\"></circle><circle cx=\"19.5\" cy=\"16.5\" r=\"2\"></circle></g></svg>");
+function _s(e, t) {
+	var n = gs();
 	B(() => {
-		Q(n, "width", t.size), Q(n, "height", t.size);
-	}), Y(e, n);
+		Z(n, "width", t.size), Z(n, "height", t.size);
+	}), J(e, n);
 }
 //#endregion
 //#region src/core/status.js
-var ko = Object.freeze([
+var vs = Object.freeze([
 	"wasm-init",
 	"manifest",
 	"loading-cached",
 	"downloading",
 	"caching",
 	"indexing"
-]), Ao = [
+]), ys = [
 	"manifest",
 	"wasm-init",
 	"corpus",
 	"indexing"
-], jo = (e) => (e / 1e6).toFixed(1), Mo = (e) => String(e).slice(0, 7);
-function No(e, t) {
-	return La(e.progress.bytes, {
-		loaded: jo(t.loadedBytes),
-		total: jo(t.totalBytes)
+], bs = (e) => (e / 1e6).toFixed(1), xs = (e) => String(e).slice(0, 7);
+function Ss(e, t) {
+	return $(e.progress.bytes, {
+		loaded: bs(t.loadedBytes),
+		total: bs(t.totalBytes)
 	});
 }
-function Po(e, t) {
-	return La(e.progress.count, {
+function Cs(e, t) {
+	return $(e.progress.count, {
 		done: t.indexed,
 		total: t.totalPoints
 	});
 }
-function Fo(e, t, n) {
+function ws(e, t, n) {
 	if (n) return t.phase[e.msgPhase] ?? t.phase.writing;
 	if (e.status === "ready" && e.corpora.length > 0) {
-		let n = e.corpora.reduce((e, t) => e + t.chunks, 0), r = e.corpora.length === 1 ? Mo(e.corpora[0].commit) : La(t.pill.corpora, { n: e.corpora.length }), i = [
+		let n = e.corpora.reduce((e, t) => e + t.chunks, 0), r = e.corpora.length === 1 ? xs(e.corpora[0].commit) : $(t.pill.corpora, { n: e.corpora.length }), i = [
 			t.status.ready,
 			r,
-			La(t.pill.chunks, { n }),
-			La(t.pill.dim, { n: e.corpora[0].dim })
+			$(t.pill.chunks, { n }),
+			$(t.pill.dim, { n: e.corpora[0].dim })
 		];
 		return e.offline && i.push(t.offlineBadge), i.join(" · ");
 	}
-	return e.status === "downloading" && e.progress.totalBytes > 0 ? `${t.status.downloading} ${No(t, e.progress)}` : e.status === "indexing" && e.progress.totalPoints > 0 ? `${t.status.indexing} ${Po(t, e.progress)}` : t.status[e.status] ?? e.status;
+	return e.status === "downloading" && e.progress.totalBytes > 0 ? `${t.status.downloading} ${Ss(t, e.progress)}` : e.status === "indexing" && e.progress.totalPoints > 0 ? `${t.status.indexing} ${Cs(t, e.progress)}` : t.status[e.status] ?? e.status;
 }
-function Io(e, t, n) {
-	return n || e.status === "ready" ? Fo(e, t, n) : t.status[e.status] ?? e.status;
+function Ts(e, t, n) {
+	return n || e.status === "ready" ? ws(e, t, n) : t.status[e.status] ?? e.status;
 }
-function Lo(e, t) {
+function Es(e, t) {
 	return e.status === "error" ? "error" : e.status === "consent" ? "idle" : e.status === "ready" ? t ? "working" : "ready" : e.status === "idle" ? "idle" : "working";
 }
-function Ro(e, t) {
+function Ds(e, t) {
 	let n = e.progress;
-	return e.status === "downloading" || e.status === "caching" ? n.totalBytes > 0 ? No(t, n) : "" : (e.status === "indexing" || e.status === "loading-cached") && n.totalPoints > 0 ? Po(t, n) : "";
+	return e.status === "downloading" || e.status === "caching" ? n.totalBytes > 0 ? Ss(t, n) : "" : (e.status === "indexing" || e.status === "loading-cached") && n.totalPoints > 0 ? Cs(t, n) : "";
 }
-function zo(e, t) {
+function Os(e, t) {
 	let n = [
 		"loading-cached",
 		"downloading",
 		"caching"
-	].includes(e.status) ? "corpus" : e.status, r = Ao.indexOf(n);
-	return Ao.map((n, i) => ({
+	].includes(e.status) ? "corpus" : e.status, r = ys.indexOf(n);
+	return ys.map((n, i) => ({
 		id: n,
 		label: t.loader.stages[n],
 		state: r === -1 ? "pending" : i < r ? "done" : i === r ? "active" : "pending",
-		detail: i === r ? Ro(e, t) : ""
+		detail: i === r ? Ds(e, t) : ""
 	}));
 }
-function Bo(e) {
+function ks(e) {
 	let t = e.progress;
 	return (e.status === "downloading" || e.status === "caching") && t.totalBytes > 0 ? Math.min(100, t.loadedBytes / t.totalBytes * 100) : (e.status === "indexing" || e.status === "loading-cached") && t.totalPoints > 0 ? Math.min(100, t.indexed / t.totalPoints * 100) : null;
 }
 //#endregion
 //#region src/ui/LoaderPanel.svelte
-var Vo = /* @__PURE__ */ J("<div><dt> </dt> <dd> </dd></div>"), Ho = /* @__PURE__ */ J("<dl class=\"cc-load-meta\"><div><dt> </dt> <dd> </dd></div> <!></dl>"), Uo = /* @__PURE__ */ J("<span class=\"cc-stage-detail\"> </span>"), Wo = /* @__PURE__ */ J("<li class=\"cc-stage\"><span class=\"cc-stage-glyph\" aria-hidden=\"true\"> </span> <span class=\"cc-stage-label\"> </span> <!></li>"), Go = /* @__PURE__ */ J("<p class=\"cc-offline\"> </p>"), Ko = /* @__PURE__ */ J("<div class=\"cc-panel cc-load\" aria-busy=\"true\"><p class=\"cc-load-title\"> </p> <!> <ol class=\"cc-stages\"></ol> <div class=\"cc-bar\" role=\"progressbar\" aria-valuemin=\"0\" aria-valuemax=\"100\"><div></div></div> <!> <p class=\"cc-fine\"> </p></div>");
-function qo(e, t) {
+var As = /* @__PURE__ */ q("<div><dt> </dt> <dd> </dd></div>"), js = /* @__PURE__ */ q("<dl class=\"cc-load-meta\"><div><dt> </dt> <dd> </dd></div> <!></dl>"), Ms = /* @__PURE__ */ q("<span class=\"cc-stage-detail\"> </span>"), Ns = /* @__PURE__ */ q("<li class=\"cc-stage\"><span class=\"cc-stage-glyph\" aria-hidden=\"true\"> </span> <span class=\"cc-stage-label\"> </span> <!></li>"), Ps = /* @__PURE__ */ q("<p class=\"cc-offline\"> </p>"), Fs = /* @__PURE__ */ q("<div class=\"cc-panel cc-load\" aria-busy=\"true\"><p class=\"cc-load-title\"> </p> <!> <ol class=\"cc-stages\"></ol> <div class=\"cc-bar\" role=\"progressbar\" aria-valuemin=\"0\" aria-valuemax=\"100\"><div></div></div> <!> <p class=\"cc-fine\"> </p></div>");
+function Is(e, t) {
 	Ve(t, !0);
-	let n = /* @__PURE__ */ M(() => zo(t.chat, t.copy)), r = /* @__PURE__ */ M(() => Bo(t.chat));
-	var i = Ko(), a = R(i), o = R(a, !0);
+	let n = /* @__PURE__ */ M(() => Os(t.chat, t.copy)), r = /* @__PURE__ */ M(() => ks(t.chat));
+	var i = Fs(), a = R(i), o = R(a, !0);
 	k(a);
 	var s = z(a, 2), c = (e) => {
-		var n = Ho(), r = R(n), i = R(r), a = R(i, !0);
+		var n = js(), r = R(n), i = R(r), a = R(i, !0);
 		k(i);
 		var o = z(i, 2), s = R(o, !0);
 		k(o), k(r);
 		var c = z(r, 2), l = (e) => {
-			var n = Vo(), r = R(n), i = R(r, !0);
+			var n = As(), r = R(n), i = R(r, !0);
 			k(r);
 			var a = z(r, 2), o = R(a, !0);
 			k(a), k(n), B(() => {
-				X(i, t.copy.loader.chunksLabel), X(o, t.chat.progress.totalPoints);
-			}), Y(e, n);
+				Y(i, t.copy.loader.chunksLabel), Y(o, t.chat.progress.totalPoints);
+			}), J(e, n);
 		};
-		Z(c, (e) => {
+		X(c, (e) => {
 			t.chat.progress.totalPoints > 0 && e(l);
 		}), k(n), B((e) => {
-			X(a, t.copy.loader.sizeLabel), X(s, e);
-		}, [() => La(t.copy.progress.size, { total: jo(t.chat.progress.totalBytes) })]), Y(e, n);
+			Y(a, t.copy.loader.sizeLabel), Y(s, e);
+		}, [() => $(t.copy.progress.size, { total: bs(t.chat.progress.totalBytes) })]), J(e, n);
 	};
-	Z(s, (e) => {
+	X(s, (e) => {
 		t.chat.progress.totalBytes > 0 && e(c);
 	});
 	var l = z(s, 2);
-	Nr(l, 21, () => G(n), (e) => e.id, (e, t) => {
-		var n = Wo(), r = R(n), i = R(r, !0);
+	Pr(l, 21, () => G(n), (e) => e.id, (e, t) => {
+		var n = Ns(), r = R(n), i = R(r, !0);
 		k(r);
 		var a = z(r, 2), o = R(a, !0);
 		k(a);
 		var s = z(a, 2), c = (e) => {
-			var n = Uo(), r = R(n, !0);
-			k(n), B(() => X(r, G(t).detail)), Y(e, n);
+			var n = Ms(), r = R(n, !0);
+			k(n), B(() => Y(r, G(t).detail)), J(e, n);
 		};
-		Z(s, (e) => {
+		X(s, (e) => {
 			G(t).detail && e(c);
 		}), k(n), B(() => {
-			Q(n, "data-state", G(t).state), X(i, G(t).state === "done" ? "✓" : G(t).state === "active" ? "●" : "○"), X(o, G(t).label);
-		}), Y(e, n);
+			Z(n, "data-state", G(t).state), Y(i, G(t).state === "done" ? "✓" : G(t).state === "active" ? "●" : "○"), Y(o, G(t).label);
+		}), J(e, n);
 	}), k(l);
 	var u = z(l, 2), d = R(u);
 	let f, p;
 	k(u);
 	var m = z(u, 2), h = (e) => {
-		var n = Go(), r = R(n, !0);
-		k(n), B(() => X(r, t.copy.offlineBadge)), Y(e, n);
+		var n = Ps(), r = R(n, !0);
+		k(n), B(() => Y(r, t.copy.offlineBadge)), J(e, n);
 	};
-	Z(m, (e) => {
+	X(m, (e) => {
 		t.chat.offline && e(h);
 	});
 	var g = z(m, 2), _ = R(g, !0);
 	k(g), k(i), B((e) => {
-		X(o, t.copy.loader.title), Q(u, "aria-label", t.copy.loader.title), Q(u, "aria-valuenow", e), f = Gr(d, 1, "cc-bar-fill", null, f, { "cc-shimmer": G(r) === null }), p = qr(d, "", p, { width: `${(G(r) === null ? 100 : G(r)) ?? ""}%` }), X(_, t.copy.loader.cancelNote);
-	}, [() => G(r) === null ? void 0 : Math.round(G(r))]), Y(e, i), He();
+		Y(o, t.copy.loader.title), Z(u, "aria-label", t.copy.loader.title), Z(u, "aria-valuenow", e), f = Kr(d, 1, "cc-bar-fill", null, f, { "cc-shimmer": G(r) === null }), p = Jr(d, "", p, { width: `${(G(r) === null ? 100 : G(r)) ?? ""}%` }), Y(_, t.copy.loader.cancelNote);
+	}, [() => G(r) === null ? void 0 : Math.round(G(r))]), J(e, i), He();
 }
 //#endregion
 //#region src/ui/focus-trap.js
-var Jo = "a[href], button:not([disabled]), input:not([disabled]), summary, [tabindex]:not([tabindex=\"-1\"])";
-function Yo(e) {
-	return [...e.querySelectorAll(Jo)].filter((e) => e.offsetParent !== null);
+var Ls = "a[href], button:not([disabled]), input:not([disabled]), summary, [tabindex]:not([tabindex=\"-1\"])";
+function Rs(e) {
+	return [...e.querySelectorAll(Ls)].filter((e) => e.offsetParent !== null);
 }
-function Xo(e, t) {
+function zs(e, t) {
 	if (e.key !== "Tab" || e.ctrlKey || e.metaKey) return !1;
-	let n = Yo(t);
+	let n = Rs(t);
 	if (n.length === 0) return !1;
 	let r = document.activeElement, i = (e) => !!(r && r !== e && r.compareDocumentPosition(e) & Node.DOCUMENT_POSITION_FOLLOWING), a = (e) => !!(r && r !== e && e.compareDocumentPosition(r) & Node.DOCUMENT_POSITION_FOLLOWING && !e.contains(r)), o = r && t.contains(r), s;
 	return e.shiftKey ? (s = o ? n.findLast(a) : void 0, s ??= n[n.length - 1]) : (s = o ? n.find(i) : void 0, s ??= n[0]), e.preventDefault(), s.focus(), !0;
 }
 //#endregion
 //#region src/core/reset-time.js
-function Zo(e, t, n, { locale: r, timeZone: i }) {
+function Bs(e, t, n, { locale: r, timeZone: i }) {
 	let a = new Date(e).toLocaleTimeString(r, {
 		hour: "numeric",
 		minute: "2-digit",
@@ -4095,7 +4632,7 @@ function Zo(e, t, n, { locale: r, timeZone: i }) {
 		timeZone: i
 	}), o = Math.ceil((e - t) / 6e4);
 	if (o <= 0) return `${n.errors.quota.reset} ${a}.`;
-	let s = La(n.errors.quota.resetIn, {
+	let s = $(n.errors.quota.resetIn, {
 		h: Math.floor(o / 60),
 		m: o % 60
 	});
@@ -4103,10 +4640,10 @@ function Zo(e, t, n, { locale: r, timeZone: i }) {
 }
 //#endregion
 //#region src/ui/RepoChat.svelte
-var Qo = /* @__PURE__ */ J("<div class=\"cc-motif\" aria-hidden=\"true\"></div>"), $o = /* @__PURE__ */ J("<div class=\"cc-panel\"><!></div>"), es = /* @__PURE__ */ J("<p class=\"cc-offline\"> </p>"), ts = /* @__PURE__ */ J("<p class=\"cc-cleared\" role=\"status\"> <button type=\"button\" class=\"cc-undo\"> </button></p>"), ns = /* @__PURE__ */ J("<p class=\"cc-boot-line\"> </p>"), rs = /* @__PURE__ */ J("<p class=\"cc-boot-line cc-boot-corpus\"> </p>"), is = /* @__PURE__ */ J("<button type=\"button\" class=\"cc-chip\"> </button>"), as = /* @__PURE__ */ J("<!> <p class=\"cc-sub\"> </p> <div class=\"cc-boot\"><!> <!></div> <div class=\"cc-chips\"></div>", 1), os = /* @__PURE__ */ J("<p class=\"cc-pending\"><span class=\"cc-status-dot\" aria-hidden=\"true\"></span> <span class=\"cc-pending-bar cc-shimmer\" aria-hidden=\"true\"></span></p>"), ss = /* @__PURE__ */ J("<div class=\"cc-log\" role=\"log\" aria-live=\"polite\" tabindex=\"-1\"><!> <!> <!> <!> <!></div>"), cs = /* @__PURE__ */ J("<button type=\"button\" class=\"cc-clear\"> </button>"), ls = /* @__PURE__ */ J("<div class=\"cc-backdrop\" role=\"presentation\"><div class=\"cc\" role=\"dialog\" aria-modal=\"true\" tabindex=\"-1\"><!> <header class=\"cc-head\"><div class=\"cc-head-titles\"><span class=\"cc-slabel\"><!> </span> <h2 class=\"cc-title\"> </h2></div> <p class=\"cc-status\"><span class=\"cc-status-dot\" aria-hidden=\"true\"></span> <span class=\"cc-status-text\"> </span></p> <p class=\"cc-sr\" role=\"status\"> </p> <button type=\"button\" class=\"cc-close\">✕</button></header> <!> <!> <form class=\"cc-input-row\"><span class=\"cc-prompt\" aria-hidden=\"true\">❯</span> <input class=\"cc-input\" autocomplete=\"off\" spellcheck=\"false\"/> <button type=\"submit\" class=\"cc-ask\"> </button></form> <div class=\"cc-foot\"><!> <span class=\"cc-hint\" aria-live=\"polite\"><!></span> <span class=\"cc-fineprint\"> </span></div></div></div>");
-function us(e, t) {
+var Vs = /* @__PURE__ */ q("<div class=\"cc-motif\" aria-hidden=\"true\"></div>"), Hs = /* @__PURE__ */ q("<div class=\"cc-panel\"><!></div>"), Us = /* @__PURE__ */ q("<p class=\"cc-offline\"> </p>"), Ws = /* @__PURE__ */ q("<p class=\"cc-cleared\" role=\"status\"> <button type=\"button\" class=\"cc-undo\"> </button></p>"), Gs = /* @__PURE__ */ q("<p class=\"cc-boot-line\"> </p>"), Ks = /* @__PURE__ */ q("<p class=\"cc-boot-line cc-boot-corpus\"> </p>"), qs = /* @__PURE__ */ q("<button type=\"button\" class=\"cc-chip\"> </button>"), Js = /* @__PURE__ */ q("<!> <p class=\"cc-sub\"> </p> <div class=\"cc-boot\"><!> <!></div> <div class=\"cc-chips\"></div>", 1), Ys = /* @__PURE__ */ q("<p class=\"cc-pending\"><span class=\"cc-status-dot\" aria-hidden=\"true\"></span> <span class=\"cc-pending-bar cc-shimmer\" aria-hidden=\"true\"></span></p>"), Xs = /* @__PURE__ */ q("<div class=\"cc-log\" role=\"log\" aria-live=\"polite\" tabindex=\"-1\"><!> <!> <!> <!> <!></div>"), Zs = /* @__PURE__ */ q("<button type=\"button\" class=\"cc-clear\"> </button>"), Qs = /* @__PURE__ */ q("<div class=\"cc-backdrop\" role=\"presentation\"><div class=\"cc\" role=\"dialog\" aria-modal=\"true\" tabindex=\"-1\"><!> <header class=\"cc-head\"><div class=\"cc-head-titles\"><span class=\"cc-slabel\"><!> </span> <h2 class=\"cc-title\"> </h2></div> <p class=\"cc-status\"><span class=\"cc-status-dot\" aria-hidden=\"true\"></span> <span class=\"cc-status-text\"> </span></p> <p class=\"cc-sr\" role=\"status\"> </p> <button type=\"button\" class=\"cc-close\">✕</button></header> <!> <!> <form class=\"cc-input-row\"><span class=\"cc-prompt\" aria-hidden=\"true\">❯</span> <input class=\"cc-input\" autocomplete=\"off\" spellcheck=\"false\"/> <button type=\"submit\" class=\"cc-ask\"> </button></form> <div class=\"cc-foot\"><!> <span class=\"cc-hint\" aria-live=\"polite\"><!></span> <span class=\"cc-fineprint\"> </span></div></div></div>");
+function $s(e, t) {
 	Ve(t, !0);
-	let n = /* @__PURE__ */ M(() => t.session.chat), r = /* @__PURE__ */ M(() => t.session.conversation), i = /* @__PURE__ */ M(() => G(r).convo), a = /* @__PURE__ */ P(null), o = /* @__PURE__ */ P(null), s = /* @__PURE__ */ P(null), c = /* @__PURE__ */ P(!1), l = /* @__PURE__ */ M(() => ko.includes(G(n).status) || G(n).status === "idle"), u = /* @__PURE__ */ M(() => G(n).status === "ready"), d = /* @__PURE__ */ M(() => G(n).status === "error" ? G(n).error : null), f = /* @__PURE__ */ M(() => G(n).status === "consent" ? G(n).consent : null), p = /* @__PURE__ */ M(() => G(r).canAsk()), m = /* @__PURE__ */ M(() => Fo(G(n), t.copy, G(i).asking)), h = /* @__PURE__ */ M(() => Io(G(n), t.copy, G(i).asking)), g = /* @__PURE__ */ M(() => Lo(G(n), G(i).asking)), _ = /* @__PURE__ */ M(() => G(i).askError), v = /* @__PURE__ */ M(() => G(_)?.kind === "quota" && G(_).resetAt ? Zo(G(_).resetAt, t.session.epochMs(), t.copy, {
+	let n = /* @__PURE__ */ M(() => t.session.chat), r = /* @__PURE__ */ M(() => t.session.conversation), i = /* @__PURE__ */ M(() => G(r).convo), a = /* @__PURE__ */ P(null), o = /* @__PURE__ */ P(null), s = /* @__PURE__ */ P(null), c = /* @__PURE__ */ P(!1), l = /* @__PURE__ */ M(() => vs.includes(G(n).status) || G(n).status === "idle"), u = /* @__PURE__ */ M(() => G(n).status === "ready"), d = /* @__PURE__ */ M(() => G(n).status === "error" ? G(n).error : null), f = /* @__PURE__ */ M(() => G(n).status === "consent" ? G(n).consent : null), p = /* @__PURE__ */ M(() => G(r).canAsk()), m = /* @__PURE__ */ M(() => ws(G(n), t.copy, G(i).asking)), h = /* @__PURE__ */ M(() => Ts(G(n), t.copy, G(i).asking)), g = /* @__PURE__ */ M(() => Es(G(n), G(i).asking)), _ = /* @__PURE__ */ M(() => G(i).askError), v = /* @__PURE__ */ M(() => G(_)?.kind === "quota" && G(_).resetAt ? Bs(G(_).resetAt, t.session.epochMs(), t.copy, {
 		locale: [],
 		timeZone: void 0
 	}) : ""), y = /* @__PURE__ */ M(() => G(n).chatModel.endsWith(":free") ? G(n).chatModel.slice(0, -5) : ""), b = /* @__PURE__ */ M(() => G(i).asking && G(n).stream && (G(n).stream.reasoningText || G(n).stream.answerText) ? G(n).stream : null), x = /* @__PURE__ */ M(() => G(b) ? [...G(i).messages, {
@@ -4132,13 +4669,13 @@ function us(e, t) {
 		}) : G(s).scrollTop = G(s).scrollHeight);
 	});
 	function ee() {
-		(ko.includes(G(n).status) || G(n).status === "consent") && t.session.abortLoad(), t.onclose();
+		(vs.includes(G(n).status) || G(n).status === "consent") && t.session.abortLoad(), t.onclose();
 	}
 	async function te() {
 		t.session.acceptDownload(), await tr(), G(a)?.focus();
 	}
 	function C(e) {
-		e.key === "Escape" ? ee() : G(a) && Xo(e, G(a));
+		e.key === "Escape" ? ee() : G(a) && zs(e, G(a));
 	}
 	async function w(e) {
 		await tr(), e?.detail === 0 ? G(o)?.focus() : G(s)?.focus({ preventScroll: !0 });
@@ -4167,17 +4704,17 @@ function us(e, t) {
 	async function le() {
 		t.session.ensureReady(), await tr(), G(a)?.focus();
 	}
-	var ue = ls();
+	var ue = Qs();
 	dr("keydown", Zt, C);
 	var de = R(ue), fe = R(de), pe = (e) => {
-		var n = Qo();
-		zr(n, () => t.brand.motifSvg, !0), k(n), Y(e, n);
+		var n = Vs();
+		Br(n, () => t.brand.motifSvg, !0), k(n), J(e, n);
 	};
-	Z(fe, (e) => {
+	X(fe, (e) => {
 		t.brand.motifSvg && e(pe);
 	});
 	var me = z(fe, 2), he = R(me), ge = R(he), _e = R(ge);
-	Oo(_e, { size: 14 });
+	_s(_e, { size: 14 });
 	var ve = z(_e, 1, !0);
 	k(ge);
 	var ye = z(ge, 2), be = R(ye, !0);
@@ -4189,10 +4726,10 @@ function us(e, t) {
 	var T = z(we, 2);
 	k(me);
 	var Ee = z(me, 2), De = (e) => {
-		var t = $o(), n = R(t);
+		var t = Hs(), n = R(t);
 		{
 			let e = /* @__PURE__ */ M(() => G(d).kind === "config" ? G(d).message : null);
-			yo(n, {
+			cs(n, {
 				get entry() {
 					return G(S);
 				},
@@ -4205,9 +4742,9 @@ function us(e, t) {
 				onretry: le
 			});
 		}
-		k(t), Y(e, t);
+		k(t), J(e, t);
 	}, Oe = (e) => {
-		ho(e, {
+		is(e, {
 			get consent() {
 				return G(f);
 			},
@@ -4218,7 +4755,7 @@ function us(e, t) {
 			ondecline: ee
 		});
 	}, ke = (e) => {
-		qo(e, {
+		Is(e, {
 			get chat() {
 				return G(n);
 			},
@@ -4227,52 +4764,52 @@ function us(e, t) {
 			}
 		});
 	}, Ae = (e) => {
-		var r = ss(), a = R(r), o = (e) => {
-			var n = es(), r = R(n, !0);
-			k(n), B(() => X(r, t.copy.offlineBadge)), Y(e, n);
+		var r = Xs(), a = R(r), o = (e) => {
+			var n = Us(), r = R(n, !0);
+			k(n), B(() => Y(r, t.copy.offlineBadge)), J(e, n);
 		};
-		Z(a, (e) => {
+		X(a, (e) => {
 			G(n).offline && e(o);
 		});
 		var c = z(a, 2), l = (e) => {
-			var r = as(), a = rn(r), o = (e) => {
-				var n = ts(), r = R(n), i = z(r), a = R(i, !0);
+			var r = Js(), a = rn(r), o = (e) => {
+				var n = Ws(), r = R(n), i = z(r), a = R(i, !0);
 				k(i), k(n), B(() => {
-					X(r, `${t.copy.conversation.cleared ?? ""} `), X(a, t.copy.conversation.undo);
-				}), K("click", i, ce), Y(e, n);
+					Y(r, `${t.copy.conversation.cleared ?? ""} `), Y(a, t.copy.conversation.undo);
+				}), K("click", i, ce), J(e, n);
 			};
-			Z(a, (e) => {
+			X(a, (e) => {
 				G(i).cleared && e(o);
 			});
 			var s = z(a, 2), c = R(s, !0);
 			k(s);
 			var l = z(s, 2), u = R(l);
-			Nr(u, 17, () => t.copy.boot, kr, (e, t) => {
-				var n = ns(), r = R(n, !0);
-				k(n), B(() => X(r, G(t))), Y(e, n);
-			}), Nr(z(u, 2), 17, () => G(n).corpora, (e) => e.id, (e, n) => {
-				var r = rs(), i = R(r, !0);
-				k(r), B((e) => X(i, e), [() => La(t.copy.corpusLine, {
+			Pr(u, 17, () => t.copy.boot, Ar, (e, t) => {
+				var n = Gs(), r = R(n, !0);
+				k(n), B(() => Y(r, G(t))), J(e, n);
+			}), Pr(z(u, 2), 17, () => G(n).corpora, (e) => e.id, (e, n) => {
+				var r = Ks(), i = R(r, !0);
+				k(r), B((e) => Y(i, e), [() => $(t.copy.corpusLine, {
 					id: G(n).id,
 					chunks: G(n).chunks,
 					files: G(n).files,
-					commit: Mo(G(n).commit)
-				})]), Y(e, r);
+					commit: xs(G(n).commit)
+				})]), J(e, r);
 			}), k(l);
 			var d = z(l, 2);
-			Nr(d, 21, () => t.copy.starters, kr, (e, t) => {
-				var n = is(), r = R(n, !0);
-				k(n), B(() => X(r, G(t))), K("click", n, (e) => ie(G(t), e)), Y(e, n);
-			}), k(d), B(() => X(c, t.copy.sub)), Y(e, r);
+			Pr(d, 21, () => t.copy.starters, Ar, (e, t) => {
+				var n = qs(), r = R(n, !0);
+				k(n), B(() => Y(r, G(t))), K("click", n, (e) => ie(G(t), e)), J(e, n);
+			}), k(d), B(() => Y(c, t.copy.sub)), J(e, r);
 		};
-		Z(c, (e) => {
+		X(c, (e) => {
 			G(i).messages.length === 0 && e(l);
 		});
 		var u = z(c, 2);
-		Nr(u, 17, () => G(x), (e) => e.id, (e, r) => {
+		Pr(u, 17, () => G(x), (e) => e.id, (e, r) => {
 			{
 				let i = /* @__PURE__ */ M(() => G(r).live ? null : G(r)), a = /* @__PURE__ */ M(() => G(r).live ?? null), o = /* @__PURE__ */ M(() => G(n).corpora.length > 1);
-				uo(e, {
+				es(e, {
 					get message() {
 						return G(i);
 					},
@@ -4292,16 +4829,16 @@ function us(e, t) {
 			}
 		});
 		var d = z(u, 2), f = (e) => {
-			var r = os(), i = z(R(r));
-			Pe(), k(r), B(() => X(i, ` ${t.copy.phase[G(n).msgPhase] ?? t.copy.phase.writing ?? ""} `)), Y(e, r);
+			var r = Ys(), i = z(R(r));
+			Pe(), k(r), B(() => Y(i, ` ${t.copy.phase[G(n).msgPhase] ?? t.copy.phase.writing ?? ""} `)), J(e, r);
 		};
-		Z(d, (e) => {
+		X(d, (e) => {
 			!G(b) && G(i).asking && e(f);
 		});
 		var p = z(d, 2), m = (e) => {
 			{
 				let n = /* @__PURE__ */ M(() => G(_).kind === "quota" && G(y) ? t.copy.errors.quota.paid : "");
-				yo(e, {
+				cs(e, {
 					get entry() {
 						return t.copy.errors[G(_).kind];
 					},
@@ -4319,17 +4856,17 @@ function us(e, t) {
 				});
 			}
 		};
-		Z(p, (e) => {
+		X(p, (e) => {
 			G(_) && e(m);
-		}), k(r), ai(r, (e) => F(s, e), () => G(s)), B(() => {
-			Q(r, "aria-label", t.copy.conversation.label), Q(r, "aria-busy", G(i).asking);
-		}), Y(e, r);
+		}), k(r), oi(r, (e) => F(s, e), () => G(s)), B(() => {
+			Z(r, "aria-label", t.copy.conversation.label), Z(r, "aria-busy", G(i).asking);
+		}), J(e, r);
 	};
-	Z(Ee, (e) => {
+	X(Ee, (e) => {
 		G(d) ? e(De) : G(f) ? e(Oe, 1) : G(l) ? e(ke, 2) : e(Ae, -1);
 	});
 	var je = z(Ee, 2);
-	Eo(je, {
+	hs(je, {
 		get session() {
 			return t.session;
 		},
@@ -4348,37 +4885,324 @@ function us(e, t) {
 		}
 	});
 	var E = z(je, 2), Me = z(R(E), 2);
-	Zr(Me), ai(Me, (e) => F(o, e), () => G(o));
+	Qr(Me), oi(Me, (e) => F(o, e), () => G(o));
 	var D = z(Me, 2), O = R(D, !0);
 	k(D), k(E);
 	var Ne = z(E, 2), Fe = R(Ne), Ie = (e) => {
-		var n = cs(), r = R(n, !0);
-		k(n), B(() => X(r, t.copy.conversation.clear)), K("click", n, se), Y(e, n);
+		var n = Zs(), r = R(n, !0);
+		k(n), B(() => Y(r, t.copy.conversation.clear)), K("click", n, se), J(e, n);
 	};
-	Z(Fe, (e) => {
+	X(Fe, (e) => {
 		G(i).messages.length > 0 && !G(i).asking && e(Ie);
 	});
 	var Le = z(Fe, 2), Re = R(Le), ze = (e) => {
-		var n = br();
-		B(() => X(n, t.copy.input.hintLoading)), Y(e, n);
+		var n = xr();
+		B(() => Y(n, t.copy.input.hintLoading)), J(e, n);
 	}, A = (e) => {
-		var n = br();
-		B(() => X(n, t.copy.input.hintNoKey)), Y(e, n);
+		var n = xr();
+		B(() => Y(n, t.copy.input.hintNoKey)), J(e, n);
 	};
-	Z(Re, (e) => {
+	X(Re, (e) => {
 		!G(u) && !G(d) && !G(f) ? e(ze) : G(n).keyState === "missing" && e(A, 1);
 	}), k(Le);
 	var Be = z(Le, 2), Ue = R(Be, !0);
-	k(Be), k(Ne), k(de), ai(de, (e) => F(a, e), () => G(a)), k(ue), B((e) => {
-		Q(de, "aria-label", t.copy.navLabel), X(ve, t.copy.label), X(be, t.copy.title), Q(xe, "data-tone", G(g)), Q(xe, "title", G(m)), X(Ce, G(m)), X(Te, G(h)), Q(T, "aria-label", t.copy.closeLabel), Q(Me, "placeholder", t.copy.input.placeholder), Q(Me, "aria-label", t.copy.navLabel), Me.disabled = !G(u), D.disabled = e, X(O, t.copy.input.ask), X(Ue, t.copy.input.fine);
-	}, [() => !G(p) || !G(i).draft.trim()]), K("click", ue, ee), K("click", de, (e) => e.stopPropagation()), K("click", T, ee), dr("submit", E, re), ti(Me, () => G(i).draft, (e) => G(i).draft = e), K("click", D, (e) => ne = e), Y(e, ue), He();
+	k(Be), k(Ne), k(de), oi(de, (e) => F(a, e), () => G(a)), k(ue), B((e) => {
+		Z(de, "aria-label", t.copy.navLabel), Y(ve, t.copy.label), Y(be, t.copy.title), Z(xe, "data-tone", G(g)), Z(xe, "title", G(m)), Y(Ce, G(m)), Y(Te, G(h)), Z(T, "aria-label", t.copy.closeLabel), Z(Me, "placeholder", t.copy.input.placeholder), Z(Me, "aria-label", t.copy.navLabel), Me.disabled = !G(u), D.disabled = e, Y(O, t.copy.input.ask), Y(Ue, t.copy.input.fine);
+	}, [() => !G(p) || !G(i).draft.trim()]), K("click", ue, ee), K("click", de, (e) => e.stopPropagation()), K("click", T, ee), dr("submit", E, re), ni(Me, () => G(i).draft, (e) => G(i).draft = e), K("click", D, (e) => ne = e), J(e, ue), He();
 }
 fr(["click"]);
 //#endregion
+//#region src/core/search-status.js
+function ec(e, t) {
+	if (e.searching) return t.search.searching;
+	if (e.status !== "ready" || e.corpora.length === 0) return ws(e, t, !1);
+	let n = e.corpora.reduce((e, t) => e + t.chunks, 0), r = e.corpora.length === 1 ? xs(e.corpora[0].commit) : $(t.pill.corpora, { n: e.corpora.length }), i = [...new Set(e.corpora.map((e) => t.search.plan[e.plan.kind]))].join(" + "), a = [
+		t.status.ready,
+		r,
+		$(t.pill.chunks, { n }),
+		i
+	];
+	return e.offline && a.push(t.offlineBadge), a.join(" · ");
+}
+function tc(e, t) {
+	return e.searching || e.status === "ready" ? ec(e, t) : t.status[e.status] ?? e.status;
+}
+function nc(e, t) {
+	let n = e.items.length;
+	return n === 0 ? $(t.search.empty, { query: e.query }) : n === 1 ? $(t.search.countOne, { query: e.query }) : $(t.search.count, {
+		n,
+		query: e.query
+	});
+}
+//#endregion
+//#region src/ui/SearchResults.svelte
+var rc = /* @__PURE__ */ q("<a class=\"cs-hit-title\"> </a>"), ic = /* @__PURE__ */ q("<span class=\"cs-hit-title\"> </span>"), ac = /* @__PURE__ */ q("<span class=\"cs-crumb-sep\" aria-hidden=\"true\">›</span>"), oc = /* @__PURE__ */ q("<!><span class=\"cs-crumb\"> </span>", 1), sc = /* @__PURE__ */ q("<p class=\"cs-crumbs\"><span class=\"cc-sr\"> </span> <!></p>"), cc = /* @__PURE__ */ q("<mark> </mark>"), lc = /* @__PURE__ */ q("<p class=\"cs-snippet\"></p>"), uc = /* @__PURE__ */ q("<span class=\"cs-corpus\"> </span>"), dc = /* @__PURE__ */ q("<li class=\"cs-hit\"><!> <!> <!> <!></li>"), fc = /* @__PURE__ */ q("<ol class=\"cs-results\"></ol>"), pc = /* @__PURE__ */ q("<p class=\"cs-count\" role=\"status\"> </p> <!>", 1);
+function mc(e, t) {
+	Ve(t, !0);
+	let n = /* @__PURE__ */ P(null), r = /* @__PURE__ */ M(() => nc(t.results, t.copy)), i = () => G(n) ? [...G(n).querySelectorAll("a.cs-hit-title")] : [];
+	function a() {
+		let e = i()[0];
+		return e?.focus(), !!e;
+	}
+	function o(e) {
+		let n = i(), r = n.indexOf(document.activeElement);
+		if (r === -1) return;
+		let a = null;
+		if (e.key === "ArrowDown") a = n[Math.min(r + 1, n.length - 1)];
+		else if (e.key === "ArrowUp") a = r === 0 ? null : n[r - 1];
+		else if (e.key === "Home") a = n[0];
+		else if (e.key === "End") a = n[n.length - 1];
+		else return;
+		e.preventDefault(), a ? a.focus() : t.onexitup();
+	}
+	function s(e) {
+		e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || t.onpick();
+	}
+	var c = { focusFirst: a }, l = pc(), u = rn(l), d = R(u, !0);
+	k(u);
+	var f = z(u, 2), p = (e) => {
+		var r = fc();
+		Pr(r, 21, () => t.results.items, (e) => e.key, (e, n) => {
+			var r = dc(), i = R(r), a = (e) => {
+				var t = rc(), r = R(t, !0);
+				k(t), B(() => {
+					Z(t, "href", G(n).url), Y(r, G(n).title);
+				}), K("click", t, s), J(e, t);
+			}, o = (e) => {
+				var t = ic(), r = R(t, !0);
+				k(t), B(() => Y(r, G(n).title)), J(e, t);
+			};
+			X(i, (e) => {
+				G(n).url ? e(a) : e(o, -1);
+			});
+			var c = z(i, 2), l = (e) => {
+				var r = sc(), i = R(r), a = R(i);
+				k(i), Pr(z(i, 2), 17, () => G(n).crumbs, Ar, (e, t, n) => {
+					var r = oc(), i = rn(r), a = (e) => {
+						J(e, ac());
+					};
+					X(i, (e) => {
+						n > 0 && e(a);
+					});
+					var o = z(i), s = R(o, !0);
+					k(o), B(() => Y(s, G(t))), J(e, r);
+				}), k(r), B(() => Y(a, `${t.copy.search.crumbsLabel ?? ""}:`)), J(e, r);
+			};
+			X(c, (e) => {
+				G(n).crumbs.length > 0 && e(l);
+			});
+			var u = z(c, 2), d = (e) => {
+				var t = lc();
+				Pr(t, 21, () => G(n).snippet, Ar, (e, t) => {
+					var n = Sr(), r = rn(n), i = (e) => {
+						var n = cc(), r = R(n, !0);
+						k(n), B(() => Y(r, G(t).text)), J(e, n);
+					}, a = (e) => {
+						var n = xr();
+						B(() => Y(n, G(t).text)), J(e, n);
+					};
+					X(r, (e) => {
+						G(t).hit ? e(i) : e(a, -1);
+					}), J(e, n);
+				}), k(t), J(e, t);
+			};
+			X(u, (e) => {
+				G(n).snippet.length > 0 && e(d);
+			});
+			var f = z(u, 2), p = (e) => {
+				var t = uc(), r = R(t, !0);
+				k(t), B(() => Y(r, G(n).corpusId)), J(e, t);
+			};
+			X(f, (e) => {
+				t.showCorpus && e(p);
+			}), k(r), J(e, r);
+		}), k(r), oi(r, (e) => F(n, e), () => G(n)), B(() => Z(r, "aria-label", t.copy.search.resultsLabel)), K("keydown", r, o), J(e, r);
+	};
+	return X(f, (e) => {
+		t.results.items.length > 0 && e(p);
+	}), B(() => Y(d, G(r))), J(e, l), He(c);
+}
+fr(["keydown", "click"]);
+//#endregion
+//#region src/ui/RepoSearch.svelte
+var hc = /* @__PURE__ */ q("<div class=\"cc-motif\" aria-hidden=\"true\"></div>"), gc = /* @__PURE__ */ q("<div class=\"cc-panel\"><!></div>"), _c = /* @__PURE__ */ q("<p class=\"cc-offline\"> </p>"), vc = /* @__PURE__ */ q("<p class=\"cc-sub\"> </p>"), yc = /* @__PURE__ */ q("<div class=\"cc-log cs-log\"><!> <!> <!></div>"), bc = /* @__PURE__ */ q("<div class=\"cc-backdrop\" role=\"presentation\"><div class=\"cc cs\" role=\"dialog\" aria-modal=\"true\" tabindex=\"-1\"><!> <header class=\"cc-head\"><div class=\"cc-head-titles\"><span class=\"cc-slabel\"><!> </span> <h2 class=\"cc-title\"> </h2></div> <p class=\"cc-status\"><span class=\"cc-status-dot\" aria-hidden=\"true\"></span> <span class=\"cc-status-text\"> </span></p> <p class=\"cc-sr\" role=\"status\"> </p> <button type=\"button\" class=\"cc-close\">✕</button></header> <!> <form class=\"cc-input-row\" role=\"search\"><span class=\"cc-prompt\" aria-hidden=\"true\">❯</span> <input class=\"cc-input cs-input\" type=\"search\" autocomplete=\"off\" spellcheck=\"false\" enterkeyhint=\"search\"/> <button type=\"submit\" class=\"cc-ask cs-submit\"> </button></form> <div class=\"cc-foot\"><span class=\"cc-hint\" aria-live=\"polite\"><!></span> <span class=\"cc-fineprint\"> </span></div></div></div>");
+function xc(e, t) {
+	Ve(t, !0);
+	let n = /* @__PURE__ */ M(() => t.session.chat), r = /* @__PURE__ */ P(null), i = /* @__PURE__ */ P(null), a = /* @__PURE__ */ P(null), o = /* @__PURE__ */ M(() => vs.includes(G(n).status) || G(n).status === "idle"), s = /* @__PURE__ */ M(() => G(n).status === "ready"), c = /* @__PURE__ */ M(() => G(n).status === "error" ? G(n).error : null), l = /* @__PURE__ */ M(() => G(n).status === "consent" ? G(n).consent : null), u = /* @__PURE__ */ M(() => ec(G(n), t.copy)), d = /* @__PURE__ */ M(() => tc(G(n), t.copy)), f = /* @__PURE__ */ M(() => Es(G(n), G(n).searching)), p = /* @__PURE__ */ M(() => G(c) ? t.copy.errors[G(c).kind] ?? t.copy.errors.generic : null);
+	mn(() => {
+		let e = document.activeElement;
+		document.body.style.overflow = "hidden", G(r)?.focus(), ir(() => t.session.ensureReady());
+		let n = (e) => {
+			G(r) && e.target instanceof Node && !G(r).contains(e.target) && G(r).focus();
+		};
+		return document.addEventListener("focusin", n), () => {
+			document.removeEventListener("focusin", n), document.body.style.overflow = "", e instanceof HTMLElement && e.focus();
+		};
+	}), mn(() => {
+		G(n).status === "ready" && (t.onready(), ir(() => tr().then(() => G(i)?.focus())));
+	});
+	function m() {
+		(vs.includes(G(n).status) || G(n).status === "consent") && t.session.abortLoad(), t.onclose();
+	}
+	async function h() {
+		t.session.acceptDownload(), await tr(), G(r)?.focus();
+	}
+	function g(e) {
+		e.key === "Escape" ? m() : G(r) && zs(e, G(r));
+	}
+	function _(e) {
+		e.preventDefault(), t.session.search(G(n).draft);
+	}
+	function v(e) {
+		e.key === "ArrowDown" && G(a)?.focusFirst() && e.preventDefault();
+	}
+	async function y() {
+		t.session.ensureReady(), await tr(), G(r)?.focus();
+	}
+	async function b() {
+		await t.session.search(G(n).draft || G(n).results?.query || ""), G(i)?.focus();
+	}
+	var x = bc();
+	dr("keydown", Zt, g);
+	var S = R(x), ee = R(S), te = (e) => {
+		var n = hc();
+		Br(n, () => t.brand.motifSvg, !0), k(n), J(e, n);
+	};
+	X(ee, (e) => {
+		t.brand.motifSvg && e(te);
+	});
+	var C = z(ee, 2), w = R(C), ne = R(w), re = R(ne);
+	_s(re, { size: 14 });
+	var ie = z(re, 1, !0);
+	k(ne);
+	var ae = z(ne, 2), oe = R(ae, !0);
+	k(ae), k(w);
+	var se = z(w, 2), ce = z(R(se), 2), le = R(ce, !0);
+	k(ce), k(se);
+	var ue = z(se, 2), de = R(ue, !0);
+	k(ue);
+	var fe = z(ue, 2);
+	k(C);
+	var pe = z(C, 2), me = (e) => {
+		var t = gc(), n = R(t);
+		{
+			let e = /* @__PURE__ */ M(() => G(c).kind === "config" ? G(c).message : null);
+			cs(n, {
+				get entry() {
+					return G(p);
+				},
+				get detail() {
+					return G(e);
+				},
+				resetText: "",
+				paidLabel: "",
+				onpaid: () => {},
+				onretry: y
+			});
+		}
+		k(t), J(e, t);
+	}, he = (e) => {
+		is(e, {
+			get consent() {
+				return G(l);
+			},
+			get copy() {
+				return t.copy;
+			},
+			onaccept: h,
+			ondecline: m
+		});
+	}, ge = (e) => {
+		Is(e, {
+			get chat() {
+				return G(n);
+			},
+			get copy() {
+				return t.copy;
+			}
+		});
+	}, _e = (e) => {
+		var r = yc(), o = R(r), s = (e) => {
+			var n = _c(), r = R(n, !0);
+			k(n), B(() => Y(r, t.copy.offlineBadge)), J(e, n);
+		};
+		X(o, (e) => {
+			G(n).offline && e(s);
+		});
+		var c = z(o, 2), l = (e) => {
+			{
+				let r = /* @__PURE__ */ M(() => G(n).corpora.length > 1);
+				oi(mc(e, {
+					get results() {
+						return G(n).results;
+					},
+					get copy() {
+						return t.copy;
+					},
+					get showCorpus() {
+						return G(r);
+					},
+					onexitup: () => G(i)?.focus(),
+					onpick: () => setTimeout(m, 0)
+				}), (e) => F(a, e, !0), () => G(a));
+			}
+		}, u = (e) => {
+			var n = vc(), r = R(n, !0);
+			k(n), B(() => Y(r, t.copy.search.sub)), J(e, n);
+		};
+		X(c, (e) => {
+			G(n).results ? e(l) : e(u, -1);
+		});
+		var d = z(c, 2), f = (e) => {
+			cs(e, {
+				get entry() {
+					return t.copy.search.error;
+				},
+				get detail() {
+					return G(n).searchError.message;
+				},
+				resetText: "",
+				paidLabel: "",
+				onpaid: () => {},
+				onretry: b
+			});
+		};
+		X(d, (e) => {
+			G(n).searchError && e(f);
+		}), k(r), B(() => Z(r, "aria-busy", G(n).searching)), J(e, r);
+	};
+	X(pe, (e) => {
+		G(c) ? e(me) : G(l) ? e(he, 1) : G(o) ? e(ge, 2) : e(_e, -1);
+	});
+	var ve = z(pe, 2), ye = z(R(ve), 2);
+	Qr(ye), oi(ye, (e) => F(i, e), () => G(i));
+	var be = z(ye, 2), xe = R(be, !0);
+	k(be), k(ve);
+	var Se = z(ve, 2), Ce = R(Se), we = R(Ce), Te = (e) => {
+		var n = xr();
+		B(() => Y(n, t.copy.search.hintLoading)), J(e, n);
+	};
+	X(we, (e) => {
+		!G(s) && !G(c) && !G(l) && e(Te);
+	}), k(Ce);
+	var T = z(Ce, 2), Ee = R(T, !0);
+	k(T), k(Se), k(S), oi(S, (e) => F(r, e), () => G(r)), k(x), B((e) => {
+		Z(S, "aria-label", t.copy.search.navLabel), Y(ie, t.copy.search.label), Y(oe, t.copy.search.title), Z(se, "data-tone", G(f)), Z(se, "title", G(u)), Y(le, G(u)), Y(de, G(d)), Z(fe, "aria-label", t.copy.search.closeLabel), Z(ye, "placeholder", t.copy.search.placeholder), Z(ye, "aria-label", t.copy.search.navLabel), ye.disabled = !G(s), be.disabled = e, Y(xe, t.copy.search.submit), Y(Ee, t.copy.search.fine);
+	}, [() => !G(s) || !G(n).draft.trim()]), K("click", x, m), K("click", S, (e) => e.stopPropagation()), K("click", fe, m), dr("submit", ve, _), K("keydown", ye, v), ni(ye, () => G(n).draft, (e) => G(n).draft = e), J(e, x), He();
+}
+fr(["click", "keydown"]);
+//#endregion
 //#region src/index.js
-var ds = "(max-width: 860px)", fs = /* @__PURE__ */ new Map(), ps = (e) => `${e.storage.keyPrefix}lattice-wasm`;
-function ms(e) {
-	return JSON.stringify([
+var Sc = "(max-width: 860px)", Cc = /* @__PURE__ */ new Map(), wc = (e) => `${e.storage.keyPrefix}lattice-wasm`;
+function Tc(e) {
+	return e.mode === "search" ? JSON.stringify([
+		"search",
+		e.corpora,
+		e.wasm,
+		e.search,
+		e.storage.keyPrefix
+	]) : JSON.stringify([
+		"answer",
 		e.corpora,
 		e.wasm,
 		e.provider,
@@ -4387,46 +5211,69 @@ function ms(e) {
 		e.brand.productName
 	]);
 }
-function hs(e) {
-	let t = ms(e), n = fs.get(t);
-	if (!n) {
-		let r = {
-			fetch: Li,
-			sleep: Pi
-		};
-		n = Ja(e, {
-			openrouter: oa(e.provider, r),
-			lattice: Ji(e.wasm, {
-				importModule: Ri,
-				fetch: Li
-			}),
-			cache: ga(e.storage.keyPrefix, {
-				getDirectory: zi(),
-				sleep: Pi
-			}),
-			net: Ki({ fetch: Li }),
-			keys: _a(e.storage.keyPrefix, window.localStorage),
-			clock: Fi,
-			idleYield: Ni,
-			wasmBytes: () => Hi(e.wasm.binUrl, ps(e)),
-			reportCacheFault: (e) => console.error(`repo-chat: browser cache: ${e?.message ?? e}`, e)
-		}), fs.set(t, n);
-	}
-	return n;
+var Ec = (e) => e.mode === "search" ? e.search.embedder?.embed ?? null : null;
+function Dc(e) {
+	return go(e, {
+		search: ma(ra(e.wasm, {
+			importModule: qi,
+			fetch: Gi
+		})),
+		cache: ka(e.storage.keyPrefix, Pa, {
+			getDirectory: Ji(),
+			sleep: Hi
+		}),
+		net: ta({ fetch: Gi }),
+		wasmBytes: () => Zi(e.wasm.binUrl, wc(e)),
+		sha256: Ki,
+		reportCacheFault: (e) => console.error(`repo-chat: browser cache: ${e?.message ?? e}`, e)
+	});
 }
-function gs(e) {
+function Oc(e) {
+	let t = Tc(e), n = Cc.get(t);
+	if (n && n.embed === Ec(e)) return n.session;
+	let r;
+	if (e.mode === "search") r = Dc(e);
+	else {
+		let t = {
+			fetch: Gi,
+			sleep: Hi
+		};
+		r = Ro(e, {
+			openrouter: Ea(e.provider, t),
+			lattice: ra(e.wasm, {
+				importModule: qi,
+				fetch: Gi
+			}),
+			cache: ka(e.storage.keyPrefix, Na, {
+				getDirectory: Ji(),
+				sleep: Hi
+			}),
+			net: ta({ fetch: Gi }),
+			keys: Aa(e.storage.keyPrefix, window.localStorage),
+			clock: Ui,
+			idleYield: Vi,
+			wasmBytes: () => Zi(e.wasm.binUrl, wc(e)),
+			reportCacheFault: (e) => console.error(`repo-chat: browser cache: ${e?.message ?? e}`, e)
+		});
+	}
+	return Cc.set(t, {
+		session: r,
+		embed: Ec(e)
+	}), r;
+}
+function kc(e) {
 	if (typeof window > "u" || typeof document > "u") throw Error(`${e} runs in a browser only`);
 }
-function _s(e) {
-	let t = Mi(e);
-	gs("warmRepoChat"), Bi(t.assets.cssHref).catch(() => {}), Wi(t.wasm.binUrl, ps(t));
+function Ac(e) {
+	let t = Bi(e);
+	kc("warmRepoChat"), Yi(t.assets.cssHref).catch(() => {}), $i(t.wasm.binUrl, wc(t));
 }
-function vs(e) {
-	let t = Mi(e);
-	gs("openRepoChat");
+function jc(e) {
+	let t = Bi(e);
+	kc("openRepoChat");
 	let n = document.createElement("div");
 	n.className = "arr-root";
-	for (let [e, r] of di(t.theme)) n.style.setProperty(e, r);
+	for (let [e, r] of fi(t.theme)) n.style.setProperty(e, r);
 	let r, i = new Promise((e, t) => {
 		r = {
 			resolve: e,
@@ -4436,30 +5283,41 @@ function vs(e) {
 	i.catch(() => {});
 	let a = null, o = !1, s = !1;
 	function c() {
-		s || (s = !0, l.abortLoad(), a && Dr(a), n.remove(), o || r.reject(/* @__PURE__ */ Error("the chat was closed before its corpora were ready")), t.onClose?.());
+		s || (s = !0, l.abortLoad(), a && Or(a), n.remove(), o || r.reject(/* @__PURE__ */ Error("the chat was closed before its corpora were ready")), t.onClose?.());
 	}
-	let l = hs(t);
-	return t.mount.appendChild(n), Bi(t.assets.cssHref).catch((e) => {
+	let l = Oc(t);
+	return t.mount.appendChild(n), Yi(t.assets.cssHref).catch((e) => {
 		console.error(e);
 	}).then(() => {
-		s || (a = Cr(us, {
+		if (s) return;
+		let e = () => {
+			o || (o = !0, r.resolve(), t.onReady?.());
+		};
+		a = t.mode === "search" ? wr(xc, {
 			target: n,
 			props: {
 				session: l,
 				copy: t.copy,
 				brand: t.brand,
-				sourcesOpen: !Ii(ds),
-				reducedMotion: () => Ii("(prefers-reduced-motion: reduce)"),
 				onclose: c,
-				onready: () => {
-					o || (o = !0, r.resolve(), t.onReady?.());
-				}
+				onready: e
 			}
-		}));
+		}) : wr($s, {
+			target: n,
+			props: {
+				session: l,
+				copy: t.copy,
+				brand: t.brand,
+				sourcesOpen: !Wi(Sc),
+				reducedMotion: () => Wi("(prefers-reduced-motion: reduce)"),
+				onclose: c,
+				onready: e
+			}
+		});
 	}), {
 		close: c,
 		ready: i
 	};
 }
 //#endregion
-export { ci as COPY_EN, fi as ConfigError, vs as openRepoChat, _s as warmRepoChat };
+export { li as COPY_EN, pi as ConfigError, jc as openRepoChat, Ac as warmRepoChat };

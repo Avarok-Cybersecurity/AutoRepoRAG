@@ -34,6 +34,12 @@ export const matches = (query) => typeof window !== 'undefined' && window.matchM
 /** Fetch through whatever window.fetch is at call time (never a stale copy). */
 export const fetchNow = (input, init) => globalThis.fetch(input, init);
 
+/** Lowercase hex SHA-256 of `bytes` (WebCrypto). */
+export async function sha256Hex(bytes) {
+  const digest = new Uint8Array(await crypto.subtle.digest('SHA-256', bytes));
+  return Array.from(digest, (b) => b.toString(16).padStart(2, '0')).join('');
+}
+
 export const importModule = (url) => import(/* @vite-ignore */ url);
 
 export const opfsDirectory = () =>

@@ -5,12 +5,13 @@
 //   ?corpora=code,docs   which fixture corpora to load (default: code)
 
 import { COPY_EN, openRepoChat, warmRepoChat } from '/repo-chat/repo-chat.js';
+import { THEME } from './theme.js';
 
 const params = new URLSearchParams(location.search);
 const ids = (params.get('corpora') ?? 'code').split(',');
-const v = (name) => `var(--h-${name})`;
 
 export const config = {
+  mode: 'answer',
   mount: document.body,
   assets: { cssHref: '/repo-chat/repo-chat.css' },
   wasm: { jsUrl: '/repo-chat/lattice_server.js', binUrl: '/repo-chat/lattice_server_bg.wasm' },
@@ -36,24 +37,7 @@ export const config = {
     ],
   },
   brand: { productName: 'Example Engine', motifSvg: null },
-  theme: {
-    bg: v('bg'),
-    bg2: v('bg2'),
-    card: v('card'),
-    border: v('border'),
-    borderStrong: v('border-strong'),
-    text: v('t1'),
-    text2: v('t2'),
-    text3: v('t3'),
-    accent: v('accent'),
-    accentSoft: v('accent-soft'),
-    onAccent: v('on-accent'),
-    green: v('green'),
-    amber: v('amber'),
-    fontMono: 'ui-monospace, Menlo, Consolas, monospace',
-    fontSans: 'system-ui, sans-serif',
-    shadowLg: v('shadow-lg'),
-  },
+  theme: THEME,
 };
 
 // What the suite reads back: lifecycle callbacks, and the module itself.

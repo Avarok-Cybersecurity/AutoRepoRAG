@@ -18,25 +18,11 @@
 // (or loading-cached -> indexing), so several corpora repeat the walk.
 // =============================================================================
 
-import { classifyStreamError, corpusFaultKind, manifestFaultKind } from '../core/ask-errors.js';
+import { classifyStreamError, corpusFaultKind } from '../core/ask-errors.js';
 import { createLineSplitter, parseHeader, parsePoint } from '../core/jsonl.js';
 import { missingDownload } from '../core/consent.js';
 import { sharedEmbedding, validateMeta } from '../core/manifest.js';
-
-class AbortedError extends Error {
-  constructor() {
-    super('load aborted');
-    this.name = 'AbortError';
-  }
-}
-
-/** A load step failed and already recorded its error kind on `chat`. */
-class FailedError extends Error {
-  constructor() {
-    super('load failed');
-    this.name = 'FailedError';
-  }
-}
+import { AbortedError, createLoadGate, resolveManifest as resolveWith } from './load-gate.js';
 
 /**
  * @param {object} deps
@@ -52,30 +38,24 @@ class FailedError extends Error {
 export function createLoader({ chat, corpora, upsertBatch, ports }) {
   const { lattice, cache, net, idleYield, wasmBytes, reportCacheFault } = ports;
 
-  let loadPromise = null; // in-flight ensureReady(); cleared on error/abort
   let controller = null; // AbortController for the current corpus download
   let writer = null; // OPFS corpus writer (partial file cleanup on abort)
-  let loadToken = null; // { aborted } — lets abortLoad() stop non-fetch phases
-  let consented = false; // the visitor pressed "download" for this open
-  let consentGate = null; // { resolve, reject } while waiting in 'consent'
   let wasmReady = false; // the engine initialized once this session
 
-  const throwIfAborted = (token) => {
-    if (token.aborted) throw new AbortedError();
-  };
-
-  function resetProgress() {
-    chat.progress.loadedBytes = 0;
-    chat.progress.totalBytes = 0;
-    chat.progress.indexed = 0;
-    chat.progress.totalPoints = 0;
-  }
-
-  function fail(kind, err) {
-    chat.status = 'error';
-    chat.error = { kind, message: err?.message ? String(err.message) : String(err) };
-    return new FailedError();
-  }
+  const gate = createLoadGate(chat, {
+    cancelIo() {
+      controller?.abort();
+      const w = writer;
+      writer = null;
+      if (w) w.discard().catch(reportCacheFault);
+    },
+    settled() {
+      controller = null;
+      writer = null;
+    },
+  });
+  const { fail, throwIfAborted } = gate;
+  const resolveManifest = (token, corpus) => resolveWith({ chat, net, cache, gate, validate: validateMeta }, token, corpus);
 
   async function dropWriter() {
     const w = writer;
@@ -83,75 +63,7 @@ export function createLoader({ chat, corpora, upsertBatch, ports }) {
     if (w) await w.discard().catch(reportCacheFault);
   }
 
-  /**
-   * Drive the machine to 'ready'. Idempotent: concurrent calls share one
-   * load; re-calling after an error retries from scratch. Resolves when the
-   * machine settles ('ready' or 'error' — errors are reported via chat.error,
-   * not by rejecting, so callers never need their own catch for state).
-   */
-  function ensureReady() {
-    if (chat.status === 'ready') return Promise.resolve();
-    if (loadPromise) return loadPromise;
-
-    const token = { aborted: false };
-    loadToken = token;
-    loadPromise = load(token)
-      .catch((err) => {
-        // abortLoad() already restored 'idle' — not an error state.
-        if (token.aborted || err?.name === 'AbortError' || err instanceof FailedError) return;
-        if (!chat.error) fail('corpus', err);
-      })
-      .finally(() => {
-        if (chat.status !== 'ready') loadPromise = null;
-        if (loadToken === token) loadToken = null;
-        controller = null;
-        writer = null;
-      });
-    return loadPromise;
-  }
-
-  /** Abort an in-flight load: cancel the fetch, drop any partial OPFS file. */
-  function abortLoad() {
-    if (chat.status === 'ready' || chat.status === 'idle') return;
-    if (loadToken) loadToken.aborted = true;
-    consented = false;
-    consentGate?.reject(new AbortedError());
-    consentGate = null;
-    chat.consent = null;
-    controller?.abort();
-    const w = writer;
-    writer = null;
-    if (w) w.discard().catch(reportCacheFault);
-    loadPromise = null;
-    chat.error = null;
-    chat.offline = false;
-    resetProgress();
-    chat.status = 'idle';
-  }
-
-  /** The visitor pressed "download": the waiting load goes on. */
-  function accept() {
-    if (!consentGate) return;
-    consented = true;
-    chat.consent = null;
-    consentGate.resolve();
-    consentGate = null;
-  }
-
-  /** Wait in 'consent' until accept() or abortLoad(). */
-  function awaitConsent(missing) {
-    chat.consent = missing;
-    chat.status = 'consent';
-    return new Promise((resolve, reject) => {
-      consentGate = { resolve, reject };
-    });
-  }
-
   async function load(token) {
-    chat.error = null;
-    chat.offline = false;
-    resetProgress();
-
     // 1) every manifest preflight (tiny meta.json: sha/size/dim/model)
     chat.status = 'manifest';
     const plan = [];
@@ -172,12 +84,7 @@ export function createLoader({ chat, corpora, upsertBatch, ports }) {
     }
 
     // 4) anything large missing: ask first, with its size
-    if (!consented && plan.some((p) => !p.file)) {
-      const engine = wasmReady ? 0 : await wasmBytes();
-      throwIfAborted(token);
-      await awaitConsent(missingDownload(plan, engine));
-      throwIfAborted(token);
-    }
+    await gate.consentTo(token, async () => (plan.some((p) => !p.file) ? missingDownload(plan, wasmReady ? 0 : await wasmBytes()) : null));
 
     // 5) wasm
     chat.status = 'wasm-init';
@@ -210,34 +117,6 @@ export function createLoader({ chat, corpora, upsertBatch, ports }) {
     chat.corpora = loaded;
     chat.embedding = embedding;
     chat.status = 'ready';
-  }
-
-  /**
-   * The validated manifest of `corpus`. When it is unreachable or invalid,
-   * fall back to the newest cached copy of that corpus (the offline path);
-   * with no cached copy the load fails as 'manifest' (no response: the
-   * connection) or 'unavailable' (the server's error, or an invalid meta).
-   */
-  async function resolveManifest(token, corpus) {
-    let raw;
-    try {
-      raw = await net.fetchMeta(corpus.metaUrl);
-      return { corpus, raw, meta: validateMeta(raw, corpus.id), file: null };
-    } catch (err) {
-      throwIfAborted(token);
-      const cached = await cache.newestOffline(corpus.id);
-      throwIfAborted(token);
-      if (!cached) throw fail(manifestFaultKind(err), err);
-      let meta;
-      try {
-        meta = validateMeta(cached.rawMeta, corpus.id);
-      } catch {
-        throw fail(manifestFaultKind(err), err);
-      }
-      if (meta.commitSha !== cached.sha) throw fail(manifestFaultKind(err), err);
-      chat.offline = true;
-      return { corpus, raw: cached.rawMeta, meta, file: cached.file };
-    }
   }
 
   // Serve a previously cached decompressed corpus from OPFS.
@@ -406,5 +285,5 @@ export function createLoader({ chat, corpora, upsertBatch, ports }) {
     return header;
   }
 
-  return { ensureReady, abortLoad, accept };
+  return { ensureReady: () => gate.ensureReady(load), abortLoad: gate.abortLoad, accept: gate.accept };
 }

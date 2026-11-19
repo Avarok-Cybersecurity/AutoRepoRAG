@@ -1,0 +1,105 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+/* =============================================================================
+   repo-chat: search mode's result list (ui/SearchResults.svelte). The dialog
+   shell, panels, input row and phone sheet are answer mode's own rules
+   (shell.css, controls.css, viewport.css); this file adds only the results.
+   Every colour and font is a --arr-* custom property (tokens.css); no colour
+   literal belongs in this file (test/unit/styles.test.js enforces it).
+   ========================================================================== */
+
+/* No ruled paper behind a result list: it is not a transcript. */
+.cs-log {
+  background-image: none;
+  gap: 0.75rem;
+}
+.cs-input {
+  appearance: none;
+  -webkit-appearance: none;
+}
+.cs-count {
+  font-family: var(--arr-font-mono);
+  font-size: 0.74rem;
+  color: var(--arr-text3);
+}
+.cs-results {
+  list-style: none;
+  display: grid;
+  gap: 0.6rem;
+}
+.cs-hit {
+  position: relative;
+  display: grid;
+  gap: 0.25rem;
+  padding: 0.8rem 0.95rem;
+  background: var(--arr-card);
+  border: 1px solid var(--arr-border);
+  border-radius: 10px;
+  min-width: 0;
+}
+.cs-hit:focus-within {
+  border-color: var(--arr-accent);
+}
+.cs-hit-title {
+  font-family: var(--arr-font-sans);
+  font-size: 0.95rem;
+  font-weight: 700;
+  line-height: 1.35;
+  color: var(--arr-text);
+  overflow-wrap: anywhere;
+}
+a.cs-hit-title {
+  color: var(--arr-accent-deep);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+a.cs-hit-title:hover {
+  color: var(--arr-accent);
+}
+.cs-crumbs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.15rem 0.4rem;
+  font-family: var(--arr-font-mono);
+  font-size: 0.7rem;
+  color: var(--arr-text2);
+  overflow-wrap: anywhere;
+}
+.cs-crumb-sep {
+  color: var(--arr-text3);
+}
+.cs-snippet {
+  font-size: 0.84rem;
+  line-height: 1.55;
+  color: var(--arr-text2);
+  overflow-wrap: anywhere;
+}
+.cs-snippet mark {
+  color: var(--arr-text);
+  background: var(--arr-accent-soft);
+  border-radius: 3px;
+  padding: 0 0.1em;
+}
+.cs-corpus {
+  justify-self: start;
+  font-family: var(--arr-font-mono);
+  font-size: 0.64rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--arr-text3);
+  border: 1px solid var(--arr-border);
+  border-radius: 999px;
+  padding: 0.05rem 0.5rem;
+}
+
+@media (max-width: 860px) {
+  .cs-hit {
+    padding: 0.7rem 0.8rem;
+  }
+  /* a comfortable tap target for the link on a phone */
+  a.cs-hit-title {
+    display: block;
+    min-height: 24px;
+  }
+}

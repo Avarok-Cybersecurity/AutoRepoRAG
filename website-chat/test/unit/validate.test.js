@@ -11,7 +11,18 @@ import { validConfig } from './config-fixture.js';
 
 // Written out by hand, not derived from the validator's own spec: deriving it
 // would make the test agree with whatever the validator happens to check.
+const SHARED_LEAVES = [
+  'mount',
+  'assets.cssHref',
+  'wasm.jsUrl',
+  'wasm.binUrl',
+  'storage.keyPrefix',
+  'copy',
+  ...['bg', 'bg2', 'card', 'border', 'borderStrong', 'text', 'text2', 'text3', 'accent', 'accentSoft', 'onAccent', 'green', 'amber', 'fontMono', 'fontSans', 'shadowLg'].map((k) => `theme.${k}`),
+];
+
 const REQUIRED_LEAVES = [
+  'mode',
   'mount',
   'assets.cssHref',
   'wasm.jsUrl',
@@ -59,19 +70,29 @@ describe('validateConfig', () => {
     assert.equal(validateConfig(config), config);
   });
 
-  it('openRepoChat({}) lists every missing key in one error', () => {
+  it('openRepoChat({}) lists the mode and every key both modes need, in one error', () => {
     const problems = problemsOf({});
     const missing = problems.map((p) => p.split(':')[0]);
-    assert.deepEqual([...missing].sort(), [...REQUIRED_LEAVES].sort());
-    assert.throws(() => validateConfig({}), (e) => REQUIRED_LEAVES.every((p) => e.message.includes(`  - ${p}: missing`)));
+    assert.deepEqual([...missing].sort(), ['mode', ...SHARED_LEAVES].sort());
+    assert.ok(problems.includes("mode: missing (one of 'answer', 'search')"), problems.join('\n'));
+    assert.throws(() => validateConfig({}), (e) => SHARED_LEAVES.every((p) => e.message.includes(`  - ${p}: missing`)));
   });
 
   it('a non-object config is refused, still listing every key', () => {
     for (const bad of [undefined, null, 'cfg', []]) {
       const problems = problemsOf(bad);
       assert.equal(problems[0], 'config: must be a plain object');
-      assert.equal(problems.length, REQUIRED_LEAVES.length + 1);
+      assert.equal(problems.length, SHARED_LEAVES.length + 2);
     }
+  });
+
+  it('an unknown mode is named, and the mode-specific keys are not judged against a guess', () => {
+    const config = { ...validConfig(), mode: 'chat' };
+    assert.deepEqual(problemsOf(config), ["mode: must be one of 'answer', 'search'"]);
+  });
+
+  it('answer mode refuses the search-mode keys', () => {
+    assert.deepEqual(problemsOf({ ...validConfig(), search: {} }), ['search: unknown key']);
   });
 
   for (const path of REQUIRED_LEAVES) {

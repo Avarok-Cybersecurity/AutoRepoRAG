@@ -8,6 +8,11 @@
 //
 //   warmRepoChat(config);                 // on hover/focus: stylesheet + idle wasm prefetch
 //
+// config.mode picks what opens: 'answer' (the chat: OpenRouter answers over
+// the corpora, with the visitor's key) or 'search' (a ranked result list
+// from the corpora's LatticeDB snapshots; no key, nothing leaves the page
+// unless the site's own search.embedder sends it).
+//
 // This file is the composition root: it validates the config, binds every
 // adapter to it, and mounts the UI. Nothing below it reads a global constant.
 // A session is reused while the page lives, so a closed-then-reopened chat
@@ -21,6 +26,7 @@ import './styles/shell.css';
 import './styles/log.css';
 import './styles/controls.css';
 import './styles/viewport.css';
+import './styles/search.css';
 import { validateConfig } from './config/validate.js';
 import { COPY_EN } from './copy-en.js';
 import { themeDeclarations } from './core/theme.js';
@@ -33,16 +39,21 @@ import {
   matches,
   opfsDirectory,
   prefetchWasmOnIdle,
+  sha256Hex,
   sleep,
   wasmDownloadBytes,
 } from './adapters/browser.js';
 import { createCorpusNet } from './adapters/corpus.js';
 import { createLattice } from './adapters/lattice.js';
+import { createLatticeSearch } from './adapters/lattice-search.js';
 import { createOpenRouter } from './adapters/openrouter.js';
 import { createOpfsCache } from './adapters/opfs.js';
 import { createKeyStore } from './adapters/storage.js';
+import { JSONL_LAYOUT, SNAPSHOT_LAYOUT } from './core/cache-names.js';
+import { createSearchSession } from './state/search-session.svelte.js';
 import { createSession } from './state/session.svelte.js';
 import RepoChat from './ui/RepoChat.svelte';
+import RepoSearch from './ui/RepoSearch.svelte';
 
 export { COPY_EN };
 export { ConfigError } from './config/validate.js';
@@ -56,20 +67,42 @@ const sessions = new Map();
 /** The Cache Storage name the warm-up prefetch keeps the wasm binary in. */
 const wasmCacheName = (cfg) => `${cfg.storage.keyPrefix}lattice-wasm`;
 
-/** What makes two configs share one loaded session. */
+/**
+ * What makes two configs share one loaded session. In search mode the
+ * embedder's function cannot be serialized, so it is compared by identity.
+ */
 function sessionKey(cfg) {
-  return JSON.stringify([cfg.corpora, cfg.wasm, cfg.provider, cfg.retrieval, cfg.storage.keyPrefix, cfg.brand.productName]);
+  if (cfg.mode === 'search') return JSON.stringify(['search', cfg.corpora, cfg.wasm, cfg.search, cfg.storage.keyPrefix]);
+  return JSON.stringify(['answer', cfg.corpora, cfg.wasm, cfg.provider, cfg.retrieval, cfg.storage.keyPrefix, cfg.brand.productName]);
+}
+
+const searchEmbed = (cfg) => (cfg.mode === 'search' ? (cfg.search.embedder?.embed ?? null) : null);
+
+function searchSessionFor(cfg) {
+  const lattice = createLattice(cfg.wasm, { importModule, fetch: fetchNow });
+  return createSearchSession(cfg, {
+    search: createLatticeSearch(lattice),
+    cache: createOpfsCache(cfg.storage.keyPrefix, SNAPSHOT_LAYOUT, { getDirectory: opfsDirectory(), sleep }),
+    net: createCorpusNet({ fetch: fetchNow }),
+    wasmBytes: () => wasmDownloadBytes(cfg.wasm.binUrl, wasmCacheName(cfg)),
+    sha256: sha256Hex,
+    reportCacheFault: (err) => console.error(`repo-chat: browser cache: ${err?.message ?? err}`, err),
+  });
 }
 
 function sessionFor(cfg) {
   const key = sessionKey(cfg);
-  let session = sessions.get(key);
-  if (!session) {
+  const kept = sessions.get(key);
+  if (kept && kept.embed === searchEmbed(cfg)) return kept.session;
+  let session;
+  if (cfg.mode === 'search') {
+    session = searchSessionFor(cfg);
+  } else {
     const io = { fetch: fetchNow, sleep };
     session = createSession(cfg, {
       openrouter: createOpenRouter(cfg.provider, io),
       lattice: createLattice(cfg.wasm, { importModule, fetch: fetchNow }),
-      cache: createOpfsCache(cfg.storage.keyPrefix, { getDirectory: opfsDirectory(), sleep }),
+      cache: createOpfsCache(cfg.storage.keyPrefix, JSONL_LAYOUT, { getDirectory: opfsDirectory(), sleep }),
       net: createCorpusNet({ fetch: fetchNow }),
       keys: createKeyStore(cfg.storage.keyPrefix, window.localStorage),
       clock,
@@ -78,8 +111,8 @@ function sessionFor(cfg) {
       // Cache commit/cleanup failures never decide a load; they go here.
       reportCacheFault: (err) => console.error(`repo-chat: browser cache: ${err?.message ?? err}`, err),
     });
-    sessions.set(key, session);
   }
+  sessions.set(key, { session, embed: searchEmbed(cfg) });
   return session;
 }
 
@@ -148,23 +181,27 @@ export function openRepoChat(config) {
     })
     .then(() => {
       if (closed) return;
-      app = mount(RepoChat, {
-        target: host,
-        props: {
-          session,
-          copy: cfg.copy,
-          brand: cfg.brand,
-          sourcesOpen: !matches(PHONE_QUERY),
-          reducedMotion: () => matches('(prefers-reduced-motion: reduce)'),
-          onclose: close,
-          onready: () => {
-            if (isReady) return;
-            isReady = true;
-            settleReady.resolve();
-            cfg.onReady?.();
-          },
-        },
-      });
+      const onready = () => {
+        if (isReady) return;
+        isReady = true;
+        settleReady.resolve();
+        cfg.onReady?.();
+      };
+      app =
+        cfg.mode === 'search'
+          ? mount(RepoSearch, { target: host, props: { session, copy: cfg.copy, brand: cfg.brand, onclose: close, onready } })
+          : mount(RepoChat, {
+              target: host,
+              props: {
+                session,
+                copy: cfg.copy,
+                brand: cfg.brand,
+                sourcesOpen: !matches(PHONE_QUERY),
+                reducedMotion: () => matches('(prefers-reduced-motion: reduce)'),
+                onclose: close,
+                onready,
+              },
+            });
     });
 
   return { close, ready };

@@ -204,16 +204,20 @@ test('asking is gated on an OpenRouter key that persists across visits', async (
 // =============================================================================
 
 test.describe('openRepoChat', () => {
-  test('openRepoChat({}) throws one error listing every missing key, and mounts nothing', async ({ page }) => {
+  test('openRepoChat({ mode: "answer" }) throws one error listing every missing key, and mounts nothing', async ({ page }) => {
     await page.goto('/');
-    const err = await page.evaluate(() => {
-      try {
-        window.__repoChat.openRepoChat({});
-        return null;
-      } catch (e) {
-        return { name: e.name, problems: e.problems, message: e.message };
-      }
-    });
+    const errorOf = (config) =>
+      page.evaluate((c) => {
+        try {
+          window.__repoChat.openRepoChat(c);
+          return null;
+        } catch (e) {
+          return { name: e.name, problems: e.problems, message: e.message };
+        }
+      }, config);
+    // With no mode, which keys apply is unknown: the mode is named first.
+    expect((await errorOf({})).problems).toContain("mode: missing (one of 'answer', 'search')");
+    const err = await errorOf({ mode: 'answer' });
     expect(err.name).toBe('ConfigError');
     for (const path of ['mount', 'assets.cssHref', 'wasm.jsUrl', 'wasm.binUrl', 'corpora', 'provider.apiUrl', 'provider.chatModel', 'retrieval.topK', 'storage.keyPrefix', 'copy', 'brand.motifSvg', 'theme.accent']) {
       expect(err.problems.some((p) => p.startsWith(`${path}: missing`)), path).toBe(true);

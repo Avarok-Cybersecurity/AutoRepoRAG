@@ -6,7 +6,7 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 
 import { createOpfsCache } from '../../src/adapters/opfs.js';
-import { corpusFileName, metaFileName, partialFileName } from '../../src/core/cache-names.js';
+import { JSONL_LAYOUT, corpusFileName, metaFileName, partialFileName } from '../../src/core/cache-names.js';
 
 const SHA_OLD = '1'.repeat(40);
 const SHA_NEW = '2'.repeat(40);
@@ -92,7 +92,7 @@ describe('pruneStale', () => {
   it('a bad sha deletes nothing at all, rather than everything', async () => {
     for (const bad of [undefined, null, '', 0, {}, []]) {
       const mem = memoryDir({ [corpusFileName(P, 'code', SHA_OLD)]: { text: 'x', lastModified: 1 } });
-      await createOpfsCache(P, mem).pruneStale('code', bad);
+      await createOpfsCache(P, JSONL_LAYOUT, mem).pruneStale('code', bad);
       assert.deepEqual(mem.removed, []);
     }
   });
@@ -107,7 +107,7 @@ describe('pruneStale', () => {
       [corpusFileName('other-', 'code', SHA_OLD)]: { text: 'theirs', lastModified: 1 },
       'unrelated.txt': { text: 'u', lastModified: 1 },
     });
-    await createOpfsCache(P, mem).pruneStale('code', SHA_NEW);
+    await createOpfsCache(P, JSONL_LAYOUT, mem).pruneStale('code', SHA_NEW);
     assert.deepEqual(mem.removed.sort(), [corpusFileName(P, 'code', SHA_OLD), metaFileName(P, 'code', SHA_OLD)].sort());
   });
 });
@@ -115,14 +115,14 @@ describe('pruneStale', () => {
 describe('getCachedCorpus', () => {
   it('serves a hit, and treats a size mismatch with the manifest as a miss', async () => {
     const mem = memoryDir({ [corpusFileName(P, 'code', SHA_NEW)]: { text: 'abcd', lastModified: 1 } });
-    const cache = createOpfsCache(P, mem);
+    const cache = createOpfsCache(P, JSONL_LAYOUT, mem);
     assert.equal((await cache.getCachedCorpus('code', SHA_NEW, 4)).size, 4);
     assert.equal(await cache.getCachedCorpus('code', SHA_NEW, 5), null);
     assert.equal(await cache.getCachedCorpus('code', SHA_OLD, 4), null);
   });
 
   it('degrades to "no cache" when the browser has no OPFS', async () => {
-    const cache = createOpfsCache(P, { getDirectory: null, sleep: async () => undefined });
+    const cache = createOpfsCache(P, JSONL_LAYOUT, { getDirectory: null, sleep: async () => undefined });
     assert.equal(await cache.getCachedCorpus('code', SHA_NEW, 4), null);
     assert.equal(await cache.createCorpusWriter('code', SHA_NEW), null);
     assert.equal(await cache.newestOffline('code'), null);
@@ -136,14 +136,14 @@ describe('newestOffline', () => {
       [metaFileName(P, 'code', SHA_OLD)]: { text: metaText(SHA_OLD), lastModified: 1 },
       [corpusFileName(P, 'code', SHA_NEW)]: { text: 'newer, but its meta is gone', lastModified: 5 },
     });
-    const off = await createOpfsCache(P, mem).newestOffline('code');
+    const off = await createOpfsCache(P, JSONL_LAYOUT, mem).newestOffline('code');
     assert.equal(off.sha, SHA_OLD);
     assert.deepEqual(off.rawMeta, { commit_sha: SHA_OLD });
   });
 
   it('a writer only publishes on finalize, and discard leaves nothing behind', async () => {
     const mem = memoryDir({});
-    const cache = createOpfsCache(P, mem);
+    const cache = createOpfsCache(P, JSONL_LAYOUT, mem);
     const w = await cache.createCorpusWriter('code', SHA_NEW);
     await w.write('partial');
     await w.discard();
@@ -165,7 +165,7 @@ describe('newestOffline', () => {
 describe('corpus writer: atomic commit and cleanup', () => {
   it('writes under the .part name; the corpus name appears only at finalize', async () => {
     const mem = memoryDir({});
-    const w = await createOpfsCache(P, mem).createCorpusWriter('code', SHA_NEW);
+    const w = await createOpfsCache(P, JSONL_LAYOUT, mem).createCorpusWriter('code', SHA_NEW);
     await w.write('half');
     assert.deepEqual([...mem.files.keys()], [partialFileName(P, 'code', SHA_NEW)]);
     await w.write(' and half');
@@ -176,7 +176,7 @@ describe('corpus writer: atomic commit and cleanup', () => {
 
   it('discard retries a removal that hits the lock-release lag, and the partial is gone', async () => {
     const mem = memoryDir({}, { lag: { [partialFileName(P, 'code', SHA_NEW)]: 3 } });
-    const w = await createOpfsCache(P, mem).createCorpusWriter('code', SHA_NEW);
+    const w = await createOpfsCache(P, JSONL_LAYOUT, mem).createCorpusWriter('code', SHA_NEW);
     await w.write('partial');
     await w.discard();
     assert.deepEqual([...mem.files.keys()], []);
@@ -186,14 +186,14 @@ describe('corpus writer: atomic commit and cleanup', () => {
   it('a removal that keeps failing is thrown with the file name, never swallowed', async () => {
     const name = partialFileName(P, 'code', SHA_NEW);
     const mem = memoryDir({}, { lag: { [name]: 1000 } });
-    const w = await createOpfsCache(P, mem).createCorpusWriter('code', SHA_NEW);
+    const w = await createOpfsCache(P, JSONL_LAYOUT, mem).createCorpusWriter('code', SHA_NEW);
     await w.write('partial');
     await assert.rejects(w.discard(), (e) => e.name === 'CacheCleanupError' && e.message.includes(name) && e.cause?.name === 'NoModificationAllowedError');
   });
 
   it('finalize retries the commit move through the same lag', async () => {
     const mem = memoryDir({}, { lag: { [partialFileName(P, 'code', SHA_NEW)]: 2 } });
-    const w = await createOpfsCache(P, mem).createCorpusWriter('code', SHA_NEW);
+    const w = await createOpfsCache(P, JSONL_LAYOUT, mem).createCorpusWriter('code', SHA_NEW);
     await w.write('whole');
     await w.finalize();
     assert.deepEqual([...mem.files.keys()], [corpusFileName(P, 'code', SHA_NEW)]);
@@ -201,7 +201,7 @@ describe('corpus writer: atomic commit and cleanup', () => {
 
   it('a createWritable failure removes the file create:true made, and degrades to no cache', async () => {
     const mem = memoryDir({}, { failCreateWritable: true });
-    assert.equal(await createOpfsCache(P, mem).createCorpusWriter('code', SHA_NEW), null);
+    assert.equal(await createOpfsCache(P, JSONL_LAYOUT, mem).createCorpusWriter('code', SHA_NEW), null);
     assert.deepEqual([...mem.files.keys()], []);
   });
 
@@ -216,7 +216,7 @@ describe('corpus writer: atomic commit and cleanup', () => {
       },
       { lag: { [stuck]: 1000 } }
     );
-    await assert.rejects(createOpfsCache(P, mem).pruneStale('code', SHA_NEW), (e) => e.name === 'CacheCleanupError' && e.message.includes(stuck));
+    await assert.rejects(createOpfsCache(P, JSONL_LAYOUT, mem).pruneStale('code', SHA_NEW), (e) => e.name === 'CacheCleanupError' && e.message.includes(stuck));
     assert.deepEqual([...mem.files.keys()].sort(), [corpusFileName(P, 'code', SHA_NEW), stuck, partialFileName(P, 'docs', SHA_OLD)].sort());
   });
 });

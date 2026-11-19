@@ -51,7 +51,16 @@ byte-identical to 2.2.1's.
   the v0.5.0 release, the snapshot loaded in the v0.5.0 wasm build, BM25
   ranking checked; CI job `e2e-site-v3` (`.github/workflows/site-v3.yml`, called by `ci.yml`) also runs the composite action.
 
+- **website-chat 3.0.0: search mode.** `mode: 'search'` is retrieval-only
+  site search over v3 snapshots (BM25, no API key), with hybrid ranking when
+  the site supplies an embedder; several corpora merge by rank (RRF). Snapshots
+  are checked against `snapshot_sha256` before they are installed, cached in
+  OPFS, and downloaded only after consent. Needs the lattice-db >= v0.5.0
+  wasm. See `website-chat/README.md`.
+
 ### Changed
+- **website-chat: `mode` is a required config key** (`'answer'` or
+  `'search'`). Existing configs add `mode: 'answer'`.
 - `embedding-endpoint`, `vector-precision`, `request-interval-ms`,
   `chunk-lines` and `chunk-overlap` are declared optional in `action.yml`:
   v3 lexical / markdown runs refuse them. v2 runs still fail naming each
